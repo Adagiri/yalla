@@ -1,0 +1,87 @@
+"""
+Represents a geographical coordinate.
+"""
+type Coordinates {
+  lat: Float!
+  lng: Float!
+}
+
+"""
+Represents the bounds of a location (an area defined by its northeast and southwest coordinates).
+"""
+type Bounds {
+  northeast: Coordinates!
+  southwest: Coordinates!
+}
+
+"""
+A location with geographical coordinates, optional bounds, and an optional address.
+"""
+type Location {
+  id: ID!
+  name: String!
+  description: String
+  lat: Float!
+  lng: Float!
+  bounds: Bounds
+  address: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+Input type for specifying coordinates.
+"""
+input CoordinatesInput {
+  lat: Float!
+  lng: Float!
+}
+
+"""
+Input type for specifying bounds.
+"""
+input BoundsInput {
+  northeast: CoordinatesInput!
+  southwest: CoordinatesInput!
+}
+
+"""
+Input type for creating or updating a location.
+"""
+input LocationInput {
+  name: String!
+  description: String
+  lat: Float!
+  lng: Float!
+  bounds: BoundsInput
+  address: String
+}
+
+type Query {
+  """
+  Retrieves a single location by its ID.
+  """
+  getLocation(id: ID!): Location
+
+  """
+  Retrieves a list of locations.
+  """
+  listLocations: [Location!]!
+}
+
+type Mutation {
+  """
+  Creates a new location.
+  """
+  createLocation(input: LocationInput!): Location!
+
+  """
+  Updates an existing location.
+  """
+  updateLocation(id: ID!, input: LocationInput!): Location!
+
+  """
+  Deletes a location by its ID.
+  """
+  deleteLocation(id: ID!): Boolean!
+}

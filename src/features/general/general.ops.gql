@@ -1,0 +1,32 @@
+type Query {
+  _: Int
+}
+
+type Mutation {
+  _: Int
+}
+
+extend type Query {
+  getBankCodes: [BankCode]
+}
+
+type BankCode {
+  name: String!
+  code: String!
+}
+
+extend type Mutation {
+  resendCode(input: ResendCodeInput!): Boolean!
+
+  verifyCode(input: VerifyCodeInput!): AuthPayload!
+
+  login(input: LoginInput!): AuthPayload!
+
+  enableMfa(input: EnableMfaInput!): AccountEntity!
+
+  disableMfa: AccountEntity!
+
+  requestResetPassword(input: ResetPasswordRequestInput!): Boolean!
+
+  resetPassword(input: ResetPasswordInput!): Boolean!
+}

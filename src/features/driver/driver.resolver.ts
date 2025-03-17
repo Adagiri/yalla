@@ -1,0 +1,33 @@
+import { combineResolvers } from 'graphql-resolvers';
+import DriverController from './driver.controller';
+import { protectEntities, protectManager } from '../../utils/auth-middleware';
+
+const driverResolvers = {
+  Query: {
+    listDrivers: combineResolvers(
+      protectEntities(['ADMIN', 'MANAGER']),
+      DriverController.listDrivers
+    ),
+    getDriver: combineResolvers(
+      protectEntities(['ADMIN']),
+      DriverController.getDriver
+    ),
+    loggedInDriver: combineResolvers(
+      protectEntities(['USER', 'ADMIN']),
+      DriverController.loggedInDriver
+    ),
+  },
+  Mutation: {
+    registerDriver: DriverController.registerDriver,
+    updatePersonalInfo: combineResolvers(
+      protectEntities(['USER', 'ADMIN']),
+      DriverController.updatePersonalInfo
+    ),
+    updateDriverLicense: combineResolvers(
+      protectEntities(['USER', 'ADMIN']),
+      DriverController.updateDriverLicense
+    ),
+  },
+};
+
+export default driverResolvers;

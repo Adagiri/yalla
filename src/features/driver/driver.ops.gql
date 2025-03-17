@@ -1,0 +1,131 @@
+# Enum for sorting driver results. We now support sorting by firstName, lastName, email, createdAt, and updatedAt.
+enum DriverSortField {
+  firstName
+  lastName
+  email
+  createdAt
+  updatedAt
+}
+
+"""
+Specify which field to sort by (e.g., firstName, email)
+and in which direction (ASC or DESC).
+"""
+input DriverSort {
+  field: DriverSortField!
+  direction: SortDirection = ASC
+}
+
+"""
+Filters for searching drivers by various fields.
+All fields are optional; if provided, they constrain the query results.
+"""
+input DriverFilter {
+  "IDs of drivers to match"
+  ids: [ID!]
+  firstName: String
+  lastName: String
+  email: String
+  locationId: ID
+  isMFAEnabled: Boolean
+  authChannels: [AuthChannel!]
+}
+
+"""
+Input type for phone details.
+"""
+input PhoneInput {
+  countryCode: String!
+  localNumber: String!
+  fullPhone: String!
+}
+
+"""
+Type representing a phone.
+"""
+type Phone {
+  countryCode: String!
+  localNumber: String!
+  fullPhone: String!
+}
+
+"""
+Used when registering a new driver.
+"""
+input RegisterDriverInput {
+  email: String!
+  phone: PhoneInput!
+  password: String!
+  authChannel: AuthChannel!
+}
+
+"""
+Input type for updating personal information.
+"""
+input UpdatePersonalInfoInput {
+  firstName: String!
+  lastName: String!
+  locationId: ID!
+}
+
+"""
+Input type for updating driver license images.
+"""
+input UpdateDriverLicenseInput {
+  driverLicenseFront: String!
+  driverLicenseBack: String!
+}
+
+"""
+A driver as stored in the system.
+Note: the underlying model stores firstName, lastName, email, phone (as an object),
+accountType, locationId, and verification/MFA details.
+"""
+type Driver {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  email: String!
+  phone: Phone
+  accountType: String!
+  locationId: ID
+  isEmailVerified: Boolean!
+  isPhoneVerified: Boolean!
+  isMFAEnabled: Boolean!
+  authChannels: [AuthChannel!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  # Optionally, if you want to expose the populated location:
+  location: Location
+
+  # New fields for profile and driver license status
+  profilePhotoSet: Boolean!
+  driverLicenseVerified: Boolean!
+  personalInfoSet: Boolean!
+  vehicleInfoSet: Boolean!
+  driverLicenseFront: String
+  driverLicenseBack: String
+}
+
+type DriverPartial {
+  id: ID!
+  firstName: String!
+  lastName: String!
+}
+
+extend type Query {
+  listDrivers(
+    pagination: PaginationInput
+    filter: DriverFilter
+    sort: DriverSort
+  ): [Driver!]!
+
+  getDriver(id: ID!): Driver!
+  loggedInDriver: Driver!
+}
+
+extend type Mutation {
+  registerDriver(input: RegisterDriverInput!): AuthPayload!
+  updatePersonalInfo(input: UpdatePersonalInfoInput!): Driver!
+  updateDriverLicense(input: UpdateDriverLicenseInput!): Driver!
+}

@@ -1,0 +1,50 @@
+type Admin {
+  id: ID!
+  name: String!
+  email: String!
+  phone: String!
+}
+
+input CreateAdminInput {
+  name: String!
+  email: String!
+  phone: String!
+}
+
+type EmailTemplate {
+  Name: String!
+  CreatedTimestamp: String!
+}
+
+input CreateEmailTemplateInput {
+  name: String!
+  subject: String!
+  html: String!
+  text: String!
+}
+
+input UpdateEmailTemplateInput {
+  name: String!
+  subject: String
+  html: String
+  text: String
+}
+
+extend type Query {
+  getAdmin(id: ID!): Admin
+
+  listAdmins: [Admin!]!
+
+  listEmailTemplates: [EmailTemplate!]!
+}
+
+# Mutations for modifying admin and email template data
+extend type Mutation {
+  createAdmin(input: CreateAdminInput!): Admin!
+
+  createEmailTemplate(input: CreateEmailTemplateInput!): Boolean!
+
+  updateEmailTemplate(input: UpdateEmailTemplateInput!): Boolean!
+
+  deleteEmailTemplate(name: String!): Boolean!
+}

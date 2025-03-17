@@ -1,0 +1,191 @@
+# Scalars
+scalar Date
+scalar Time
+scalar DateTime
+scalar DefaultDate
+scalar Any
+scalar Number
+scalar AnyObject
+scalar Odd
+
+# Enums
+enum AuthChannel {
+  SMS
+  EMAIL
+  GOOGLE
+}
+
+enum PaymentPurpose {
+  ADD_CARD
+  PAY_INVOICE
+  PAY_INVOICES
+}
+
+enum PaymentMethod {
+  card
+  bank_transfer
+}
+
+enum PaymentTransactionStatus {
+  SUCCESS
+  FAILED
+  REVERSED
+}
+
+enum PaymentStatus {
+  PAID # The invoice has been fully settled.
+  OUTSTANDING # No payment has been received yet (previously "pending").
+  PARTIALLY_PAID # Only part of the invoice amount has been paid.
+}
+enum DeviceType {
+  ANDROID
+  IOS
+}
+
+enum AccountType {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum AccountLevel {
+  MAIN
+  SUB
+  NONE
+}
+
+enum ResendCodeScenario {
+  MFA
+  ACCOUNT_ACTIVATION
+  RESET_PASSWORD
+}
+
+enum UserCategory {
+  OWNER
+  TENANT
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+# Common Types
+type PaginatedPayload {
+  totalDocs: Int!
+  docsRetrieved: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+union AuthEntity = Manager | User
+
+union AccountEntity = Manager | User
+
+input EnableMfaInput {
+  authChannel: AuthChannel! # Type of MFA: 'email' or 'sms'
+}
+
+input PhoneInput {
+  countryCode: String!
+  localNumber: String!
+  fullPhone: String!
+}
+
+input RegisterManagerInput {
+  name: String!
+  email: String
+  country: String!
+  password: String!
+  phone: PhoneInput
+  authChannel: AuthChannel!
+}
+
+input LoginInput {
+  email: String
+  phone: PhoneInput
+  password: String!
+  authChannel: AuthChannel!
+  accountType: AccountType!
+}
+
+input ResendCodeInput {
+  token: String!
+  accountType: AccountType!
+  scenario: ResendCodeScenario!
+}
+
+input VerifyCodeInput {
+  token: String!
+  code: String!
+  accountType: AccountType!
+}
+
+input ResetPasswordRequestInput {
+  email: String
+  phone: String
+  authChannel: AuthChannel!
+  accountType: AccountType!
+}
+
+input ResetPasswordInput {
+  password: String!
+  token: String!
+  code: String!
+  accountType: AccountType!
+}
+
+type AuthPayload {
+  entity: AuthEntity
+  token: String
+}
+
+# Phone Type
+type Phone {
+  countryCode: String # E.g., "+1"
+  localNumber: String # E.g., "4155552671"
+  fullPhone: String # E.g., "+14155552671"
+}
+
+type PaymentMetadata {
+  purpose: PaymentPurpose!
+  resourceIds: [ID]!
+  resourceType: ID!
+  payerType: AccountType!
+  payerId: ID!
+  payerCategory: UserCategory
+  baseAmounts: [Float!]!
+}
+
+# Inputs
+input TagInput {
+  name: String!
+  value: String!
+}
+
+"""
+Tie-breaker cursor input for keyset pagination.
+'fieldValue' corresponds to the primary sort field (e.g., a string),
+'id' is used to break ties between documents sharing the same fieldValue.
+"""
+input CursorInput {
+  fieldValue: String!
+  id: ID!
+}
+
+"""
+Keyset-based pagination input.
+- 'limit' controls how many items to return.
+- 'after' fetches items after (i.e., older if sorting DESC) a specific boundary.
+- 'before' fetches items before (i.e., newer if sorting DESC) a specific boundary.
+"""
+input KeysetPaginationInput {
+  limit: Int = 10
+  after: CursorInput
+  before: CursorInput
+}
+
+input PaginationInput {
+  page: Int! # Page number (1-based index)
+  limit: Int! # Number of items per page
+}
