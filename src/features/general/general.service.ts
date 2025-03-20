@@ -6,8 +6,7 @@ import {
   verifyPassword,
 } from '../../utils/auth';
 import { ErrorResponse } from '../../utils/responses';
-import { ManagerModelType } from '../manager/manager.model';
-import { UserModelType } from '../user/user.model';
+import { DriverModelType } from '../driver/driver.model';
 import {
   AccountType,
   AuthChannel,
@@ -225,7 +224,7 @@ class GeneralService {
       const now = Date.now();
       const response: any = {};
 
-      const entity: ManagerModelType | UserModelType | null =
+      const entity: DriverModelType  | null =
         await model.findOne({
           $or: [
             { emailVerificationToken: encryptedToken },
@@ -276,11 +275,11 @@ class GeneralService {
         await NotificationService.sendEmail({
           to: entity.email,
           template:
-            entity.accountType === AccountType.MANAGER
+            entity.accountType !== AccountType.DRIVER
               ? 'ManagerWelcomeEmailTemplate'
               : 'UserWelcomeEmailTemplate',
           data: {
-            name: entity.name,
+            name: entity.firstname,
           },
         });
       }
@@ -408,7 +407,7 @@ class GeneralService {
     authChannel,
   }: RequestResetPasswordInput): Promise<Boolean> {
     try {
-      let entity: ManagerModelType | UserModelType | null;
+      let entity: DriverModelType  | null;
 
       if (
         !authChannel ||
@@ -487,7 +486,7 @@ class GeneralService {
     try {
       const encryptedToken = getEncryptedToken(token);
 
-      const entity: ManagerModelType | UserModelType | null =
+      const entity: DriverModelType  | null =
         await model.findOne({
           resetPasswordToken: encryptedToken,
         });

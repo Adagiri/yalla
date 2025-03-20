@@ -1,20 +1,18 @@
 import { ContextType } from '../../types';
 import { AuthPayload } from '../../utils/responses';
 import Admin from '../admin/admin.model';
-import Manager from '../manager/manager.model';
-import User from '../user/user.model';
+import Driver from '../driver/driver.model';
 import GeneralService from './general.service';
 
 const models: any = {
   admin: Admin,
-  manager: Manager,
-  user: User,
+  driver: Driver,
 };
 
 class GeneralController {
   static async getBankCodes() {
     const response = await GeneralService.getBankCodes();
-    return response
+    return response;
   }
   static async resendCode(_: any, { input }: { input: any }) {
     const accountType = input.accountType.toLowerCase();

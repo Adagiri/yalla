@@ -44,8 +44,7 @@ enum DeviceType {
 
 enum AccountType {
   ADMIN
-  MANAGER
-  USER
+  DRIVER
 }
 
 enum AccountLevel {
@@ -78,9 +77,9 @@ type PaginatedPayload {
   hasPreviousPage: Boolean!
 }
 
-union AuthEntity = Manager | User
+union AuthEntity = Driver
 
-union AccountEntity = Manager | User
+union AccountEntity = Driver
 
 input EnableMfaInput {
   authChannel: AuthChannel! # Type of MFA: 'email' or 'sms'

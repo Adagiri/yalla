@@ -7,7 +7,7 @@ export const ENV = {
   JWT_SECRET_KEY: process.env.JWT_SECRET_KEY || '',
   ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || '',
   INVOICE_WEBHOOK_KEY: process.env.INVOICE_WEBHOOK_KEY || '',
-  PROPATIZE_APP_HOSTNAME : process.env.PROPATIZE_APP_HOSTNAME || '',
+  PROPATIZE_APP_HOSTNAME: process.env.PROPATIZE_APP_HOSTNAME || '',
 
   // AWS SES Configuration
   AWS_REGION: process.env.AWS_REGION || '',
@@ -19,6 +19,7 @@ export const ENV = {
   TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || '',
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || '',
   TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || '',
+  TWILIO_NOTIFY_SERVICE_SID: process.env.TWILIO_NOTIFY_SERVICE_SID || '',
 
   // Paystack Configuration
   PAYSTACK_PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY || '',
@@ -30,4 +31,11 @@ export const ENV = {
     process.env.PAYSTACK_CARD_PAYMENT_METHOD || 'card',
   PAYSTACK_AUTH_CODE_ENCRYPTION_KEY:
     process.env.PAYSTACK_AUTH_CODE_ENCRYPTION_KEY || 'asdflkjhg',
+
+  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || '',
+
+  // TEMII
+  TEMII_BASE_URL: process.env.TEMII_BASE_URL || '',
+  TEMII_SENDER_ID: process.env.TEMII_SENDER_ID || '',
+  TEMII_API_KEY: process.env.TEMII_API_KEY || '',
 };

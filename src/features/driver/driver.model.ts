@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { v4 as uuidv4 } from 'uuid';
 import { AccountType, AuthChannelEnum } from '../../constants/general';
 
@@ -54,7 +55,7 @@ export interface DriverModelPartialType extends Document {
   name: string;
 }
 
-const DriverSchema = new Schema<DriverModelType>(
+const driverSchema = new Schema<DriverModelType>(
   {
     _id: { type: String, default: uuidv4 },
     accountType: { type: String, default: AccountType.DRIVER },
@@ -126,14 +127,14 @@ const DriverSchema = new Schema<DriverModelType>(
   }
 );
 
-DriverSchema.virtual('location', {
+driverSchema.virtual('location', {
   ref: 'Location',
   localField: 'locationId',
   foreignField: '_id',
   justOne: true,
 });
 
-DriverSchema.pre(
+driverSchema.pre(
   /^find/,
   function (this: mongoose.Query<any, DriverModelType>, next) {
     this.populate('location');
@@ -141,8 +142,22 @@ DriverSchema.pre(
   }
 );
 
-DriverSchema.index({ locationId: 1, unitId: 1, billId: 1, bankAccountId: 1 });
+driverSchema.index({ locationId: 1});
 
-const Driver = mongoose.model<DriverModelType>('Driver', DriverSchema);
+driverSchema.pre<DriverModelType>('save', function (next) {
+  if (this.phone && this.phone.fullPhone) {
+    const phoneNumber = parsePhoneNumberFromString(this.phone.fullPhone);
+    if (!phoneNumber || !phoneNumber.isValid()) {
+      return next(new Error('Invalid phone number format'));
+    }
+    // Normalize and update phone fields
+    this.phone.countryCode = '+' + phoneNumber.countryCallingCode;
+    this.phone.localNumber = phoneNumber.nationalNumber;
+    this.phone.fullPhone = phoneNumber.format('E.164');
+  }
+  next();
+});
+
+const Driver = mongoose.model<DriverModelType>('Driver', driverSchema);
 
 export default Driver;

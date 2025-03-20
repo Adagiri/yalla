@@ -10,12 +10,8 @@ const managerResolvers = {
         return 'Admin';
       }
 
-      if (obj.accountType === AccountType.MANAGER) {
-        return 'Manager';
-      }
-
-      if (obj.accountType === AccountType.USER) {
-        return 'User';
+      if (obj.accountType === AccountType.DRIVER) {
+        return 'Driver';
       }
     },
   },
@@ -26,12 +22,9 @@ const managerResolvers = {
         return 'Admin';
       }
 
-      if (obj.accountType === AccountType.MANAGER) {
-        return 'Manager';
-      }
-
-      if (obj.accountType === AccountType.USER) {
-        return 'User';
+   
+      if (obj.accountType === AccountType.DRIVER) {
+        return 'Driver';
       }
     },
   },

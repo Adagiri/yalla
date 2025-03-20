@@ -3,6 +3,7 @@ export const AuthChannelEMAIL = 'EMAIL';
 export const AuthChannelGOOGLE = 'GOOGLE';
 
 export const AccountTypeDRIVER = 'DRIVER';
+export const AccountTypeADMIN = 'ADMIN';
 export const AccountTypeCUSTOMER = 'CUSTOMER';
 export const AccountTypeMERCHANT = 'MERCHANT';
 
@@ -35,6 +36,7 @@ export const AuthChannel = {
 export type AuthChannel = (typeof AuthChannel)[keyof typeof AuthChannel];
 
 export const AccountType = {
+  ADMIN: AccountTypeADMIN,
   DRIVER: AccountTypeDRIVER,
   CUSTOMER: AccountTypeCUSTOMER,
   MERCHANT: AccountTypeMERCHANT,

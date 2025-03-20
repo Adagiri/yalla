@@ -1,5 +1,5 @@
 export const verificationTemplate = (code: string): string =>
-  `Your verification code is: ${code}. This code is valid for 10 minutes.`;
+  `Your Yalla verification code is: ${code}. This code is valid for 10 mins\nPowered By Yalla`;
 
 export const loginAccessCodeTemplate = (code: string): string =>
   `Your MFA code is ${code}`;

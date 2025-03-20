@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { ErrorResponse } from './responses';
 import Admin from '../features/admin/admin.model';
-import User from '../features/user/user.model';
-import Manager from '../features/manager/manager.model';
+import Driver from '../features/driver/driver.model';
 import { skip } from 'graphql-resolvers';
 import { AccountType } from '../constants/general';
 
@@ -38,7 +37,7 @@ export const protectAdmin = async (
   return skip;
 };
 
-export const protectUser = async (
+export const protectDriver = async (
   _: unknown,
   __: unknown,
   { user }: { user: any }
@@ -47,38 +46,16 @@ export const protectUser = async (
     throw new ErrorResponse(401, 'Please log in to continue');
   }
 
-  const userRecord = await User.findById(user.id);
+  const userRecord = await Driver.findById(user.id);
   if (!userRecord) {
     throw new ErrorResponse(404, 'User does not exist.');
   }
 
-  if (userRecord.accountType !== AccountType.USER) {
+  if (userRecord.accountType !== AccountType.DRIVER) {
     throw new ErrorResponse(403, 'Not authorized as a user.');
   }
 
   user = userRecord;
-  return skip;
-};
-
-export const protectManager = async (
-  _: unknown,
-  __: unknown,
-  { user }: { user: any }
-) => {
-  if (!user) {
-    throw new ErrorResponse(401, 'Please log in to continue');
-  }
-
-  const managerRecord = await Manager.findById(user.id);
-  if (!managerRecord) {
-    throw new ErrorResponse(404, 'User does not exist.');
-  }
-
-  if (managerRecord.accountType !== 'MANAGER') {
-    throw new ErrorResponse(403, 'Not authorized as a manager.');
-  }
-
-  user = managerRecord;
   return skip;
 };
 
@@ -94,12 +71,8 @@ export const protectEntities = (requiredEntities: string[]) => {
       userRecord = await Admin.findById(user.id);
     }
 
-    if (!userRecord && requiredEntities.includes('USER')) {
-      userRecord = await User.findById(user.id);
-    }
-
-    if (!userRecord && requiredEntities.includes('MANAGER')) {
-      userRecord = await Manager.findById(user.id);
+    if (!userRecord && requiredEntities.includes('DRIVER')) {
+      userRecord = await Driver.findById(user.id);
     }
 
     if (!userRecord) {

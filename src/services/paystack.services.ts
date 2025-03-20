@@ -1,15 +1,8 @@
 import axios from 'axios';
 import { ENV } from '../config/env';
-import { createWebhookHash, generateRandomString } from '../utils/general';
-import AssetCard from '../features/asset-card/asset-card.model';
+import { generateRandomString } from '../utils/general';
 import { PaymentPurpose, ResourceType } from '../constants/general';
-import CardService from '../features/asset-card/asset-card.service';
-import AssetCardService from '../features/asset-card/asset-card.service';
 import { PaystackTransactionData } from '../types/paystack.types';
-import BillService from '../features/bill/bill.service';
-import UserCardService from '../features/user-card/user-card.service';
-import { NextFunction } from 'express';
-import InvoiceService from '../features/invoice/invoice.service';
 
 class PaystackService {
   private static readonly secretKey = ENV.PAYSTACK_SECRET_KEY;
@@ -254,20 +247,20 @@ class PaystackService {
 
       if (event === 'charge.success') {
         switch (metadata.purpose) {
-          case PaymentPurpose.ADD_CARD:
-            if (metadata.resourceType === ResourceType.Asset) {
-              return await AssetCardService.addAssetCard(data);
-            }
-            if (metadata.resourceType === ResourceType.User) {
-              return await UserCardService.addUserCard(data);
-            }
-            break;
+          // case PaymentPurpose.ADD_CARD:
+          //   if (metadata.resourceType === ResourceType.Asset) {
+          //     return await AssetCardService.addAssetCard(data);
+          //   }
+          //   if (metadata.resourceType === ResourceType.User) {
+          //     return await UserCardService.addUserCard(data);
+          //   }
+          //   break;
 
-          case PaymentPurpose.PAY_INVOICE:
-            return await InvoiceService.payInvoice(data);
+          // case PaymentPurpose.PAY_INVOICE:
+          //   return await InvoiceService.payInvoice(data);
 
-          case PaymentPurpose.PAY_INVOICES:
-            return await InvoiceService.payInvoices(data);
+          // case PaymentPurpose.PAY_INVOICES:
+          //   return await InvoiceService.payInvoices(data);
 
           default:
             console.log(`Unhandled payment purpose: ${metadata.purpose}`);

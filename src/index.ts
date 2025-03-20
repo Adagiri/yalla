@@ -4,7 +4,6 @@ import { connectDB } from './config/db-connection';
 import { ENV } from './config/env';
 import { createWebhookHash } from './utils/general';
 import PaystackService from './services/paystack.services';
-import InvoiceService from './features/invoice/invoice.service';
 
 const app = express();
 app.use(express.json());
@@ -39,29 +38,29 @@ const handlePaystackWebhook: any = async (
   }
 };
 
-const handleInvoiceWebhook: any = async (
-  req: Request,
-  res: any
-): Promise<void> => {
-  const headers: any = req.headers;
-  const invoiceWebhookKey:string = headers['x-webhook-key'];
-  if (invoiceWebhookKey !== ENV.INVOICE_WEBHOOK_KEY) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid webhook key' });
-  } else {
-    try {
-      await InvoiceService.generateInvoicesByHook();
-      return res.status(200).json({
-        message: 'Webhook processed successfully',
-      });
-    } catch (error: any) {
-      console.error('Error processing Invoice webhook:', error);
-      return res.sendStatus(500);
-    }
-  }
-};
+// const handleInvoiceWebhook: any = async (
+//   req: Request,
+//   res: any
+// ): Promise<void> => {
+//   const headers: any = req.headers;
+//   const invoiceWebhookKey:string = headers['x-webhook-key'];
+//   if (invoiceWebhookKey !== ENV.INVOICE_WEBHOOK_KEY) {
+//     return res.status(401).json({ error: 'Unauthorized: Invalid webhook key' });
+//   } else {
+//     try {
+//       await InvoiceService.generateInvoicesByHook();
+//       return res.status(200).json({
+//         message: 'Webhook processed successfully',
+//       });
+//     } catch (error: any) {
+//       console.error('Error processing Invoice webhook:', error);
+//       return res.sendStatus(500);
+//     }
+//   }
+// };
 
 app.post('/api/paystack/transaction-completion-webhook', handlePaystackWebhook);
-app.post('/api/invoices/generate-invoices', handleInvoiceWebhook);
+// app.post('/api/invoices/generate-invoices', handleInvoiceWebhook);
 
 // (async () => {
 //   try {

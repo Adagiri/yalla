@@ -83,8 +83,8 @@ accountType, locationId, and verification/MFA details.
 """
 type Driver {
   id: ID!
-  firstName: String!
-  lastName: String!
+  firstName: String
+  lastName: String
   email: String!
   phone: Phone
   accountType: String!

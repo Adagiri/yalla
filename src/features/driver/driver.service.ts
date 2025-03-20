@@ -13,6 +13,7 @@ import { filterNullAndUndefined } from '../../utils/general';
 import { generateVerificationCode, hashPassword } from '../../utils/auth';
 import NotificationService from '../../services/notification.services';
 import { AuthChannel } from '../../constants/general';
+import { verificationTemplate } from '../../utils/sms-templates';
 
 class DriverService {
   static async listDrivers(
@@ -53,77 +54,49 @@ class DriverService {
 
   static async registerDriver(input: RegisterDriverInput) {
     try {
-      const { email, phone, password, authChannel } = input;
-      let existingDriver;
-      let response: { token?: string; entity?: DriverModelType } = {};
+      const { email, phone, password } = input;
 
-      // Validate presence of email or phone based on auth channel.
-      if (authChannel === AuthChannel.EMAIL && email) {
-        existingDriver = await Driver.findOne({ email, isEmailVerified: true });
-      } else if (authChannel === AuthChannel.SMS && phone) {
-        existingDriver = await Driver.findOne({
-          'phone.fullPhone': phone.fullPhone,
-          isPhoneVerified: true,
-        });
-      } else {
-        throw new ErrorResponse(400, 'Either email or phone is required');
+      if (!email || !phone) {
+        throw new ErrorResponse(400, 'Email and phone are required');
       }
 
+      // Check if the phone number is already registered and verified
+      const existingDriver = await Driver.findOne({
+        'phone.fullPhone': phone.fullPhone,
+        isPhoneVerified: true,
+      });
+
       if (existingDriver) {
-        throw new ErrorResponse(
-          400,
-          `${authChannel === AuthChannel.EMAIL ? 'Email' : 'Phone number'} already registered`
-        );
+        throw new ErrorResponse(400, 'Phone number already registered');
       }
 
       const hashedPassword = await hashPassword(password);
       const { code, encryptedToken, token, tokenExpiry } =
         generateVerificationCode(32, 10);
 
-      let driverData: Partial<DriverModelType> = {
+      // Prepare driver data
+      const driverData: Partial<DriverModelType> = {
+        email, // Always stored without checking for duplicates
+        phone,
         password: hashedPassword,
-        isEmailVerified: false,
-        isPhoneVerified: false,
+        oldPasswords: [hashedPassword],
+        isEmailVerified: false, // Email is not verified
+        isPhoneVerified: false, // Phone requires verification
+        phoneVerificationCode: code,
+        phoneVerificationToken: encryptedToken,
+        phoneVerificationExpiry: tokenExpiry,
       };
 
-      if (authChannel === AuthChannel.EMAIL) {
-        driverData.email = email;
-        driverData.emailVerificationCode = code;
-        driverData.emailVerificationToken = encryptedToken;
-        driverData.emailVerificationExpiry = tokenExpiry;
-      } else if (authChannel === AuthChannel.SMS && phone) {
-        driverData.phone = phone;
-        driverData.phoneVerificationCode = code;
-        driverData.phoneVerificationToken = encryptedToken;
-        driverData.phoneVerificationExpiry = tokenExpiry;
-      }
-
-      // Create the new driver record.
+      // Create the driver record
       const driver = await Driver.create(driverData);
 
-      // Send notifications based on auth channel.
-      if (authChannel === AuthChannel.EMAIL && email) {
-        await NotificationService.sendEmail({
-          to: driver.email,
-          template: 'AccountActivationEmailTemplate',
-          data: {
-            name: driver.firstname, // Adjust if necessary
-            c: code[0],
-            o: code[1],
-            d: code[2],
-            e: code[3],
-          },
-        });
-      } else if (authChannel === AuthChannel.SMS && phone) {
-        await NotificationService.sendSMS({
-          to: phone.fullPhone,
-          message: `Your verification code is ${code}`,
-        });
-      }
+      // Send phone verification SMS
+      await NotificationService.sendSMS({
+        to: phone.fullPhone,
+        message: verificationTemplate(code),
+      });
 
-      response.token = token;
-      response.entity = driver;
-      return response;
+      return { token, entity: driver };
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error registering driver', error.message);
     }
