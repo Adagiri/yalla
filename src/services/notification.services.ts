@@ -10,7 +10,7 @@ import {
 import twilio from 'twilio';
 import { ENV } from '../config/env';
 import TwilioService from './twilio.services';
-import TemiiService from './temii.services';
+import TermiiService from './termii.services';
 
 // Twilio Client Setup
 const twilioClient = twilio(ENV.TWILIO_ACCOUNT_SID, ENV.TWILIO_AUTH_TOKEN);
@@ -65,7 +65,7 @@ class NotificationService {
 
   static async sendSMS({ to, message }: SmsOptions) {
     try {
-      await TemiiService.sendSMS([to], message);
+      await TermiiService.sendSMS([to], message);
       // await TwilioService.sendNotification(message, to);
       console.log(`SMS sent to ${to}`);
     } catch (error: any) {

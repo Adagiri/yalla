@@ -1,11 +1,11 @@
 import axios from 'axios';
 import { ENV } from '../config/env';
 
-class TemiiService {
+class TermiiService {
   static async sendSMS(to: string[], message: string): Promise<any> {
-    const url = `${ENV.TEMII_BASE_URL}/api/sms/send`;
-    const senderId = ENV.TEMII_SENDER_ID;
-    const apiKey = ENV.TEMII_API_KEY;
+    const url = `${ENV.TERMII_BASE_URL}/api/sms/send`;
+    const senderId = ENV.TERMII_SENDER_ID;
+    const apiKey = ENV.TERMII_API_KEY;
 
     const data = {
       to,
@@ -30,4 +30,4 @@ class TemiiService {
   }
 }
 
-export default TemiiService;
+export default TermiiService;

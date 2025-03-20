@@ -7,7 +7,7 @@ export const ENV = {
   JWT_SECRET_KEY: process.env.JWT_SECRET_KEY || '',
   ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || '',
   INVOICE_WEBHOOK_KEY: process.env.INVOICE_WEBHOOK_KEY || '',
-  PROPATIZE_APP_HOSTNAME: process.env.PROPATIZE_APP_HOSTNAME || '',
+  YALLA_APP_HOSTNAME: process.env.YALLA_APP_HOSTNAME || '',
 
   // AWS SES Configuration
   AWS_REGION: process.env.AWS_REGION || '',
@@ -34,8 +34,8 @@ export const ENV = {
 
   GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || '',
 
-  // TEMII
-  TEMII_BASE_URL: process.env.TEMII_BASE_URL || '',
-  TEMII_SENDER_ID: process.env.TEMII_SENDER_ID || '',
-  TEMII_API_KEY: process.env.TEMII_API_KEY || '',
+  // TERMII
+  TERMII_BASE_URL: process.env.TERMII_BASE_URL || '',
+  TERMII_SENDER_ID: process.env.TERMII_SENDER_ID || '',
+  TERMII_API_KEY: process.env.TERMII_API_KEY || '',
 };
