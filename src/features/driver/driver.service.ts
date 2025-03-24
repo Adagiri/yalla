@@ -14,6 +14,7 @@ import { generateVerificationCode, hashPassword } from '../../utils/auth';
 import NotificationService from '../../services/notification.services';
 import { AuthChannel } from '../../constants/general';
 import { verificationTemplate } from '../../utils/sms-templates';
+import Location from '../location/location.model';
 
 class DriverService {
   static async listDrivers(
@@ -113,6 +114,15 @@ class DriverService {
         locationId: input.locationId,
         personalInfoSet: true,
       });
+
+      const location = await Location.findById(updateData.locationId);
+
+      if (!location) {
+        throw new ErrorResponse(
+          404,
+          `Location with id ${updateData.locationId} not found`
+        );
+      }
 
       const updatedDriver = await Driver.findByIdAndUpdate(id, updateData, {
         new: true,

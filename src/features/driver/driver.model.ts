@@ -38,7 +38,7 @@ export interface DriverModelType extends Document {
   mfaActiveMethod: string | null;
   isMFAEnabled: boolean;
 
-  // New fields for profile and driver license info
+  // profile and driver license info
   profilePhotoSet: boolean;
   driverLicenseVerified: boolean;
   personalInfoSet: boolean;
@@ -142,7 +142,7 @@ driverSchema.pre(
   }
 );
 
-driverSchema.index({ locationId: 1});
+driverSchema.index({ locationId: 1 });
 
 driverSchema.pre<DriverModelType>('save', function (next) {
   if (this.phone && this.phone.fullPhone) {

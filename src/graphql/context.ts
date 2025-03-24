@@ -4,12 +4,12 @@ import { ExpressContextFunctionArgument } from '@apollo/server/dist/esm/express4
 
 export const context = async ({ req, res }: ExpressContextFunctionArgument) => {
   const token = req.headers.authorization?.split(' ')[1];
-  const driver = token ? getUserInfo(token) : null;
+  const user = token ? getUserInfo(token) : null;
 
   return {
     req,
     res,
-    driver,
+    user,
     models: {
       Driver,
     },

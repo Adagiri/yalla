@@ -70,7 +70,6 @@ export const protectEntities = (requiredEntities: string[]) => {
     if (requiredEntities.includes('ADMIN')) {
       userRecord = await Admin.findById(user.id);
     }
-
     if (!userRecord && requiredEntities.includes('DRIVER')) {
       userRecord = await Driver.findById(user.id);
     }

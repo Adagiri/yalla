@@ -2,6 +2,7 @@ import Location from './location.model';
 import { ErrorResponse } from '../../utils/responses';
 import { filterNullAndUndefined } from '../../utils/general';
 import { CreateLocationInput, UpdateLocationInput } from './location.types';
+import GoogleServices from '../../services/google.services';
 
 class LocationService {
   /**
@@ -35,7 +36,8 @@ class LocationService {
    */
   static async createLocation(data: CreateLocationInput) {
     try {
-      return await Location.create(data);
+      const locationData = await GoogleServices.geocodeLocation(data.name);
+      return await Location.create({ ...data, ...locationData });
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error creating location', error.message);
     }
@@ -47,9 +49,11 @@ class LocationService {
   static async updateLocation(id: string, data: UpdateLocationInput) {
     try {
       const filteredData = filterNullAndUndefined(data);
+
+      const locationData = await GoogleServices.geocodeLocation(data.name);
       const updatedLocation = await Location.findByIdAndUpdate(
         id,
-        filteredData,
+        { ...filteredData, ...locationData },
         { new: true }
       );
       if (!updatedLocation) {

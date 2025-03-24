@@ -20,22 +20,15 @@ export interface Bounds {
 export interface BaseLocationInput {
   name: string;
   description?: string;
-  lat: number;
-  lng: number;
-  /**
-   * Optional bounds for the location.
-   */
-  bounds?: Bounds | null;
-  /**
-   * Optional human-readable address from geocoding results.
-   */
-  address?: string;
 }
 
 /**
  * Input used when creating a new location.
  */
-export interface CreateLocationInput extends BaseLocationInput {}
+export interface CreateLocationInput extends BaseLocationInput {
+  name: string;
+  description?: string;
+}
 
 /**
  * Input used when updating an existing location.
@@ -43,6 +36,8 @@ export interface CreateLocationInput extends BaseLocationInput {}
  */
 export interface UpdateLocationInput extends Partial<BaseLocationInput> {
   id: string;
+  name: string;
+  description?: string;
 }
 
 /**

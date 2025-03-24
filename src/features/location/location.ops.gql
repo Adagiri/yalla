@@ -51,10 +51,6 @@ Input type for creating or updating a location.
 input LocationInput {
   name: String!
   description: String
-  lat: Float!
-  lng: Float!
-  bounds: BoundsInput
-  address: String
 }
 
 type Query {

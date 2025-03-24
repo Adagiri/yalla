@@ -1,14 +1,14 @@
-# Enum for sorting driver results. We now support sorting by firstName, lastName, email, createdAt, and updatedAt.
+# Enum for sorting driver results. We now support sorting by firstname, lastname, email, createdAt, and updatedAt.
 enum DriverSortField {
-  firstName
-  lastName
+  firstname
+  lastname
   email
   createdAt
   updatedAt
 }
 
 """
-Specify which field to sort by (e.g., firstName, email)
+Specify which field to sort by (e.g., firstname, email)
 and in which direction (ASC or DESC).
 """
 input DriverSort {
@@ -23,8 +23,8 @@ All fields are optional; if provided, they constrain the query results.
 input DriverFilter {
   "IDs of drivers to match"
   ids: [ID!]
-  firstName: String
-  lastName: String
+  firstname: String
+  lastname: String
   email: String
   locationId: ID
   isMFAEnabled: Boolean
@@ -63,8 +63,8 @@ input RegisterDriverInput {
 Input type for updating personal information.
 """
 input UpdatePersonalInfoInput {
-  firstName: String!
-  lastName: String!
+  firstname: String!
+  lastname: String!
   locationId: ID!
 }
 
@@ -78,13 +78,13 @@ input UpdateDriverLicenseInput {
 
 """
 A driver as stored in the system.
-Note: the underlying model stores firstName, lastName, email, phone (as an object),
+Note: the underlying model stores firstname, lastname, email, phone (as an object),
 accountType, locationId, and verification/MFA details.
 """
 type Driver {
   id: ID!
-  firstName: String
-  lastName: String
+  firstname: String
+  lastname: String
   email: String!
   phone: Phone
   accountType: String!
@@ -109,8 +109,8 @@ type Driver {
 
 type DriverPartial {
   id: ID!
-  firstName: String!
-  lastName: String!
+  firstname: String!
+  lastname: String!
 }
 
 extend type Query {
