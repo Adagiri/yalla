@@ -16,7 +16,7 @@ type BankCode {
 }
 
 extend type Mutation {
-  resendCode(input: ResendCodeInput!): Boolean!
+  resendCode(input: ResendCodeInput!): AuthPayload!
 
   verifyCode(input: VerifyCodeInput!): AuthPayload!
 
