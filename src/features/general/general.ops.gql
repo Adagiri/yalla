@@ -8,6 +8,7 @@ type Mutation {
 
 extend type Query {
   getBankCodes: [BankCode]
+  getImageUploadUrl(input: ImageUploadUrlInput!): ImageUploadUrlResponse!
 }
 
 type BankCode {

@@ -1,0 +1,79 @@
+enum VehicleSortField {
+  brand
+  model
+  createdAt
+  updatedAt
+}
+
+"""
+Specify which field to sort by (e.g., firstname, email)
+and in which direction (ASC or DESC).
+"""
+input VehicleSort {
+  field: VehicleSortField!
+  direction: SortDirection = ASC
+}
+
+input VehicleFilter {
+  "IDs of drivers to match"
+  ids: [ID!]
+  brand: String
+  model: String
+  manufactureYear: String
+  color: String
+  identificationNumber: String
+  plateNumber: String
+}
+
+type Vehicle {
+  id: ID!
+  brand: String!
+  model: String!
+  manufactureYear: String!
+  color: String!
+  identificationNumber: String!
+  plateNumber: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+Input type for creating or updating a vehicle.
+"""
+input VehicleInput {
+  brand: String!
+  model: String!
+  manufactureYear: String!
+  color: String!
+  identificationNumber: String!
+  plateNumber: String!
+}
+
+type Query {
+  """
+  Retrieves a single vehicle by its ID.
+  """
+  getVehicle(id: ID!): Vehicle
+
+  """
+  Retrieves a list of vehicles.
+  """
+  listVehicles: [Vehicle!]!
+}
+
+type Mutation {
+  """
+  Creates a new vehicle.
+  """
+  createVehicle(input: VehicleInput!): Vehicle!
+
+  """
+  Updates an existing vehicle.
+  """
+  updateVehicle(id: ID!, input: VehicleInput!): Vehicle!
+
+  """
+  Deletes a vehicle by its ID.
+  """
+  deleteVehicle(id: ID!): Boolean!
+}

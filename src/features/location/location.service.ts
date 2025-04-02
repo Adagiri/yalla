@@ -1,18 +1,36 @@
 import Location from './location.model';
 import { ErrorResponse } from '../../utils/responses';
 import { filterNullAndUndefined } from '../../utils/general';
-import { CreateLocationInput, UpdateLocationInput } from './location.types';
+import { CreateLocationInput, LocationFilter, LocationSort, UpdateLocationInput } from './location.types';
 import GoogleServices from '../../services/google.services';
+import { Pagination } from '../../types/list-resources';
+import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
 
 class LocationService {
   /**
    * List all locations.
    */
-  static async listLocations() {
+  static async listLocations(
+    pagination?: Pagination,
+    filter?: LocationFilter,
+    sort?: LocationSort
+  ) {
     try {
-      return await Location.find();
+      const baseFilter = {
+        $or: [{ isEmailVerified: true }, { isPhoneVerified: true }],
+      };
+
+      const data = await listResourcesPagination({
+        model: Location,
+        baseFilter,
+        additionalFilter: filter,
+        sortParam: sort,
+        pagination,
+      });
+
+      return data;
     } catch (error: any) {
-      throw new ErrorResponse(500, 'Error fetching locations', error.message);
+      throw new ErrorResponse(500, 'Error fetching vehicles', error.message);
     }
   }
 

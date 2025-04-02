@@ -1,13 +1,12 @@
 import { AccountLevel, AuthChannel } from '../../constants/general';
 
-export interface RegisterDriverInput {
-  email: string;
+export interface RegisterCustomerInput {
   phone: { countryCode: string; localNumber: string; fullPhone: string };
   password: string;
   authChannel: AuthChannel;
 }
 
-export interface AddDriverInput {
+export interface AddCustomerInput {
   name: string;
   unitId: string;
   email?: string;
@@ -16,7 +15,7 @@ export interface AddDriverInput {
   level: AccountLevel;
 }
 
-export interface DriverFilter {
+export interface CustomerFilter {
   ids?: string[];
   firstName?: string;
   lastName?: string;
@@ -26,26 +25,27 @@ export interface DriverFilter {
   authChannels?: AuthChannel[];
 }
 
-export interface DriverSort {
+export interface CustomerSort {
   field: 'firstName' | 'lastName' | 'email' | 'createdAt' | 'updatedAt';
   direction: 'ASC' | 'DESC';
 }
 
 /**
- * Input for updating a driver's personal information.
+ * Input for updating a customer's personal information.
  */
-export interface UpdateDriverPersonalInfoInput {
+export interface UpdateCustomerPersonalInfoInput {
+  email: string;
   firstName: string;
   lastName: string;
   locationId: string;
 }
 
 /**
- * Input for updating a driver's license images.
+ * Input for updating a customer's license images.
  */
-export interface UpdateDriverLicenseInput {
-  driverLicenseFront: string;
-  driverLicenseBack: string;
+export interface UpdateCustomerLicenseInput {
+  customerLicenseFront: string;
+  customerLicenseBack: string;
 }
 
 export interface UpdateProfilePhotoInput {

@@ -27,6 +27,11 @@ const driverResolvers = {
       protectEntities(['DRIVER', 'ADMIN']),
       DriverController.updateDriverLicense
     ),
+
+    updateProfilePhoto: combineResolvers(
+      protectEntities(['DRIVER', 'ADMIN']),
+      DriverController.updateProfilePhoto
+    ),
   },
 };
 

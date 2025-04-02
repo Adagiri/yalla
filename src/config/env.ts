@@ -13,6 +13,8 @@ export const ENV = {
   AWS_REGION: process.env.AWS_REGION || '',
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || '',
+  AWS_S3_ASSET_UPLOAD_BUCKET: process.env.AWS_S3_ASSET_UPLOAD_BUCKET || '',
+  AWS_ASSET_HOSTNAME: process.env.AWS_ASSET_HOSTNAME || '',
   SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || '',
 
   // Twilio Configuration

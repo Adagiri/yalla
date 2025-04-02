@@ -1,3 +1,21 @@
+enum LocationSortField {
+  name
+  createdAt
+  updatedAt
+}
+
+input LocationSort {
+  field: LocationSortField!
+  direction: SortDirection = ASC
+}
+
+input LocationFilter {
+  "IDs of locations to match"
+  ids: [ID!]
+  name: String
+  address: String
+}
+
 """
 Represents a geographical coordinate.
 """

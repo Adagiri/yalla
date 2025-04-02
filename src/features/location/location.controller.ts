@@ -1,10 +1,26 @@
+import { ContextType } from '../../types';
+import { Pagination } from '../../types/list-resources';
+import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
 import LocationService from './location.service';
-import { CreateLocationInput, UpdateLocationInput } from './location.types';
+import { CreateLocationInput, LocationFilter, LocationSort, UpdateLocationInput } from './location.types';
 
 class LocationController {
-  static async listLocations(_: any, __: any) {
-    const locations = await LocationService.listLocations();
-    return locations;
+  static async listLocations(
+    _: any,
+    {
+      pagination,
+      filter,
+      sort,
+    }: { pagination?: Pagination; filter?: LocationFilter; sort?: LocationSort },
+    { res }: ContextType
+  ) {
+    const { data, paginationResult } = await LocationService.listLocations(
+      pagination,
+      filter,
+      sort
+    );
+    setPagePaginationHeaders(res, paginationResult);
+    return data;
   }
 
   static async getLocation(_: any, { id }: { id: string }) {

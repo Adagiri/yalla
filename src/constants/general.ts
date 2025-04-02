@@ -187,6 +187,17 @@ export const ReceivableReason = {
 export type ReceivableReason =
   (typeof ReceivableReason)[keyof typeof ReceivableReason];
 
+const UploadUrlPurposeProduct = 'PRODUCT';
+const UploadUrlPurposeProfilePhoto = 'PROFILE_PHOTO';
+
+export const UploadUrlPurpose = {
+  Product: UploadUrlPurposeProduct,
+  ProfilePhoto: UploadUrlPurposeProfilePhoto,
+} as const;
+
+export type UploadUrlPurpose =
+  (typeof UploadUrlPurpose)[keyof typeof UploadUrlPurpose];
+
 export const PaymentStatusEnum: string[] = Object.values(PaymentStatus);
 export const AccountTypeEnum: string[] = Object.values(AccountType);
 export const AuthChannelEnum: string[] = Object.values(AuthChannel);
@@ -204,3 +215,4 @@ export const PaymentRecurringFrequencyEnum: string[] = Object.values(
   PaymentRecurringFrequency
 );
 export const ReceivableReasonEnum: string[] = Object.values(ReceivableReason);
+export const UploadUrlPurposeEnum: string[] = Object.values(UploadUrlPurpose);

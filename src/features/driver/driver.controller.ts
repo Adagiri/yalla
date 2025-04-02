@@ -7,8 +7,9 @@ import {
   RegisterDriverInput,
   DriverFilter,
   DriverSort,
-  UpdatePersonalInfoInput,
+  UpdateDriverPersonalInfoInput,
   UpdateDriverLicenseInput,
+  UpdateProfilePhotoInput,
 } from './driver.type';
 
 class DriverController {
@@ -48,7 +49,7 @@ class DriverController {
 
   static async updatePersonalInfo(
     _: any,
-    { input }: { input: UpdatePersonalInfoInput },
+    { input }: { input: UpdateDriverPersonalInfoInput },
     { user }: ContextType
   ) {
     // Use the logged in driver's id for the update
@@ -65,6 +66,18 @@ class DriverController {
     { user }: ContextType
   ) {
     const updatedDriver = await DriverService.updateDriverLicense(
+      user.id,
+      input
+    );
+    return updatedDriver;
+  }
+
+  static async updateProfilePhoto(
+    _: any,
+    { input }: { input: UpdateProfilePhotoInput },
+    { user }: ContextType
+  ) {
+    const updatedDriver = await DriverService.updateProfilePhoto(
       user.id,
       input
     );

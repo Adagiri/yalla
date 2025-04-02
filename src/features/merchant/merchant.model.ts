@@ -3,7 +3,7 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { v4 as uuidv4 } from 'uuid';
 import { AccountType, AuthChannelEnum } from '../../constants/general';
 
-export interface DriverModelType extends Document {
+export interface MerchantModelType extends Document {
   id?: string; // UUID
   firstname: string;
   lastname: string;
@@ -38,31 +38,25 @@ export interface DriverModelType extends Document {
   mfaActiveMethod: string | null;
   isMFAEnabled: boolean;
 
-  // profile and driver license info
+  // profile and merchant license info
   profilePhoto: string;
   profilePhotoSet: boolean;
-  driverLicenseVerified: boolean;
   personalInfoSet: boolean;
-  vehicleInfoSet: boolean;
-  driverLicenseFront?: string;
-  driverLicenseBack?: string;
-  vehicleId?: string;
 
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface DriverModelPartialType extends Document {
+export interface MerchantModelPartialType extends Document {
   id?: string;
   name: string;
 }
 
-const driverSchema = new Schema<DriverModelType>(
+const merchantSchema = new Schema<MerchantModelType>(
   {
     _id: { type: String, default: uuidv4 },
     accountType: { type: String, default: AccountType.DRIVER },
     locationId: { type: String },
-    vehicleId: { type: String },
     firstname: { type: String },
     lastname: { type: String },
     email: {
@@ -106,14 +100,10 @@ const driverSchema = new Schema<DriverModelType>(
     mfaVerificationExpiry: { type: Date },
     mfaActiveMethod: { type: String, enum: AuthChannelEnum },
 
-    // New fields for additional driver info
+    // New fields for additional merchant info
     profilePhoto: { type: String },
     profilePhotoSet: { type: Boolean, default: false },
-    driverLicenseVerified: { type: Boolean, default: false },
     personalInfoSet: { type: Boolean, default: false },
-    vehicleInfoSet: { type: Boolean, default: false },
-    driverLicenseFront: { type: String },
-    driverLicenseBack: { type: String },
 
     createdAt: {
       type: Date,
@@ -131,31 +121,31 @@ const driverSchema = new Schema<DriverModelType>(
   }
 );
 
-driverSchema.virtual('location', {
+merchantSchema.virtual('location', {
   ref: 'Location',
   localField: 'locationId',
   foreignField: '_id',
   justOne: true,
 });
 
-driverSchema.virtual('vehicle', {
+merchantSchema.virtual('vehicle', {
   ref: 'Vehicle',
   localField: 'vehicleId',
   foreignField: '_id',
   justOne: true,
 });
 
-driverSchema.pre(
+merchantSchema.pre(
   /^find/,
-  function (this: mongoose.Query<any, DriverModelType>, next) {
+  function (this: mongoose.Query<any, MerchantModelType>, next) {
     this.populate('location vehicle');
     next();
   }
 );
 
-driverSchema.index({ locationId: 1 });
+merchantSchema.index({ locationId: 1 });
 
-driverSchema.pre<DriverModelType>('save', function (next) {
+merchantSchema.pre<MerchantModelType>('save', function (next) {
   if (this.phone && this.phone.fullPhone) {
     const phoneNumber = parsePhoneNumberFromString(this.phone.fullPhone);
     if (!phoneNumber || !phoneNumber.isValid()) {
@@ -169,6 +159,6 @@ driverSchema.pre<DriverModelType>('save', function (next) {
   next();
 });
 
-const Driver = mongoose.model<DriverModelType>('Driver', driverSchema);
+const Merchant = mongoose.model<MerchantModelType>('Merchant', merchantSchema);
 
-export default Driver;
+export default Merchant;

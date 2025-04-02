@@ -1,5 +1,5 @@
-# Enum for sorting driver results. We now support sorting by firstname, lastname, email, createdAt, and updatedAt.
-enum DriverSortField {
+# Enum for sorting customer results. We now support sorting by firstname, lastname, email, createdAt, and updatedAt.
+enum CustomerSortField {
   firstname
   lastname
   email
@@ -11,17 +11,17 @@ enum DriverSortField {
 Specify which field to sort by (e.g., firstname, email)
 and in which direction (ASC or DESC).
 """
-input DriverSort {
-  field: DriverSortField!
+input CustomerSort {
+  field: CustomerSortField!
   direction: SortDirection = ASC
 }
 
 """
-Filters for searching drivers by various fields.
+Filters for searching customers by various fields.
 All fields are optional; if provided, they constrain the query results.
 """
-input DriverFilter {
-  "IDs of drivers to match"
+input CustomerFilter {
+  "IDs of customers to match"
   ids: [ID!]
   firstname: String
   lastname: String
@@ -50,10 +50,9 @@ type Phone {
 }
 
 """
-Used when registering a new driver.
+Used when registering a new customer.
 """
-input RegisterDriverInput {
-  email: String!
+input RegisterCustomerInput {
   phone: PhoneInput!
   password: String!
   authChannel: AuthChannel!
@@ -62,37 +61,29 @@ input RegisterDriverInput {
 """
 Input type for updating personal information.
 """
-input UpdateDriverPersonalInfoInput {
+input UpdateCustomerPersonalInfoInput {
+  email: String!
   firstname: String!
   lastname: String!
   locationId: ID!
-}
-
-"""
-Input type for updating driver license images.
-"""
-input UpdateDriverLicenseInput {
-  driverLicenseFront: String!
-  driverLicenseBack: String!
 }
 
 input UpdateProfilePhotoInput {
   src: String!
 }
 """
-A driver as stored in the system.
+A customer as stored in the system.
 Note: the underlying model stores firstname, lastname, email, phone (as an object),
 accountType, locationId, and verification/MFA details.
 """
-type Driver {
+type Customer {
   id: ID!
   firstname: String
   lastname: String
-  email: String!
-  phone: Phone
+  email: String
+  phone: Phone!
   accountType: String!
   locationId: ID
-  vehicleId: ID
   isEmailVerified: Boolean!
   isPhoneVerified: Boolean!
   isMFAEnabled: Boolean!
@@ -101,39 +92,33 @@ type Driver {
   updatedAt: DateTime!
   # Optionally, if you want to expose the populated location:
   location: Location
-  vehicle: Vehicle
 
-  # New fields for profile and driver license status
+  # New fields for profile and customer license status
   profilePhotoSet: Boolean!
   profilePhoto: String
   personalInfoSet: Boolean!
-  vehicleInfoSet: Boolean!
-  driverLicenseVerified: Boolean!
-  driverLicenseFront: String
-  driverLicenseBack: String
-  vehicleInspectionDone: Boolean!
 }
 
-type DriverPartial {
+type CustomerPartial {
   id: ID!
   firstname: String!
   lastname: String!
 }
 
 extend type Query {
-  listDrivers(
+  listCustomers(
     pagination: PaginationInput
-    filter: DriverFilter
-    sort: DriverSort
-  ): [Driver!]!
+    filter: CustomerFilter
+    sort: CustomerSort
+  ): [Customer!]!
 
-  getDriver(id: ID!): Driver!
-  loggedInDriver: Driver!
+  getCustomer(id: ID!): Customer!
+  loggedInCustomer: Customer!
 }
 
 extend type Mutation {
-  registerDriver(input: RegisterDriverInput!): AuthPayload!
-  updatePersonalInfo(input: UpdateCustomerPersonalInfoInput!): Driver!
-  updateProfilePhoto(input: UpdateProfilePhotoInput!): Driver!
-  updateDriverLicense(input: UpdateDriverLicenseInput!): Driver!
+  registerCustomer(input: RegisterCustomerInput!): AuthPayload!
+  updatePersonalInfo(input: UpdateCustomerPersonalInfoInput!): Customer!
+  updateProfilePhoto(input: UpdateProfilePhotoInput!): Customer!
+  updateCustomerLicense(input: UpdateCustomerLicenseInput!): Customer!
 }

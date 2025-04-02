@@ -13,6 +13,7 @@ import {
   AuthChannelEMAIL,
   AuthChannelSMS,
   EmailTemplate,
+  UploadUrlPurposeEnum,
 } from '../../constants/general';
 import NotificationService from '../../services/notification.services';
 import {
@@ -31,7 +32,11 @@ import {
   ResetPasswordInput,
   VerifyCodeInput,
 } from '../../types/auth';
-import { generateRandomNumbers } from '../../utils/general';
+import {
+  generateRandomNumbers,
+  generateRandomString,
+} from '../../utils/general';
+import AWSServices from '../../services/aws.services';
 import PaystackService from '../../services/paystack.services';
 
 class GeneralService {
@@ -49,6 +54,51 @@ class GeneralService {
       throw new ErrorResponse(500, 'Error fetching banks', error.message);
     }
   }
+
+  /**
+   * Returns the image upload URL and public URL for the file.
+   * @param contentType - The MIME type of the file.
+   * @param purpose - The purpose of the upload (e.g., 'profile_picture', 'complaints', 'communication').
+   */
+  static async getImageUploadUrl(contentType: string, purpose: string) {
+    try {
+      const allowedPurposes = UploadUrlPurposeEnum;
+      if (!allowedPurposes.includes(purpose)) {
+        throw new ErrorResponse(400, 'Unsupported purpose option');
+      }
+
+      const allowedContentTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+      if (!allowedContentTypes.includes(contentType)) {
+        throw new ErrorResponse(400, 'Please upload a jpeg or png file');
+      }
+
+      const randomString = generateRandomString(30);
+      // Extract file extension from the MIME type (e.g., "image/png" => "png")
+      const extension = contentType.slice(6);
+      const key = `${purpose}/${randomString}.${extension}`;
+
+      // Generate the pre-signed URL for upload.
+      const uploadUrl = await AWSServices.generateS3SignedUrl(key, contentType);
+      if (!uploadUrl) {
+        throw new ErrorResponse(500, 'Could not generate S3 signed URL');
+      }
+
+      // Construct the public URL for accessing the file after upload.
+      const url = `https://${process.env.AWS_ASSET_HOSTNAME}/${key}`;
+
+      return {
+        uploadUrl,
+        url,
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error generating upload URL',
+        error.message
+      );
+    }
+  }
+
   static async resendCode({ token, model }: ResendCodeInput) {
     const dbEncryptedToken = getEncryptedToken(token);
 
@@ -224,14 +274,13 @@ class GeneralService {
       const now = Date.now();
       const response: any = {};
 
-      const entity: DriverModelType  | null =
-        await model.findOne({
-          $or: [
-            { emailVerificationToken: encryptedToken },
-            { phoneVerificationToken: encryptedToken },
-            { mfaVerificationToken: encryptedToken },
-          ],
-        });
+      const entity: DriverModelType | null = await model.findOne({
+        $or: [
+          { emailVerificationToken: encryptedToken },
+          { phoneVerificationToken: encryptedToken },
+          { mfaVerificationToken: encryptedToken },
+        ],
+      });
 
       if (!entity) throw new ErrorResponse(404, 'Invalid token');
 
@@ -407,7 +456,7 @@ class GeneralService {
     authChannel,
   }: RequestResetPasswordInput): Promise<Boolean> {
     try {
-      let entity: DriverModelType  | null;
+      let entity: DriverModelType | null;
 
       if (
         !authChannel ||
@@ -486,10 +535,9 @@ class GeneralService {
     try {
       const encryptedToken = getEncryptedToken(token);
 
-      const entity: DriverModelType  | null =
-        await model.findOne({
-          resetPasswordToken: encryptedToken,
-        });
+      const entity: DriverModelType | null = await model.findOne({
+        resetPasswordToken: encryptedToken,
+      });
 
       if (!entity) throw new ErrorResponse(404, 'Invalid token');
 

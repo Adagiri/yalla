@@ -15,6 +15,11 @@ enum AuthChannel {
   GOOGLE
 }
 
+enum UploadUrl {
+  PROFILE_PHOTO
+  PRODUCT
+}
+
 enum PaymentPurpose {
   ADD_CARD
   PAY_INVOICE
@@ -187,4 +192,13 @@ input KeysetPaginationInput {
 input PaginationInput {
   page: Int! # Page number (1-based index)
   limit: Int! # Number of items per page
+}
+type ImageUploadUrlResponse {
+  uploadUrl: String!
+  url: String!
+}
+
+input ImageUploadUrlInput {
+  purpose: UploadUrl!
+  contentType: String!
 }

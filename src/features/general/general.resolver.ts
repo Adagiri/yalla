@@ -22,7 +22,6 @@ const managerResolvers = {
         return 'Admin';
       }
 
-   
       if (obj.accountType === AccountType.DRIVER) {
         return 'Driver';
       }
@@ -30,6 +29,7 @@ const managerResolvers = {
   },
   Query: {
     getBankCodes: GeneralController.getBankCodes,
+    getImageUploadUrl: GeneralController.getImageUploadUrl,
   },
   Mutation: {
     resendCode: GeneralController.resendCode,

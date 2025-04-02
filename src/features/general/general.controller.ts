@@ -9,11 +9,28 @@ const models: any = {
   driver: Driver,
 };
 
+interface ImageUploadUrlInput {
+  purpose: string;
+  contentType: string;
+}
+
 class GeneralController {
   static async getBankCodes() {
     const response = await GeneralService.getBankCodes();
     return response;
   }
+
+  static async getImageUploadUrl(
+    _: any,
+    { input }: { input: ImageUploadUrlInput }
+  ) {
+    const response = await GeneralService.getImageUploadUrl(
+      input.contentType,
+      input.purpose
+    );
+    return response;
+  }
+
   static async resendCode(_: any, { input }: { input: any }) {
     const accountType = input.accountType.toLowerCase();
     const model = models[accountType];
