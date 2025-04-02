@@ -17,7 +17,7 @@ export interface Bounds {
 export interface VehicleFilter {
   ids?: string[];
   brand?: string;
-  model?: string;
+  modelName?: string;
   manufactureYear?: string;
   color?: string;
   identificationNumber?: string;
@@ -25,7 +25,7 @@ export interface VehicleFilter {
 }
 
 export interface VehicleSort {
-  field: 'brand' | 'model' | 'createdAt' | 'updatedAt';
+  field: 'brand' | 'modelName' | 'createdAt' | 'updatedAt';
   direction: 'ASC' | 'DESC';
 }
 
@@ -39,7 +39,7 @@ export interface BaseVehicleInput {}
  */
 export interface CreateVehicleInput extends BaseVehicleInput {
   brand: string;
-  model: string;
+  modelName: string;
   manufactureYear: string;
   color: string;
   identificationNumber: string;
@@ -52,7 +52,7 @@ export interface CreateVehicleInput extends BaseVehicleInput {
  */
 export interface UpdateVehicleInput extends Partial<BaseVehicleInput> {
   brand: string;
-  model: string;
+  modelName: string;
   manufactureYear: string;
   color: string;
   identificationNumber: string;

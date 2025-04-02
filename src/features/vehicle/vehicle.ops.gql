@@ -1,6 +1,6 @@
 enum VehicleSortField {
   brand
-  model
+  modelName
   createdAt
   updatedAt
 }
@@ -18,7 +18,7 @@ input VehicleFilter {
   "IDs of drivers to match"
   ids: [ID!]
   brand: String
-  model: String
+  modelName: String
   manufactureYear: String
   color: String
   identificationNumber: String
@@ -28,7 +28,7 @@ input VehicleFilter {
 type Vehicle {
   id: ID!
   brand: String!
-  model: String!
+  modelName: String!
   manufactureYear: String!
   color: String!
   identificationNumber: String!
@@ -42,7 +42,7 @@ Input type for creating or updating a vehicle.
 """
 input VehicleInput {
   brand: String!
-  model: String!
+  modelName: String!
   manufactureYear: String!
   color: String!
   identificationNumber: String!
