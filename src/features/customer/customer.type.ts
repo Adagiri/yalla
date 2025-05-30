@@ -15,31 +15,6 @@ export interface AddCustomerInput {
   level: AccountLevel;
 }
 
-export interface CustomerFilter {
-  ids?: string[];
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  locationId?: string;
-  isMFAEnabled?: boolean;
-  authChannels?: AuthChannel[];
-}
-
-export interface CustomerSort {
-  field: 'firstName' | 'lastName' | 'email' | 'createdAt' | 'updatedAt';
-  direction: 'ASC' | 'DESC';
-}
-
-/**
- * Input for updating a customer's personal information.
- */
-export interface UpdateCustomerPersonalInfoInput {
-  email: string;
-  firstName: string;
-  lastName: string;
-  locationId: string;
-}
-
 /**
  * Input for updating a customer's license images.
  */
@@ -50,4 +25,26 @@ export interface UpdateCustomerLicenseInput {
 
 export interface UpdateProfilePhotoInput {
   src: string;
+}
+
+export interface UpdateCustomerPersonalInfoInput {
+  email: string;
+  firstname: string; // Changed from firstname
+  lastname: string; // Changed from lastname
+  locationId: string;
+}
+
+export interface CustomerFilter {
+  ids?: string[];
+  firstname?: string; // Changed from firstname
+  lastname?: string; // Changed from lastname
+  email?: string;
+  locationId?: string;
+  isMFAEnabled?: boolean;
+  authChannels?: AuthChannel[];
+}
+
+export interface CustomerSort {
+  field: 'firstname' | 'lastname' | 'email' | 'createdAt' | 'updatedAt'; // Updated field names
+  direction: 'ASC' | 'DESC';
 }

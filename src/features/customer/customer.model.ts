@@ -54,7 +54,7 @@ export interface CustomerModelPartialType extends Document {
 const customerSchema = new Schema<CustomerModelType>(
   {
     _id: { type: String, default: uuidv4 },
-    accountType: { type: String, default: AccountType.DRIVER },
+    accountType: { type: String, default: AccountType.CUSTOMER },
     locationId: { type: String },
     firstname: { type: String },
     lastname: { type: String },

@@ -1,14 +1,14 @@
 type Admin {
   id: ID!
   name: String!
-  email: String!
-  phone: String!
+  email: String
+  phone: Phone
 }
 
 input CreateAdminInput {
   name: String!
-  email: String!
-  phone: String!
+  email: String
+  phone: PhoneInput
 }
 
 type EmailTemplate {

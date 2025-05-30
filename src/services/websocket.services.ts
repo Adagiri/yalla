@@ -299,63 +299,65 @@ class WebSocketService {
         currentLocation: driver.currentLocation,
       };
 
-      // Notify the customer
-      await NotificationService.sendTripNotification(
-        trip.customerId,
-        'customer',
-        'trip_accepted',
-        {
-          ...trip.toObject(),
-          driverName: driverDetails.name,
-          driverPhone: driverDetails.phone.fullPhone,
-          driverPhoto: driverDetails.photo,
-          driverRating: driverDetails.rating,
-          vehicleNumber: driverDetails.vehicle?.plateNumber,
-          vehicleBrand: driverDetails.vehicle?.brand,
-          vehicleModel: driverDetails.vehicle?.modelName,
-          vehicleColor: driverDetails.vehicle?.color,
+      if (trip !== null) {
+        // Notify the customer
+        await NotificationService.sendTripNotification(
+          trip.customerId,
+          'customer',
+          'trip_accepted',
+          {
+            ...trip.toObject(),
+            driverName: driverDetails.name,
+            driverPhone: driverDetails.phone.fullPhone,
+            driverPhoto: driverDetails.photo,
+            driverRating: driverDetails.rating,
+            vehicleNumber: driverDetails.vehicle?.plateNumber,
+            vehicleBrand: driverDetails.vehicle?.brand,
+            vehicleModel: driverDetails.vehicle?.modelName,
+            vehicleColor: driverDetails.vehicle?.color,
+            estimatedArrival: trip.estimatedArrival,
+          }
+        );
+
+        // Send real-time update to customer
+        this.io.to(`user:${trip.customerId}`).emit('trip_accepted', {
+          tripId: trip._id,
+          driver: driverDetails,
           estimatedArrival: trip.estimatedArrival,
-        }
-      );
+          message: 'Your trip has been accepted!',
+        });
 
-      // Send real-time update to customer
-      this.io.to(`user:${trip.customerId}`).emit('trip_accepted', {
-        tripId: trip._id,
-        driver: driverDetails,
-        estimatedArrival: trip.estimatedArrival,
-        message: 'Your trip has been accepted!',
-      });
+        // Notify other drivers that the trip is no longer available
+        this.io.emit('trip_no_longer_available', { tripId });
 
-      // Notify other drivers that the trip is no longer available
-      this.io.emit('trip_no_longer_available', { tripId });
+        // Join trip-specific room for location sharing
+        socket.join(`trip:${tripId}`);
 
-      // Join trip-specific room for location sharing
-      socket.join(`trip:${tripId}`);
+        // Send success response to the accepting driver
+        socket.emit('trip_acceptance_success', {
+          trip: {
+            id: trip._id,
+            pickup: trip.pickup,
+            destination: trip.destination,
+            //   customer: {
+            //     name: trip.name,
+            //     phone: trip.customerPhone,
+            //     rating: trip.customerRating,
+            //   },
+            pricing: trip.pricing,
+            paymentMethod: trip.paymentMethod,
+            verificationPin: trip.verificationPin,
+            estimatedArrival: trip.estimatedArrival,
+          },
+          message: 'Trip accepted successfully!',
+        });
 
-      // Send success response to the accepting driver
-      socket.emit('trip_acceptance_success', {
-        trip: {
-          id: trip._id,
-          pickup: trip.pickup,
-          destination: trip.destination,
-          //   customer: {
-          //     name: trip.name,
-          //     phone: trip.customerPhone,
-          //     rating: trip.customerRating,
-          //   },
-          pricing: trip.pricing,
-          paymentMethod: trip.paymentMethod,
-          verificationPin: trip.verificationPin,
-          estimatedArrival: trip.estimatedArrival,
-        },
-        message: 'Trip accepted successfully!',
-      });
-
-      // Start location tracking for this trip
-      socket.emit('start_location_tracking', {
-        tripId,
-        updateInterval: 5000, // Update every 5 seconds
-      });
+        // Start location tracking for this trip
+        socket.emit('start_location_tracking', {
+          tripId,
+          updateInterval: 5000, // Update every 5 seconds
+        });
+      }
     } catch (error: any) {
       console.error('Error handling trip acceptance:', error);
 
@@ -495,6 +497,94 @@ class WebSocketService {
       const estimatedMinutes = Math.round(distance / 500); // Rough estimate: 500m per minute
       return new Date(Date.now() + estimatedMinutes * 60 * 1000);
     }
+  }
+
+  /**
+   * Broadcast message to all connected users
+   */
+  public broadcastToAll(event: string, data: any): void {
+    try {
+      this.io.emit(event, {
+        ...data,
+        timestamp: new Date(),
+      });
+      console.log(`📡 Broadcasted ${event} to all connected users`);
+    } catch (error) {
+      console.error('Error broadcasting to all users:', error);
+    }
+  }
+
+  /**
+   * Broadcast to all drivers only
+   */
+  public broadcastToDrivers(event: string, data: any): void {
+    try {
+      // Get all connected driver sockets
+      this.io.sockets.sockets.forEach((socket) => {
+        if (socket.data.userType === 'DRIVER') {
+          socket.emit(event, {
+            ...data,
+            timestamp: new Date(),
+          });
+        }
+      });
+      console.log(`📡 Broadcasted ${event} to all connected drivers`);
+    } catch (error) {
+      console.error('Error broadcasting to drivers:', error);
+    }
+  }
+
+  /**
+   * Broadcast to all customers only
+   */
+  public broadcastToCustomers(event: string, data: any): void {
+    try {
+      // Get all connected customer sockets
+      this.io.sockets.sockets.forEach((socket) => {
+        if (socket.data.userType === 'CUSTOMER') {
+          socket.emit(event, {
+            ...data,
+            timestamp: new Date(),
+          });
+        }
+      });
+      console.log(`📡 Broadcasted ${event} to all connected customers`);
+    } catch (error) {
+      console.error('Error broadcasting to customers:', error);
+    }
+  }
+
+  /**
+   * Get connected users count by type
+   */
+  public getConnectedUsersCount(): {
+    drivers: number;
+    customers: number;
+    total: number;
+  } {
+    let drivers = 0;
+    let customers = 0;
+
+    this.io.sockets.sockets.forEach((socket) => {
+      if (socket.data.userType === 'DRIVER') drivers++;
+      else if (socket.data.userType === 'CUSTOMER') customers++;
+    });
+
+    return {
+      drivers,
+      customers,
+      total: drivers + customers,
+    };
+  }
+
+  /**
+   * Check if user is connected
+   */
+  public isUserConnected(userId: string): boolean {
+    return (
+      this.userSockets.has(userId) &&
+      (this.userSockets.get(userId)?.length || 0) > 0
+    );
   }
 }
 

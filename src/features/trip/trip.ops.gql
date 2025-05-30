@@ -46,16 +46,14 @@ enum TimelineEventType {
   cancelled
 }
 
-# ===== BASIC TYPES =====
-type Coordinates {
-  lat: Float!
-  lng: Float!
+type LocationCoordinate {
+  coordinates: [Float!]!
 }
 
+# ===== BASIC TYPES =====
 type TripLocation {
   address: String!
-  coordinates: Coordinates!
-  estateId: ID
+  location: LocationCoordinate!
   estate: Location
 }
 
@@ -88,15 +86,15 @@ type TimelineEvent {
 }
 
 type PathPoint {
-  coordinates: Coordinates!
+  coordinates: [Float!]!
   timestamp: DateTime!
 }
 
 type DriverLocationInfo {
-  coordinates: Coordinates!
+  coordinates: [Float!]
   heading: Float
   speed: Float
-  updatedAt: DateTime!
+  updatedAt: DateTime
 }
 
 # ===== MAIN TYPES =====
@@ -105,8 +103,8 @@ type Trip {
   tripNumber: String!
 
   # Users
-  driver: Driver
-  customer: Customer
+  driver: DriverPartial
+  customer: CustomerPartial
 
   # Locations
   pickup: TripLocation!
@@ -187,14 +185,18 @@ type PaymentResult {
 }
 
 # ===== INPUT TYPES =====
+
 input CoordinatesInput {
-  lat: Float!
-  lng: Float!
+  coordinates: [Float!]! # [longitude, latitude]
 }
 
 input LocationInput {
   address: String!
-  coordinates: CoordinatesInput!
+  coordinates: [Float!]! # [longitude, latitude]
+}
+
+type Coordinates {
+  coordinates: [Float!]! # [longitude, latitude]
 }
 
 input CreateTripInput {
@@ -206,7 +208,7 @@ input CreateTripInput {
 
 input UpdateDriverLocationInput {
   tripId: ID! # Added missing tripId
-  coordinates: CoordinatesInput!
+  coordinates: [Float!]! # [longitude, latitude]
   heading: Float
   speed: Float
 }
@@ -293,7 +295,7 @@ extend type Query {
 
   # Find nearby drivers (for customers/admin)
   findNearbyDrivers(
-    location: CoordinatesInput!
+    location: [Float!]! # [longitude, latitude]
     radius: Float = 5000
   ): [Driver!]!
 

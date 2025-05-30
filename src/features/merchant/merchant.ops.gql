@@ -81,7 +81,7 @@ type Merchant {
   firstname: String
   lastname: String
   email: String
-  phone: Phone!
+  phone: Phone
   accountType: String!
   locationId: ID
   isEmailVerified: Boolean!

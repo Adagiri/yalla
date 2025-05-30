@@ -83,9 +83,9 @@ type PaginatedPayload {
   hasPreviousPage: Boolean!
 }
 
-union AuthEntity = Driver
+union AuthEntity = Driver | Customer | Admin
 
-union AccountEntity = Driver
+union AccountEntity = Driver | Customer | Admin
 
 input EnableMfaInput {
   authChannel: AuthChannel! # Type of MFA: 'email' or 'sms'

@@ -17,8 +17,8 @@ export interface AddMerchantInput {
 
 export interface MerchantFilter {
   ids?: string[];
-  firstName?: string;
-  lastName?: string;
+  firstname?: string;
+  lastname?: string;
   email?: string;
   locationId?: string;
   isMFAEnabled?: boolean;
@@ -26,7 +26,7 @@ export interface MerchantFilter {
 }
 
 export interface MerchantSort {
-  field: 'firstName' | 'lastName' | 'email' | 'createdAt' | 'updatedAt';
+  field: 'firstname' | 'lastname' | 'email' | 'createdAt' | 'updatedAt';
   direction: 'ASC' | 'DESC';
 }
 
@@ -35,8 +35,8 @@ export interface MerchantSort {
  */
 export interface UpdateMerchantPersonalInfoInput {
   email: string;
-  firstName: string;
-  lastName: string;
+  firstname: string;
+  lastname: string;
   locationId: string;
 }
 

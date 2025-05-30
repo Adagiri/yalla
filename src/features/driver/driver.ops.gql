@@ -32,24 +32,6 @@ input DriverFilter {
 }
 
 """
-Input type for phone details.
-"""
-input PhoneInput {
-  countryCode: String!
-  localNumber: String!
-  fullPhone: String!
-}
-
-"""
-Type representing a phone.
-"""
-type Phone {
-  countryCode: String!
-  localNumber: String!
-  fullPhone: String!
-}
-
-"""
 Used when registering a new driver.
 """
 input RegisterDriverInput {
@@ -88,7 +70,7 @@ type Driver {
   id: ID!
   firstname: String
   lastname: String
-  email: String!
+  email: String
   phone: Phone
   accountType: String!
   locationId: ID
@@ -112,7 +94,6 @@ type Driver {
   driverLicenseFront: String
   driverLicenseBack: String
   vehicleInspectionDone: Boolean!
-
 }
 
 type DriverPartial {

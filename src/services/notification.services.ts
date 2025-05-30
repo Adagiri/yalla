@@ -195,7 +195,8 @@ class NotificationService {
       | 'trip_accepted'
       | 'driver_arrived'
       | 'trip_started'
-      | 'trip_completed',
+      | 'trip_completed'
+      | 'trip_cancelled',
     tripData: any
   ) {
     try {

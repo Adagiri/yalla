@@ -2,11 +2,13 @@ import { ContextType } from '../../types';
 import { AuthPayload } from '../../utils/responses';
 import Admin from '../admin/admin.model';
 import Driver from '../driver/driver.model';
+import Customer from '../customer/customer.model';
 import GeneralService from './general.service';
 
 const models: any = {
   admin: Admin,
   driver: Driver,
+  customer: Customer,
 };
 
 interface ImageUploadUrlInput {

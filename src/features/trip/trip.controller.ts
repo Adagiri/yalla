@@ -1,6 +1,8 @@
 import { ContextType } from '../../types';
+import { ContextUser } from '../../types/auth';
 import { Pagination } from '../../types/list-resources';
 import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
+import { ErrorResponse } from '../../utils/responses';
 import TripService from './trip.service';
 
 interface CreateTripInput {
@@ -44,10 +46,38 @@ interface CancelTripInput {
 
 class TripController {
   // Create a new trip
-  static async createTrip(_: any, { input }: { input: CreateTripInput }) {
-    return await TripService.createTrip(input);
-  }
+  static async createTrip(
+    _: any,
+    { input }: { input: CreateTripInput },
+    { user }: { user: ContextUser }
+  ) {
+    try {
+      // Validate coordinates are numbers
+      const pickupCoords = input.pickup.coordinates;
+      const destCoords = input.destination.coordinates;
 
+      if (
+        pickupCoords.some((coord) => typeof coord !== 'number' || isNaN(coord))
+      ) {
+        throw new ErrorResponse(400, 'Invalid pickup coordinates');
+      }
+
+      if (
+        destCoords.some((coord) => typeof coord !== 'number' || isNaN(coord))
+      ) {
+        throw new ErrorResponse(400, 'Invalid destination coordinates');
+      }
+
+      input.customerId = user.id;
+      return await TripService.createTrip(input);
+    } catch (error: any) {
+      if (error instanceof ErrorResponse) {
+        throw error;
+      }
+      console.error('Trip creation controller error:', error);
+      throw new ErrorResponse(500, 'Failed to create trip', error.message);
+    }
+  }
   // Driver accepts a trip
   static async acceptTrip(
     _: any,
@@ -153,6 +183,7 @@ class TripController {
 
   // Get single trip by ID
   static async getTrip(_: any, { id }: { id: string }, { user }: ContextType) {
+    console.log(user)
     const userType =
       user.accountType === 'ADMIN'
         ? 'admin'
@@ -162,7 +193,7 @@ class TripController {
 
     return await TripService.getTripById(id, user.id, userType);
   }
-  
+
   // Get active trip for driver
   static async getActiveTrip(_: any, __: any, { user }: ContextType) {
     return await TripService.getActiveTrip(user.id);

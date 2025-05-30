@@ -18,8 +18,8 @@ export interface AddDriverInput {
 
 export interface DriverFilter {
   ids?: string[];
-  firstName?: string;
-  lastName?: string;
+  firstname?: string;
+  lastname?: string;
   email?: string;
   locationId?: string;
   isMFAEnabled?: boolean;
@@ -27,7 +27,7 @@ export interface DriverFilter {
 }
 
 export interface DriverSort {
-  field: 'firstName' | 'lastName' | 'email' | 'createdAt' | 'updatedAt';
+  field: 'firstname' | 'lastname' | 'email' | 'createdAt' | 'updatedAt';
   direction: 'ASC' | 'DESC';
 }
 
@@ -35,8 +35,8 @@ export interface DriverSort {
  * Input for updating a driver's personal information.
  */
 export interface UpdateDriverPersonalInfoInput {
-  firstName: string;
-  lastName: string;
+  firstname: string;
+  lastname: string;
   locationId: string;
 }
 

@@ -5,6 +5,7 @@ import AmazonLocationService from '../../services/amazon-location.services';
 import Location from '../location/location.model';
 import mongoose from 'mongoose';
 import NotificationService from '../../services/notification.services';
+import TripNotificationService from '../../services/trip-notification.service';
 
 interface CreateTripInput {
   customerId: string;
@@ -29,12 +30,14 @@ class TripService {
     userId?: string,
     userType?: 'customer' | 'driver' | 'admin'
   ) {
+    console.log("user type: ", userType)
     try {
       let query: any = { _id: tripId };
 
       // If not admin, restrict access to trips the user is involved in
       if (userType && userType !== 'admin') {
         if (userType === 'customer') {
+          console.log(userType);
           query.customerId = userId;
         } else if (userType === 'driver') {
           query.driverId = userId;
@@ -59,7 +62,7 @@ class TripService {
       throw new ErrorResponse(500, 'Error fetching trip', error.message);
     }
   }
-  
+
   /**
    * Calculate trip pricing based on distance and time
    */
@@ -154,6 +157,10 @@ class TripService {
         surgeMultiplier
       );
 
+      console.log('pricing: ', pricing);
+      console.log('pickup location: ', pickupLocation);
+      console.log('destination location: ', destinationLocation);
+
       // Apply customer's offered price if higher
       if (input.priceOffered && input.priceOffered > pricing.total) {
         pricing.total = input.priceOffered;
@@ -202,11 +209,18 @@ class TripService {
         tripType === 'within_estate' ? 2000 : 5000 // Search radius in meters
       );
 
-      // Send trip request to drivers (implement real-time notification)
+      // 🎯 CLEAN REFACTORED NOTIFICATION LOGIC
+      await TripNotificationService.broadcastTripToDrivers(
+        trip,
+        nearbyDrivers,
+        input.customerId
+      );
+
       // This would use WebSocket or push notifications
 
       await session.commitTransaction();
 
+      console.log(trip);
       return trip;
     } catch (error: any) {
       await session.abortTransaction();
@@ -223,78 +237,34 @@ class TripService {
     location: [number, number],
     radiusInMeters: number
   ) {
-    return await Driver.find({
-      isOnline: true,
-      isAvailable: true,
-      currentLocation: {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: location,
-          },
-          $maxDistance: radiusInMeters,
-        },
-      },
-    })
-      .limit(20)
-      .select('id firstname lastname phone currentLocation vehicleId stats');
-  }
+    try {
+      // Validate location
+      if (!Array.isArray(location) || location.length !== 2) {
+        throw new Error(
+          'Invalid location format. Expected [longitude, latitude]'
+        );
+      }
 
-  /**
-   * Calculate surge pricing multiplier based on demand
-   */
-  static async calculateSurgeMultiplier(
-    location: [number, number]
-  ): Promise<number> {
-    // Count active trips and available drivers in the area
-    const radius = 5000; // 5km radius
-    const now = new Date();
-    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
-
-    const [activeTrips, availableDrivers] = await Promise.all([
-      Trip.countDocuments({
-        status: {
-          $in: [
-            'searching',
-            'driver_assigned',
-            'driver_arrived',
-            'in_progress',
-          ],
-        },
-        requestedAt: { $gte: thirtyMinutesAgo },
-        'pickup.location': {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: location,
-            },
-            $maxDistance: radius,
-          },
-        },
-      }),
-      Driver.countDocuments({
+      // Use $geoWithin with $centerSphere instead of $near
+      return await Driver.find({
         isOnline: true,
         isAvailable: true,
         currentLocation: {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: location,
-            },
-            $maxDistance: radius,
+          $geoWithin: {
+            $centerSphere: [
+              location, // [longitude, latitude]
+              radiusInMeters / 6378100, // Convert meters to radians (Earth radius in meters)
+            ],
           },
         },
-      }),
-    ]);
-
-    const demandRatio =
-      availableDrivers > 0 ? activeTrips / availableDrivers : 3;
-
-    // Surge pricing logic
-    if (demandRatio >= 3) return 2.0;
-    if (demandRatio >= 2) return 1.5;
-    if (demandRatio >= 1.5) return 1.25;
-    return 1.0;
+      })
+        .limit(20)
+        .select('id firstname lastname phone currentLocation vehicleId stats')
+        .lean(); // Use lean() for better performance
+    } catch (error: any) {
+      console.error('Error finding nearby drivers:', error);
+      throw new Error(`Failed to find nearby drivers: ${error.message}`);
+    }
   }
 
   /**
@@ -346,7 +316,9 @@ class TripService {
 
       await session.commitTransaction();
 
-      // Notify customer (implement real-time notification)
+      await TripNotificationService.notifyDriversTripTaken(tripId, driverId);
+
+      return trip;
 
       return trip;
     } catch (error: any) {
@@ -674,39 +646,6 @@ class TripService {
   }
 
   /**
-   * Get nearby available trips for driver
-   */
-  static async getNearbyTrips(
-    driverLocation: [number, number],
-    radius: number = 5000
-  ) {
-    try {
-      const trips = await Trip.find({
-        status: 'searching',
-        'pickup.location': {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: driverLocation,
-            },
-            $maxDistance: radius,
-          },
-        },
-      })
-        .limit(10)
-        .populate('customerId');
-
-      return trips;
-    } catch (error: any) {
-      throw new ErrorResponse(
-        500,
-        'Error fetching nearby trips',
-        error.message
-      );
-    }
-  }
-
-  /**
    * Mark driver as arrived at pickup location
    */
   static async arrivedAtPickup(tripId: string, driverId: string) {
@@ -916,6 +855,95 @@ class TripService {
       throw new ErrorResponse(500, 'Error assigning trip', error.message);
     } finally {
       session.endSession();
+    }
+  }
+
+  /**
+   * Get nearby available trips for driver
+   */
+  static async getNearbyTrips(
+    driverLocation: [number, number],
+    radius: number = 5000
+  ) {
+    try {
+      // Use $geoWithin instead of $near
+      const trips = await Trip.find({
+        status: 'searching',
+        'pickup.location': {
+          $geoWithin: {
+            $centerSphere: [
+              driverLocation,
+              radius / 6378100, // Convert meters to radians
+            ],
+          },
+        },
+      })
+        .limit(10)
+        .populate('customerId')
+        .lean();
+
+      return trips;
+    } catch (error: any) {
+      throw new Error(`Error fetching nearby trips: ${error.message}`);
+    }
+  }
+
+  /**
+   * Calculate surge pricing multiplier based on demand
+   */
+  static async calculateSurgeMultiplier(
+    location: [number, number]
+  ): Promise<number> {
+    try {
+      const radius = 5000; // 5km radius
+      const now = new Date();
+      const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+
+      const [activeTrips, availableDrivers] = await Promise.all([
+        Trip.countDocuments({
+          status: {
+            $in: [
+              'searching',
+              'driver_assigned',
+              'driver_arrived',
+              'in_progress',
+            ],
+          },
+          requestedAt: { $gte: thirtyMinutesAgo },
+          'pickup.location': {
+            $geoWithin: {
+              $centerSphere: [
+                location,
+                radius / 6378100, // Convert to radians
+              ],
+            },
+          },
+        }),
+        Driver.countDocuments({
+          isOnline: true,
+          isAvailable: true,
+          currentLocation: {
+            $geoWithin: {
+              $centerSphere: [
+                location,
+                radius / 6378100, // Convert to radians
+              ],
+            },
+          },
+        }),
+      ]);
+
+      const demandRatio =
+        availableDrivers > 0 ? activeTrips / availableDrivers : 3;
+
+      // Surge pricing logic
+      if (demandRatio >= 3) return 2.0;
+      if (demandRatio >= 2) return 1.5;
+      if (demandRatio >= 1.5) return 1.25;
+      return 1.0;
+    } catch (error: any) {
+      console.error('Error calculating surge multiplier:', error);
+      return 1.0; // Default to no surge on error
     }
   }
 }

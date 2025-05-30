@@ -2,9 +2,9 @@ import jwt from 'jsonwebtoken';
 import { ErrorResponse } from './responses';
 import Admin from '../features/admin/admin.model';
 import Driver from '../features/driver/driver.model';
+import Customer from '../features/customer/customer.model';
 import { skip } from 'graphql-resolvers';
 import { AccountType } from '../constants/general';
-import Customer from '../features/customer/customer.model';
 
 export const getUserInfo = (token: string) => {
   try {
@@ -30,7 +30,7 @@ export const protectAdmin = async (
     throw new ErrorResponse(404, 'User does not exist.');
   }
 
-  if (userRecord.accountType !== 'admin') {
+  if (userRecord.accountType !== AccountType.ADMIN) {
     throw new ErrorResponse(403, 'Not authorized as admin.');
   }
 
@@ -53,7 +53,29 @@ export const protectDriver = async (
   }
 
   if (userRecord.accountType !== AccountType.DRIVER) {
-    throw new ErrorResponse(403, 'Not authorized as a user.');
+    throw new ErrorResponse(403, 'Not authorized as a driver.');
+  }
+
+  user = userRecord;
+  return skip;
+};
+
+export const protectCustomer = async (
+  _: unknown,
+  __: unknown,
+  { user }: { user: any }
+) => {
+  if (!user) {
+    throw new ErrorResponse(401, 'Please log in to continue');
+  }
+
+  const userRecord = await Customer.findById(user.id);
+  if (!userRecord) {
+    throw new ErrorResponse(404, 'User does not exist.');
+  }
+
+  if (userRecord.accountType !== AccountType.CUSTOMER) {
+    throw new ErrorResponse(403, 'Not authorized as a customer.');
   }
 
   user = userRecord;
@@ -68,28 +90,41 @@ export const protectEntities = (requiredEntities: string[]) => {
     }
 
     let userRecord: any;
+
+    // Check Admin
     if (requiredEntities.includes('ADMIN')) {
       userRecord = await Admin.findById(user.id);
+      if (userRecord && userRecord.accountType === AccountType.ADMIN) {
+        context.user = userRecord;
+        return skip;
+      }
     }
-    if (!userRecord && requiredEntities.includes('DRIVER')) {
+
+    // Check Driver
+    if (requiredEntities.includes('DRIVER')) {
       userRecord = await Driver.findById(user.id);
+      if (userRecord && userRecord.accountType === AccountType.DRIVER) {
+        context.user = userRecord;
+        return skip;
+      }
     }
-    console.log(requiredEntities, user);
-    if (!userRecord && requiredEntities.includes('CUSTOMER')) {
+
+    // Check Customer
+    if (requiredEntities.includes('CUSTOMER')) {
       userRecord = await Customer.findById(user.id);
+      if (userRecord && userRecord.accountType === AccountType.CUSTOMER) {
+        context.user = userRecord;
+        return skip;
+      }
     }
 
     if (!userRecord) {
       throw new ErrorResponse(404, 'User record not found.');
     }
 
-    if (!requiredEntities.includes(userRecord.accountType)) {
-      throw new ErrorResponse(
-        403,
-        `User is not authorized as ${userRecord.accountType}.`
-      );
-    }
-    context.user = userRecord;
-    return skip;
+    throw new ErrorResponse(
+      403,
+      `User is not authorized. Required roles: ${requiredEntities.join(', ')}`
+    );
   };
 };

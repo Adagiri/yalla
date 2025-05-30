@@ -112,7 +112,7 @@ const TripSchema = new Schema<TripDocument>(
       },
     },
 
-    driverId: { type: String, required: true, ref: 'Driver' },
+    driverId: { type: String, ref: 'Driver' },
     customerId: { type: String, required: true, ref: 'Customer' },
 
     pickup: {
@@ -135,7 +135,13 @@ const TripSchema = new Schema<TripDocument>(
 
     route: {
       distance: { type: Number, required: true },
-      duration: { type: Number, required: true },
+      duration: {
+        type: Number,
+        required: true,
+        set: function (value: number) {
+          return Math.round(value);
+        },
+      },
       polyline: { type: String },
     },
 

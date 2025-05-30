@@ -107,8 +107,8 @@ class MerchantService {
   ) {
     try {
       const updateData = filterNullAndUndefined({
-        firstname: input.firstName,
-        lastname: input.lastName,
+        firstname: input.firstname,
+        lastname: input.lastname,
         locationId: input.locationId,
         email: input.email,
         personalInfoSet: true,

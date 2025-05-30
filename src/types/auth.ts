@@ -94,3 +94,11 @@ export interface VerifyCodeInput {
   token: string;
   code: string;
 }
+
+export interface ContextUser {
+  firstname: string;
+  lastname: string;
+  _id?: string;
+  id: string;
+  email?: string;
+}

@@ -32,24 +32,6 @@ input CustomerFilter {
 }
 
 """
-Input type for phone details.
-"""
-input PhoneInput {
-  countryCode: String!
-  localNumber: String!
-  fullPhone: String!
-}
-
-"""
-Type representing a phone.
-"""
-type Phone {
-  countryCode: String!
-  localNumber: String!
-  fullPhone: String!
-}
-
-"""
 Used when registering a new customer.
 """
 input RegisterCustomerInput {
@@ -81,7 +63,7 @@ type Customer {
   firstname: String
   lastname: String
   email: String
-  phone: Phone!
+  phone: Phone
   accountType: String!
   locationId: ID
   isEmailVerified: Boolean!

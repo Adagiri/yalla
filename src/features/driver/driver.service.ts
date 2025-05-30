@@ -109,8 +109,8 @@ class DriverService {
   ) {
     try {
       const updateData = filterNullAndUndefined({
-        firstname: input.firstName,
-        lastname: input.lastName,
+        firstname: input.firstname,
+        lastname: input.lastname,
         locationId: input.locationId,
         personalInfoSet: true,
       });

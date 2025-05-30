@@ -107,13 +107,12 @@ class CustomerService {
   ) {
     try {
       const updateData = filterNullAndUndefined({
-        firstname: input.firstName,
-        lastname: input.lastName,
+        firstname: input.firstname, // Changed from input.firstname
+        lastname: input.lastname, // Changed from input.lastname
         locationId: input.locationId,
         email: input.email,
         personalInfoSet: true,
       });
-
       const location = await Location.findById(updateData.locationId);
 
       if (!location) {
