@@ -118,7 +118,6 @@ extend type Query {
 
 extend type Mutation {
   registerCustomer(input: RegisterCustomerInput!): AuthPayload!
-  updatePersonalInfo(input: UpdateCustomerPersonalInfoInput!): Customer!
-  updateProfilePhoto(input: UpdateProfilePhotoInput!): Customer!
-  updateCustomerLicense(input: UpdateCustomerLicenseInput!): Customer!
+  updateCustomerPersonalInfo(input: UpdateCustomerPersonalInfoInput!): Customer!
+  updateCustomerProfilePhoto(input: UpdateProfilePhotoInput!): Customer!
 }

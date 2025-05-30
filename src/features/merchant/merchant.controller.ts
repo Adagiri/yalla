@@ -50,7 +50,7 @@ class MerchantController {
     return new AuthPayload(response.entity, response.token);
   }
 
-  static async updatePersonalInfo(
+  static async updateMerchantPersonalInfo(
     _: any,
     { input }: { input: UpdateMerchantPersonalInfoInput },
     { user }: ContextType

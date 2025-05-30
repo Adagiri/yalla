@@ -1,0 +1,354 @@
+enum TripStatus {
+  searching
+  driver_assigned
+  driver_arrived
+  in_progress
+  completed
+  cancelled
+}
+
+enum PaymentMethod {
+  cash
+  card
+  wallet
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+}
+
+enum TripType {
+  within_estate
+  outside_estate
+}
+
+enum TripSortField {
+  requestedAt
+  completedAt
+  finalAmount
+  distance
+  status
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+enum TimelineEventType {
+  created
+  driver_assigned
+  driver_arrived
+  trip_started
+  trip_completed
+  cancelled
+}
+
+# ===== BASIC TYPES =====
+type Coordinates {
+  lat: Float!
+  lng: Float!
+}
+
+type TripLocation {
+  address: String!
+  coordinates: Coordinates!
+  estateId: ID
+  estate: Location
+}
+
+type RouteInfo {
+  distance: Float! # in kilometers
+  duration: Int! # in seconds
+  polyline: String
+}
+
+type PricingBreakdown {
+  baseFare: Float!
+  distanceCharge: Float!
+  timeCharge: Float!
+  surgeFee: Float!
+  discount: Float!
+}
+
+type TripPricing {
+  baseAmount: Float!
+  surgeMultiplier: Float!
+  finalAmount: Float!
+  currency: String!
+  breakdown: PricingBreakdown!
+}
+
+type TimelineEvent {
+  event: TimelineEventType!
+  timestamp: DateTime!
+  metadata: String
+}
+
+type PathPoint {
+  coordinates: Coordinates!
+  timestamp: DateTime!
+}
+
+type DriverLocationInfo {
+  coordinates: Coordinates!
+  heading: Float
+  speed: Float
+  updatedAt: DateTime!
+}
+
+# ===== MAIN TYPES =====
+type Trip {
+  id: ID!
+  tripNumber: String!
+
+  # Users
+  driver: Driver
+  customer: Customer
+
+  # Locations
+  pickup: TripLocation!
+  destination: TripLocation!
+
+  # Route
+  route: RouteInfo!
+
+  # Pricing
+  pricing: TripPricing!
+
+  # Status
+  status: TripStatus!
+  paymentMethod: PaymentMethod!
+  paymentStatus: PaymentStatus!
+
+  # Timestamps
+  requestedAt: DateTime!
+  acceptedAt: DateTime
+  startedAt: DateTime
+  completedAt: DateTime
+  cancelledAt: DateTime
+
+  # Real-time info
+  driverLocation: DriverLocationInfo
+  verificationPin: String!
+
+  # Ratings
+  driverRating: Float
+  customerRating: Float
+  driverReview: String
+  customerReview: String
+
+  # Metadata
+  tripType: TripType!
+  estimatedArrival: DateTime
+  actualDuration: Int
+
+  # Additional fields from model
+  timeline: [TimelineEvent!]!
+  assignedBy: ID # Reference to admin who manually assigned
+  actualPath: [PathPoint!] # Array of location points during trip
+}
+
+type DriverEarnings {
+  totalEarnings: Float!
+  driverShare: Float!
+  platformCommission: Float!
+  totalTrips: Int!
+  cashCollected: Float!
+  cardPayments: Float!
+  averagePerTrip: Float
+}
+
+type TripStats {
+  totalTrips: Int!
+  completedTrips: Int!
+  cancelledTrips: Int!
+  totalRevenue: Float!
+  averageRating: Float!
+  averageTripDuration: Int!
+  averageDistance: Float!
+}
+
+type TripEstimate {
+  distance: Float!
+  duration: Int!
+  pricing: TripPricing!
+  surgeActive: Boolean!
+  surgeMultiplier: Float!
+}
+
+type PaymentResult {
+  success: Boolean!
+  transactionId: String
+  errorMessage: String
+  paymentStatus: PaymentStatus!
+}
+
+# ===== INPUT TYPES =====
+input CoordinatesInput {
+  lat: Float!
+  lng: Float!
+}
+
+input LocationInput {
+  address: String!
+  coordinates: CoordinatesInput!
+}
+
+input CreateTripInput {
+  pickup: LocationInput!
+  destination: LocationInput!
+  paymentMethod: PaymentMethod!
+  priceOffered: Float
+}
+
+input UpdateDriverLocationInput {
+  tripId: ID! # Added missing tripId
+  coordinates: CoordinatesInput!
+  heading: Float
+  speed: Float
+}
+
+input UpdateDriverStatusInput {
+  isOnline: Boolean!
+  currentLocation: CoordinatesInput
+  heading: Float
+  speed: Float
+}
+
+input RateTripInput {
+  rating: Int! # 1-5
+  review: String
+}
+
+input TripFilter {
+  customerId: ID
+  driverId: ID
+  status: TripStatus
+  paymentMethod: PaymentMethod
+  tripType: TripType
+  dateFrom: DateTime
+  dateTo: DateTime
+  estateId: ID
+}
+
+input TripSort {
+  field: TripSortField!
+  direction: SortDirection!
+}
+
+input PaymentProcessInput {
+  tripId: ID!
+  amount: Float!
+  currency: String!
+  paymentMethod: PaymentMethod!
+  paymentToken: String
+}
+
+# ===== QUERIES =====
+extend type Query {
+  # ===== TRIP QUERIES =====
+  # Get single trip by ID
+  getTrip(id: ID!): Trip!
+
+  # Get current/active trip for user
+  getCurrentTrip: Trip
+
+  # Get trip history with pagination
+  getTripHistory(page: Int = 1, limit: Int = 10): [Trip!]!
+
+  # Admin: List all trips with filters and sorting
+  listTrips(
+    page: Int = 1
+    limit: Int = 10
+    filter: TripFilter
+    sort: TripSort
+  ): [Trip!]!
+
+  # ===== ESTIMATION & CALCULATION =====
+  # Estimate trip cost and time
+  estimateTrip(
+    pickup: LocationInput!
+    destination: LocationInput!
+  ): TripEstimate!
+
+  # Calculate trip pricing (for estimates)
+  calculateTripPricing(
+    distance: Float!
+    duration: Int!
+    surgeMultiplier: Float = 1
+  ): TripPricing!
+
+  # ===== DRIVER QUERIES =====
+  # Get active trip for driver
+  getActiveTrip: Trip
+
+  # Get nearby trips for driver
+  getNearbyTrips(radius: Float = 5000): [Trip!]!
+
+  # Get driver earnings with detailed breakdown
+  getDriverEarnings(period: String!): DriverEarnings!
+
+  # Find nearby drivers (for customers/admin)
+  findNearbyDrivers(
+    location: CoordinatesInput!
+    radius: Float = 5000
+  ): [Driver!]!
+
+  # ===== ADMIN QUERIES =====
+  # Get trip statistics for dashboard
+  getTripStats(dateFrom: DateTime, dateTo: DateTime, driverId: ID): TripStats!
+}
+
+# ===== MUTATIONS =====
+extend type Mutation {
+  # ===== CUSTOMER MUTATIONS =====
+  createTrip(input: CreateTripInput!): Trip!
+  cancelTrip(tripId: ID!, reason: String): Trip!
+  rateTrip(tripId: ID!, input: RateTripInput!): Trip!
+
+  # ===== DRIVER MUTATIONS =====
+  # Driver status management
+  goOnline: Driver!
+  goOffline: Driver!
+  updateDriverStatus(input: UpdateDriverStatusInput!): Driver!
+
+  # Trip management
+  acceptTrip(tripId: ID!): Trip!
+  arrivedAtPickup(tripId: ID!): Trip!
+  startTrip(tripId: ID!, pin: String!): Trip!
+  completeTrip(tripId: ID!): Trip!
+
+  # Location updates
+  updateDriverLocation(input: UpdateDriverLocationInput!): Trip!
+
+  # ===== ADMIN MUTATIONS =====
+  # Manual trip assignment
+  assignTripToDriver(tripId: ID!, driverId: ID!): Trip!
+
+  # ===== PAYMENT MUTATIONS =====
+  # Process payment for trip
+  processPayment(input: PaymentProcessInput!): PaymentResult!
+}
+
+# ===== SUBSCRIPTIONS =====
+type Subscription {
+  # ===== CUSTOMER SUBSCRIPTIONS =====
+  # Trip status updates for customer
+  tripUpdates(tripId: ID!): Trip!
+
+  # Driver location updates during trip
+  driverLocation(tripId: ID!): DriverLocationInfo!
+
+  # ===== DRIVER SUBSCRIPTIONS =====
+  # New trip requests for drivers
+  newTripRequest: Trip!
+
+  # Trip status updates for driver
+  tripStatusUpdates(tripId: ID!): Trip!
+
+  # Trip assignment notifications (when admin manually assigns)
+  tripAssigned(driverId: ID!): Trip!
+}

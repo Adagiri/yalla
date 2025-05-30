@@ -36,7 +36,7 @@ class AWSServices {
   ): Promise<string | null> {
     try {
       const s3Client = new S3Client({
-        region: ENV.AWS_REGION,
+        region: ENV.AWS_S3_REGION,
         credentials: {
           accessKeyId: ENV.AWS_ACCESS_KEY_ID,
           secretAccessKey: ENV.AWS_SECRET_ACCESS_KEY,
@@ -44,7 +44,7 @@ class AWSServices {
       });
 
       const command = new PutObjectCommand({
-        Bucket: ENV.AWS_S3_ASSET_UPLOAD_BUCKET,
+        Bucket: ENV.AWS_S3_ASSET_BUCKET,
         Key: key,
         ContentType: contentType,
       });

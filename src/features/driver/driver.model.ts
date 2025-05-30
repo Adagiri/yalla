@@ -2,17 +2,15 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { v4 as uuidv4 } from 'uuid';
 import { AccountType, AuthChannelEnum } from '../../constants/general';
+import { LocationType, PhoneType } from '../../types/general';
 
 export interface DriverModelType extends Document {
+  _id: string;
   id?: string; // UUID
   firstname: string;
   lastname: string;
   email: string;
-  phone: {
-    countryCode: string; // E.g., "+1"
-    localNumber: string; // E.g., "4155552671"
-    fullPhone: string; // E.164 format: "+14155552671"
-  };
+  phone: PhoneType;
   password: string;
   oldPasswords: string[];
   accountType: AccountType;
@@ -47,6 +45,28 @@ export interface DriverModelType extends Document {
   driverLicenseFront?: string;
   driverLicenseBack?: string;
   vehicleId?: string;
+
+  // Current location for availability
+  currentLocation?: LocationType;
+
+  // Driver status
+  isOnline: boolean;
+  isAvailable: boolean;
+  currentTripId?: string;
+
+  // Statistics
+  stats: {
+    totalTrips: number;
+    totalEarnings: number;
+    averageRating: number;
+    completionRate: number;
+  };
+
+  // Vehicle info already exists
+  vehicleInspectionDone: boolean;
+  vehicleInsuranceExpiry?: Date;
+
+  deviceTokens: string[];
 
   createdAt: Date;
   updatedAt: Date;
@@ -115,6 +135,30 @@ const driverSchema = new Schema<DriverModelType>(
     driverLicenseFront: { type: String },
     driverLicenseBack: { type: String },
 
+    currentLocation: {
+      type: { type: String, enum: ['Point'] },
+      coordinates: { type: [Number] },
+      heading: { type: Number },
+      updatedAt: { type: Date },
+    },
+
+    isOnline: { type: Boolean, default: false },
+    isAvailable: { type: Boolean, default: false },
+    currentTripId: { type: String, ref: 'Trip' },
+
+    stats: {
+      totalTrips: { type: Number, default: 0 },
+      totalEarnings: { type: Number, default: 0 },
+      averageRating: { type: Number, default: 0 },
+      completionRate: { type: Number, default: 0 },
+    },
+
+    vehicleInsuranceExpiry: { type: Date },
+
+    deviceTokens: { type: [String], default: [] },
+
+    
+
     createdAt: {
       type: Date,
       default: Date.now,
@@ -153,6 +197,8 @@ driverSchema.pre(
   }
 );
 
+driverSchema.index({ currentLocation: '2dsphere' });
+driverSchema.index({ isOnline: 1, isAvailable: 1 });
 driverSchema.index({ locationId: 1 });
 
 driverSchema.pre<DriverModelType>('save', function (next) {

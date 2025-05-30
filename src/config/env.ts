@@ -9,19 +9,29 @@ export const ENV = {
   INVOICE_WEBHOOK_KEY: process.env.INVOICE_WEBHOOK_KEY || '',
   YALLA_APP_HOSTNAME: process.env.YALLA_APP_HOSTNAME || '',
 
-  // AWS SES Configuration
-  AWS_REGION: process.env.AWS_REGION || '',
+  // AWS Core Configuration
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || '',
-  AWS_S3_ASSET_UPLOAD_BUCKET: process.env.AWS_S3_ASSET_UPLOAD_BUCKET || '',
-  AWS_ASSET_HOSTNAME: process.env.AWS_ASSET_HOSTNAME || '',
-  SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || '',
 
-  // Twilio Configuration
-  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || '',
-  TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || '',
-  TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || '',
-  TWILIO_NOTIFY_SERVICE_SID: process.env.TWILIO_NOTIFY_SERVICE_SID || '',
+  // AWS SES Configuration
+  AWS_SES_REGION: process.env.AWS_SES_REGION || 'us-east-1',
+  AWS_SES_FROM_EMAIL: process.env.AWS_SES_FROM_EMAIL || '',
+
+  // AWS S3 Configuration
+  AWS_S3_REGION: process.env.AWS_S3_REGION || 'us-east-1',
+  AWS_S3_ASSET_BUCKET: process.env.AWS_S3_ASSET_BUCKET || '',
+  AWS_S3_ASSET_HOSTNAME: process.env.AWS_S3_ASSET_HOSTNAME || '',
+
+  // AWS Location Services Configuration
+  AWS_LOCATION_REGION: process.env.AWS_LOCATION_REGION || 'us-east-1',
+  AWS_LOCATION_MAP_NAME: process.env.AWS_LOCATION_MAP_NAME || '',
+  AWS_LOCATION_PLACE_INDEX_NAME:
+    process.env.AWS_LOCATION_PLACE_INDEX_NAME || '',
+  AWS_LOCATION_ROUTE_CALCULATOR_NAME:
+    process.env.AWS_LOCATION_ROUTE_CALCULATOR_NAME || '',
+  AWS_LOCATION_GEOFENCE_COLLECTION_NAME:
+    process.env.AWS_LOCATION_GEOFENCE_COLLECTION_NAME || '',
+  AWS_LOCATION_TRACKER_NAME: process.env.AWS_LOCATION_TRACKER_NAME || '',
 
   // Paystack Configuration
   PAYSTACK_PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY || '',
@@ -40,4 +50,20 @@ export const ENV = {
   TERMII_BASE_URL: process.env.TERMII_BASE_URL || '',
   TERMII_SENDER_ID: process.env.TERMII_SENDER_ID || '',
   TERMII_API_KEY: process.env.TERMII_API_KEY || '',
+
+  // Redis Configuration
+  REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
+  REDIS_HOST: process.env.REDIS_HOST || 'localhost',
+  REDIS_PORT: process.env.REDIS_PORT || '6379',
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD || '',
+
+  // Firebase Configuration
+  FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || '',
+  FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL || '',
+  FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY || '',
+
+  // WebSocket Configuration
+  ALLOWED_ORIGINS:
+    process.env.ALLOWED_ORIGINS ||
+    'http://localhost:3000,http://localhost:4000',
 };

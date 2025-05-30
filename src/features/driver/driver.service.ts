@@ -189,6 +189,114 @@ class DriverService {
       );
     }
   }
+
+  /**
+   * Update driver online/availability status
+   */
+  static async updateDriverStatus(
+    driverId: string,
+    status: {
+      isOnline?: boolean;
+      isAvailable?: boolean;
+    }
+  ) {
+    try {
+      const driver = await Driver.findByIdAndUpdate(driverId, status, {
+        new: true,
+      });
+
+      if (!driver) {
+        throw new ErrorResponse(404, 'Driver not found');
+      }
+
+      // If going offline, remove from location tracking
+      if (status.isOnline === false) {
+        driver.currentLocation = undefined;
+        await driver.save();
+      }
+
+      return driver;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error updating driver status',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Update driver location
+   */
+  static async updateDriverLocation(
+    driverId: string,
+    location: {
+      coordinates: [number, number];
+      heading?: number;
+    }
+  ) {
+    try {
+      const driver = await Driver.findByIdAndUpdate(
+        driverId,
+        {
+          currentLocation: {
+            type: 'Point',
+            coordinates: location.coordinates,
+            heading: location.heading,
+            updatedAt: new Date(),
+          },
+        },
+        { new: true }
+      );
+
+      if (!driver) {
+        throw new ErrorResponse(404, 'Driver not found');
+      }
+
+      return driver;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error updating driver location',
+        error.message
+      );
+    }
+  }
+
+  static async updateDeviceToken(
+    userId: string,
+    token: string,
+    action: 'add' | 'remove'
+  ) {
+    try {
+      const updateQuery =
+        action === 'add'
+          ? { $addToSet: { deviceTokens: token } }
+          : { $pull: { deviceTokens: token } };
+
+      const user = await Driver.findByIdAndUpdate(userId, updateQuery, {
+        new: true,
+      });
+
+      if (!user) {
+        throw new ErrorResponse(404, 'User not found');
+      }
+
+      // If adding and exceeds limit, remove oldest token
+      if (action === 'add' && user.deviceTokens.length > 10) {
+        user.deviceTokens.shift(); // Remove first (oldest) token
+        await user.save();
+      }
+
+      return user;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error updating device token',
+        error.message
+      );
+    }
+  }
 }
 
 export default DriverService;

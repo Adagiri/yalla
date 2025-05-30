@@ -51,7 +51,7 @@ class CustomerController {
     return new AuthPayload(response.entity, response.token);
   }
 
-  static async updatePersonalInfo(
+  static async updateCustomerPersonalInfo(
     _: any,
     { input }: { input: UpdateCustomerPersonalInfoInput },
     { user }: ContextType

@@ -161,6 +161,41 @@ class CustomerService {
       );
     }
   }
+
+  static async updateDeviceToken(
+    userId: string,
+    token: string,
+    action: 'add' | 'remove'
+  ) {
+    try {
+      const updateQuery =
+        action === 'add'
+          ? { $addToSet: { deviceTokens: token } }
+          : { $pull: { deviceTokens: token } };
+
+      const user = await Customer.findByIdAndUpdate(userId, updateQuery, {
+        new: true,
+      });
+
+      if (!user) {
+        throw new ErrorResponse(404, 'User not found');
+      }
+
+      // If adding and exceeds limit, remove oldest token
+      if (action === 'add' && user.deviceTokens.length > 10) {
+        user.deviceTokens.shift(); // Remove first (oldest) token
+        await user.save();
+      }
+
+      return user;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error updating device token',
+        error.message
+      );
+    }
+  }
 }
 
 export default CustomerService;

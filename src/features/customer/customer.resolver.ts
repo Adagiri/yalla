@@ -19,12 +19,12 @@ const customerResolvers = {
   },
   Mutation: {
     registerCustomer: CustomerController.registerCustomer,
-    updatePersonalInfo: combineResolvers(
+    updateCustomerPersonalInfo: combineResolvers(
       protectEntities(['DRIVER', 'ADMIN']),
-      CustomerController.updatePersonalInfo
+      CustomerController.updateCustomerPersonalInfo
     ),
 
-    updateProfilePhoto: combineResolvers(
+    updateCustomerProfilePhoto: combineResolvers(
       protectEntities(['DRIVER', 'ADMIN']),
       CustomerController.updateProfilePhoto
     ),

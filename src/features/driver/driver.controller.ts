@@ -47,7 +47,7 @@ class DriverController {
     return new AuthPayload(response.entity, response.token);
   }
 
-  static async updatePersonalInfo(
+  static async updateDriverPersonalInfo(
     _: any,
     { input }: { input: UpdateDriverPersonalInfoInput },
     { user }: ContextType

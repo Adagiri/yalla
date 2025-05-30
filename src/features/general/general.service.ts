@@ -84,7 +84,7 @@ class GeneralService {
       }
 
       // Construct the public URL for accessing the file after upload.
-      const url = `https://${process.env.AWS_ASSET_HOSTNAME}/${key}`;
+      const url = `https://${process.env.AWS_S3_ASSET_HOSTNAME}/${key}`;
 
       return {
         uploadUrl,
@@ -214,12 +214,12 @@ class GeneralService {
           .findOne({ 'phone.fullPhone': phone.fullPhone })
           .select('+password');
       }
-
+      console.log(entity);
       if (!entity) throw new ErrorResponse(404, 'Invalid credentials');
 
       const isValidPassword = await verifyPassword(password, entity.password);
       if (!isValidPassword) throw new ErrorResponse(400, 'Invalid credentials');
-
+      console.log(entity.isMFAEnabled, 'MFA Status');
       if (entity.isMFAEnabled) {
         const { code, encryptedToken, token, tokenExpiry } =
           generateVerificationCode(32, 10);

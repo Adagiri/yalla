@@ -19,16 +19,16 @@ const driverResolvers = {
   },
   Mutation: {
     registerDriver: DriverController.registerDriver,
-    updatePersonalInfo: combineResolvers(
+    updateDriverPersonalInfo: combineResolvers(
       protectEntities(['DRIVER', 'ADMIN']),
-      DriverController.updatePersonalInfo
+      DriverController.updateDriverPersonalInfo
     ),
     updateDriverLicense: combineResolvers(
       protectEntities(['DRIVER', 'ADMIN']),
       DriverController.updateDriverLicense
     ),
 
-    updateProfilePhoto: combineResolvers(
+    updateDriverProfilePhoto: combineResolvers(
       protectEntities(['DRIVER', 'ADMIN']),
       DriverController.updateProfilePhoto
     ),

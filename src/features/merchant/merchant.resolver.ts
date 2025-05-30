@@ -19,12 +19,12 @@ const merchantResolvers = {
   },
   Mutation: {
     registerMerchant: MerchantController.registerMerchant,
-    updatePersonalInfo: combineResolvers(
+    updateMerchantPersonalInfo: combineResolvers(
       protectEntities(['DRIVER', 'ADMIN']),
-      MerchantController.updatePersonalInfo
+      MerchantController.updateMerchantPersonalInfo
     ),
 
-    updateProfilePhoto: combineResolvers(
+    updateMerchantProfilePhoto: combineResolvers(
       protectEntities(['DRIVER', 'ADMIN']),
       MerchantController.updateProfilePhoto
     ),

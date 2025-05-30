@@ -2,17 +2,14 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { v4 as uuidv4 } from 'uuid';
 import { AccountType, AuthChannelEnum } from '../../constants/general';
+import { PhoneType } from '../../types/general';
 
 export interface CustomerModelType extends Document {
   id?: string; // UUID
   firstname: string;
   lastname: string;
   email: string;
-  phone: {
-    countryCode: string; // E.g., "+1"
-    localNumber: string; // E.g., "4155552671"
-    fullPhone: string; // E.164 format: "+14155552671"
-  };
+  phone: PhoneType;
   password: string;
   oldPasswords: string[];
   accountType: AccountType;
@@ -42,6 +39,8 @@ export interface CustomerModelType extends Document {
   profilePhoto: string;
   profilePhotoSet: boolean;
   personalInfoSet: boolean;
+
+  deviceTokens: string[];
 
   createdAt: Date;
   updatedAt: Date;
@@ -104,6 +103,7 @@ const customerSchema = new Schema<CustomerModelType>(
     profilePhoto: { type: String },
     profilePhotoSet: { type: Boolean, default: false },
     personalInfoSet: { type: Boolean, default: false },
+    deviceTokens: { type: [String], default: [] },
 
     createdAt: {
       type: Date,

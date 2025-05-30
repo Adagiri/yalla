@@ -112,6 +112,9 @@ type Driver {
   driverLicenseFront: String
   driverLicenseBack: String
   vehicleInspectionDone: Boolean!
+
+  # Availability status
+  availableForTrip: Boolean!
 }
 
 type DriverPartial {
@@ -133,7 +136,7 @@ extend type Query {
 
 extend type Mutation {
   registerDriver(input: RegisterDriverInput!): AuthPayload!
-  updatePersonalInfo(input: UpdateCustomerPersonalInfoInput!): Driver!
-  updateProfilePhoto(input: UpdateProfilePhotoInput!): Driver!
+  updateDriverPersonalInfo(input: UpdateDriverPersonalInfoInput!): Driver!
+  updateDriverProfilePhoto(input: UpdateProfilePhotoInput!): Driver!
   updateDriverLicense(input: UpdateDriverLicenseInput!): Driver!
 }
