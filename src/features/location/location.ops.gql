@@ -4,17 +4,6 @@ enum LocationSortField {
   updatedAt
 }
 
-enum SortDirection {
-  ASC
-  DESC
-}
-
-enum LocationType {
-  estate
-  landmark
-  general
-}
-
 input LocationSort {
   field: LocationSortField!
   direction: SortDirection = ASC
@@ -27,6 +16,12 @@ input LocationFilter {
   address: String
   locationType: LocationType
   isActive: Boolean
+}
+
+enum LocationType {
+  estate
+  landmark
+  general
 }
 
 """
@@ -78,22 +73,22 @@ type Location {
 }
 
 """
-Input type for creating or updating a location.
+Input type for creating a location.
 """
-input LocationInput {
+input CreateLocationInput {
   name: String!
   description: String
   address: String
-  location: GeoJSONPointInput!
+  location: GeoJSONPointInput
   boundary: GeoJSONPolygonInput
   locationType: LocationType = general
   isActive: Boolean = true
 }
 
 """
-Input type for updating a location (all fields optional except coordinates).
+Input type for updating a location.
 """
-input LocationUpdateInput {
+input UpdateLocationInput {
   name: String
   description: String
   address: String
@@ -103,20 +98,19 @@ input LocationUpdateInput {
   isActive: Boolean
 }
 
-type Query {
+extend type Query {
   """
   Retrieves a single location by its ID.
   """
-  getLocation(id: ID!): Location
+  getLocation(id: ID!): Location!
 
   """
-  Retrieves a list of locations with optional filtering and sorting.
+  Retrieves a list of locations with pagination, filtering and sorting.
   """
   listLocations(
+    pagination: PaginationInput
     filter: LocationFilter
     sort: LocationSort
-    limit: Int
-    offset: Int
   ): [Location!]!
 
   """
@@ -135,16 +129,16 @@ type Query {
   findLocationsByPoint(longitude: Float!, latitude: Float!): [Location!]!
 }
 
-type Mutation {
+extend type Mutation {
   """
   Creates a new location.
   """
-  createLocation(input: LocationInput!): Location!
+  createLocation(input: CreateLocationInput!): Location!
 
   """
   Updates an existing location.
   """
-  updateLocation(id: ID!, input: LocationUpdateInput!): Location!
+  updateLocation(id: ID!, input: UpdateLocationInput!): Location!
 
   """
   Deletes a location by its ID.
@@ -156,5 +150,3 @@ type Mutation {
   """
   toggleLocationStatus(id: ID!): Location!
 }
-
-scalar DateTime

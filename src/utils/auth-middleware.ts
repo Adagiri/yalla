@@ -4,6 +4,7 @@ import Admin from '../features/admin/admin.model';
 import Driver from '../features/driver/driver.model';
 import { skip } from 'graphql-resolvers';
 import { AccountType } from '../constants/general';
+import Customer from '../features/customer/customer.model';
 
 export const getUserInfo = (token: string) => {
   try {
@@ -72,6 +73,10 @@ export const protectEntities = (requiredEntities: string[]) => {
     }
     if (!userRecord && requiredEntities.includes('DRIVER')) {
       userRecord = await Driver.findById(user.id);
+    }
+    console.log(requiredEntities, user);
+    if (!userRecord && requiredEntities.includes('CUSTOMER')) {
+      userRecord = await Customer.findById(user.id);
     }
 
     if (!userRecord) {

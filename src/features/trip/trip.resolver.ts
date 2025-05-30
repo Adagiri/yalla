@@ -9,7 +9,7 @@ const tripResolvers = {
       protectEntities(['CUSTOMER', 'DRIVER', 'ADMIN']),
       TripController.getTrip
     ),
-
+    
     // Get trip history for logged in user
     getTripHistory: combineResolvers(
       protectEntities(['CUSTOMER', 'DRIVER']),
@@ -117,13 +117,11 @@ const tripResolvers = {
     //   // subscribe: () => pubsub.asyncIterator(['TRIP_UPDATED']),
     //   resolve: (payload: any) => payload.tripUpdated,
     // },
-
     // // Driver location updates during trip
     // driverLocationUpdated: {
     //   // subscribe: () => pubsub.asyncIterator(['DRIVER_LOCATION_UPDATED']),
     //   resolve: (payload: any) => payload.driverLocationUpdated,
     // },
-
     // // New trip requests for drivers
     // newTripRequest: {
     //   // subscribe: () => pubsub.asyncIterator(['NEW_TRIP_REQUEST']),

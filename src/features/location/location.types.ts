@@ -15,39 +15,52 @@ export interface Bounds {
 }
 
 /**
- * The base input for a location.
- */
-export interface BaseLocationInput {
-  name: string;
-  description?: string;
-}
-
-/**
  * Input used when creating a new location.
  */
-export interface CreateLocationInput extends BaseLocationInput {
+export interface CreateLocationInput {
   name: string;
   description?: string;
+  address?: string;
+  location?: {
+    type: string;
+    coordinates: [number, number];
+  };
+  boundary?: {
+    type: string;
+    coordinates: number[][][];
+  };
+  locationType?: 'estate' | 'landmark' | 'general';
+  isActive?: boolean;
 }
 
 /**
  * Input used when updating an existing location.
- * All fields are optional except the id.
  */
-export interface UpdateLocationInput extends Partial<BaseLocationInput> {
-  id: string;
-  name: string;
+export interface UpdateLocationInput {
+  name?: string;
   description?: string;
+  address?: string;
+  location?: {
+    type: string;
+    coordinates: [number, number];
+  };
+  boundary?: {
+    type: string;
+    coordinates: number[][][];
+  };
+  locationType?: 'estate' | 'landmark' | 'general';
+  isActive?: boolean;
 }
 
 /**
  * Filters for searching locations.
- * All fields are optional.
  */
 export interface LocationFilter {
   ids?: string[];
   name?: string;
   address?: string;
+  locationType?: 'estate' | 'landmark' | 'general';
+  isActive?: boolean;
 }
 
 /**

@@ -50,6 +50,7 @@ enum DeviceType {
 enum AccountType {
   ADMIN
   DRIVER
+  CUSTOMER
 }
 
 enum AccountLevel {

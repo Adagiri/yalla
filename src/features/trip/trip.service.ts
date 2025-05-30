@@ -22,6 +22,45 @@ interface CreateTripInput {
 
 class TripService {
   /**
+   * Get single trip by ID
+   */
+  static async getTripById(
+    tripId: string,
+    userId?: string,
+    userType?: 'customer' | 'driver' | 'admin'
+  ) {
+    try {
+      let query: any = { _id: tripId };
+
+      // If not admin, restrict access to trips the user is involved in
+      if (userType && userType !== 'admin') {
+        if (userType === 'customer') {
+          query.customerId = userId;
+        } else if (userType === 'driver') {
+          query.driverId = userId;
+        }
+      }
+
+      const trip = await Trip.findOne(query)
+        .populate(
+          'driverId',
+          'firstname lastname phone profilePhoto stats vehicle currentLocation'
+        )
+        .populate('customerId', 'firstname lastname phone profilePhoto')
+        .populate('pickup.estateId', 'name address')
+        .populate('destination.estateId', 'name address');
+
+      if (!trip) {
+        throw new ErrorResponse(404, 'Trip not found or access denied');
+      }
+
+      return trip;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error fetching trip', error.message);
+    }
+  }
+  
+  /**
    * Calculate trip pricing based on distance and time
    */
   static calculatePricing(

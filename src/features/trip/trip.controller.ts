@@ -152,11 +152,17 @@ class TripController {
   }
 
   // Get single trip by ID
-  static async getTrip(_: any, { id }: { id: string }) {
-    // This would need to be implemented in TripService
-    // return await TripService.getTripById(id);
-  }
+  static async getTrip(_: any, { id }: { id: string }, { user }: ContextType) {
+    const userType =
+      user.accountType === 'ADMIN'
+        ? 'admin'
+        : user.accountType === 'DRIVER'
+          ? 'driver'
+          : 'customer';
 
+    return await TripService.getTripById(id, user.id, userType);
+  }
+  
   // Get active trip for driver
   static async getActiveTrip(_: any, __: any, { user }: ContextType) {
     return await TripService.getActiveTrip(user.id);

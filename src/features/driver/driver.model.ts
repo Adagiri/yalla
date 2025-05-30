@@ -153,11 +153,11 @@ const driverSchema = new Schema<DriverModelType>(
       completionRate: { type: Number, default: 0 },
     },
 
+    vehicleInspectionDone: { type: Boolean, default: false },
+
     vehicleInsuranceExpiry: { type: Date },
 
     deviceTokens: { type: [String], default: [] },
-
-    
 
     createdAt: {
       type: Date,
