@@ -16,7 +16,6 @@ import Customer from '../features/customer/customer.model';
 import * as admin from 'firebase-admin';
 import { getMessaging } from 'firebase-admin/messaging';
 
-
 // AWS SES Client Setup
 const sesClient = new SESClient({
   region: ENV.AWS_SES_REGION,
@@ -405,7 +404,10 @@ class NotificationService {
           credential: admin.credential.cert({
             projectId: ENV.FIREBASE_PROJECT_ID,
             clientEmail: ENV.FIREBASE_CLIENT_EMAIL,
-            privateKey: ENV.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            privateKey: Buffer.from(
+              ENV.FIREBASE_PRIVATE_KEY_IN_BASE_64,
+              'base64'
+            ).toString('utf-8'),
           }),
         });
       }

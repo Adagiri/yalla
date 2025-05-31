@@ -60,7 +60,8 @@ export const ENV = {
   // Firebase Configuration
   FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || '',
   FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL || '',
-  FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY || '',
+  FIREBASE_PRIVATE_KEY_IN_BASE_64:
+    process.env.FIREBASE_PRIVATE_KEY_IN_BASE_64 || '',
 
   // WebSocket Configuration
   ALLOWED_ORIGINS:
