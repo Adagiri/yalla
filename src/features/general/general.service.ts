@@ -75,7 +75,7 @@ class GeneralService {
       const randomString = generateRandomString(30);
       // Extract file extension from the MIME type (e.g., "image/png" => "png")
       const extension = contentType.slice(6);
-      const key = `${purpose.toLowerCase()}/${randomString}.${extension}`;
+      const key = `${purpose.toLowerCase().replace('_', '-')}/${randomString}.${extension}`;
 
       // Generate the pre-signed URL for upload.
       const uploadUrl = await AWSServices.generateS3SignedUrl(key, contentType);
