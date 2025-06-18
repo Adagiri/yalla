@@ -18,6 +18,7 @@ enum AuthChannel {
 enum UploadUrl {
   PROFILE_PHOTO
   PRODUCT
+  DRIVER_LISCENCE
 }
 
 enum PaymentPurpose {

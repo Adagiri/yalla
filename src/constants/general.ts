@@ -189,10 +189,12 @@ export type ReceivableReason =
 
 const UploadUrlPurposeProduct = 'PRODUCT';
 const UploadUrlPurposeProfilePhoto = 'PROFILE_PHOTO';
+const UploadUrlPurposeDriverLiscence = 'DRIVER_LISCENCE';
 
 export const UploadUrlPurpose = {
   Product: UploadUrlPurposeProduct,
   ProfilePhoto: UploadUrlPurposeProfilePhoto,
+  DriverLiscence: UploadUrlPurposeDriverLiscence,
 } as const;
 
 export type UploadUrlPurpose =
