@@ -13,7 +13,7 @@ const customerResolvers = {
       CustomerController.getCustomer
     ),
     loggedInCustomer: combineResolvers(
-      protectEntities(['DRIVER', 'ADMIN']),
+      protectEntities(['CUSTOMER', 'ADMIN']),
       CustomerController.loggedInCustomer
     ),
   },

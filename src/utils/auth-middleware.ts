@@ -109,6 +109,7 @@ export const protectEntities = (requiredEntities: string[]) => {
       }
     }
 
+
     // Check Customer
     if (requiredEntities.includes('CUSTOMER')) {
       userRecord = await Customer.findById(user.id);
