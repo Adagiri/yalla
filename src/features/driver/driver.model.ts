@@ -68,6 +68,42 @@ export interface DriverModelType extends Document {
 
   deviceTokens: string[];
 
+  walletId?: string;
+
+  // Saved payment methods
+  savedCards: Array<{
+    authorizationCode: string;
+    lastFour: string;
+    brand: string;
+    bank: string;
+    isDefault: boolean;
+    createdAt: Date;
+  }>;
+
+  // Bank account for cashouts
+  bankAccounts: Array<{
+    accountNumber: string;
+    bankCode: string;
+    bankName: string;
+    accountName: string;
+    isDefault: boolean;
+    isVerified: boolean;
+    createdAt: Date;
+  }>;
+
+  // Payment preferences
+  paymentPreferences: {
+    autoCashout: boolean;
+    autoCashoutThreshold: number; // in kobo
+    preferredBankAccount?: string; // account ID
+  };
+
+  // Financial tracking
+  totalEarningsAllTime: number; // in kobo
+  totalCashouts: number; // in kobo
+  pendingEarnings: number; // in kobo
+  lastCashoutAt?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -158,6 +194,42 @@ const driverSchema = new Schema<DriverModelType>(
     vehicleInsuranceExpiry: { type: Date },
 
     deviceTokens: { type: [String], default: [] },
+
+    walletId: { type: String, ref: 'Wallet' },
+
+    savedCards: [
+      {
+        authorizationCode: { type: String, required: true },
+        lastFour: { type: String, required: true },
+        brand: { type: String, required: true },
+        bank: { type: String, required: true },
+        isDefault: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    bankAccounts: [
+      {
+        accountNumber: { type: String, required: true },
+        bankCode: { type: String, required: true },
+        bankName: { type: String, required: true },
+        accountName: { type: String, required: true },
+        isDefault: { type: Boolean, default: false },
+        isVerified: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    paymentPreferences: {
+      autoCashout: { type: Boolean, default: false },
+      autoCashoutThreshold: { type: Number, default: 5000000 }, // ₦50,000
+      preferredBankAccount: { type: String },
+    },
+
+    totalEarningsAllTime: { type: Number, default: 0 },
+    totalCashouts: { type: Number, default: 0 },
+    pendingEarnings: { type: Number, default: 0 },
+    lastCashoutAt: { type: Date },
 
     createdAt: {
       type: Date,

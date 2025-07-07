@@ -204,3 +204,5 @@ input ImageUploadUrlInput {
   purpose: UploadUrl!
   contentType: String!
 }
+
+

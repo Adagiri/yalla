@@ -1,0 +1,270 @@
+# ===== WALLET TYPES =====
+type Wallet {
+  id: ID!
+  userId: ID!
+  userType: String!
+  balance: Float! # In Naira
+  formattedBalance: String!
+  currency: String!
+  isActive: Boolean!
+
+  # Limits
+  dailyLimit: Float!
+  monthlyLimit: Float!
+
+  # Statistics
+  totalCredits: Float!
+  totalDebits: Float!
+  lastTransactionAt: DateTime
+
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# ===== TRANSACTION TYPES =====
+enum TransactionType {
+  credit
+  debit
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+  cancelled
+  reversed
+}
+
+enum TransactionPurpose {
+  wallet_topup
+  trip_payment
+  trip_refund
+  driver_earnings
+  commission_deduction
+  cashout
+  bonus
+  penalty
+  adjustment
+}
+
+type PaystackData {
+  reference: String
+  authorizationCode: String
+  lastFour: String
+  bank: String
+  brand: String
+}
+
+type Transaction {
+  id: ID!
+  transactionId: String!
+
+  # User info
+  userId: ID!
+  userType: String!
+
+  # Transaction details
+  type: TransactionType!
+  amount: Float! # In Naira
+  formattedAmount: String!
+  currency: String!
+
+  # Payment details
+  paymentMethod: String!
+  paymentReference: String
+
+  # Purpose and description
+  purpose: TransactionPurpose!
+  description: String!
+
+  # Related entities
+  tripId: ID
+  trip: Trip
+  relatedTransactionId: ID
+
+  # Status and balances
+  status: TransactionStatus!
+  balanceBefore: Float!
+  balanceAfter: Float!
+
+  # Metadata
+  metadata: String # JSON string
+  paystackData: PaystackData
+
+  # Timestamps
+  completedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# ===== PAYMENT TYPES =====
+type PaymentResult {
+  success: Boolean!
+  paymentMethod: String!
+  trip: Trip
+  paystackData: PaystackInitializationData
+  transactions: PaymentTransactions
+  amounts: PaymentAmounts
+  message: String
+  note: String
+}
+
+type PaystackInitializationData {
+  authorization_url: String!
+  access_code: String!
+  reference: String!
+}
+
+type PaymentTransactions {
+  customerDebit: Transaction
+  driverCredit: Transaction
+}
+
+type PaymentAmounts {
+  total: Float!
+  driverEarnings: Float!
+  platformCommission: Float!
+}
+
+type WalletTopUpResult {
+  success: Boolean!
+  transaction: Transaction!
+  paystackData: PaystackInitializationData!
+}
+
+type CashoutResult {
+  success: Boolean!
+  transferReference: String!
+  accountDetails: BankAccountDetails!
+  transaction: Transaction!
+  remainingBalance: Float!
+}
+
+type BankAccountDetails {
+  account_name: String!
+  account_number: String!
+  bank_code: String!
+}
+
+type RefundResult {
+  success: Boolean!
+  trip: Trip!
+  refundAmount: Float!
+  reason: String!
+}
+
+type PaymentAnalytics {
+  totalVolume: Float!
+  totalTransactions: Int!
+  walletTopUps: Float!
+  tripPayments: Float!
+  driverEarnings: Float!
+  commissions: Float!
+  cashouts: Float!
+}
+
+# ===== INPUT TYPES =====
+input TopUpWalletInput {
+  amount: Float!
+  paymentMethod: String! # 'card' or 'bank_transfer'
+  saveCard: Boolean
+}
+
+input ProcessTripPaymentInput {
+  tripId: ID!
+  paymentMethod: String! # 'cash', 'card', 'wallet'
+  paymentToken: String # For card payments
+  saveCard: Boolean
+}
+
+input CashoutInput {
+  amount: Float!
+  accountNumber: String!
+  bankCode: String!
+}
+
+input TransactionFilter {
+  type: TransactionType
+  purpose: TransactionPurpose
+  status: TransactionStatus
+  paymentMethod: String
+  dateFrom: DateTime
+  dateTo: DateTime
+}
+
+input TransactionSort {
+  field: String! # 'createdAt', 'amount', 'status'
+  direction: SortDirection!
+}
+
+# ===== QUERIES =====
+extend type Query {
+  # ===== WALLET QUERIES =====
+  # Get current user's wallet
+  getMyWallet: Wallet!
+
+  # Get wallet by user ID (admin only)
+  getWallet(userId: ID!): Wallet!
+
+  # ===== TRANSACTION QUERIES =====
+  # Get current user's transaction history
+  getMyTransactions(
+    page: Int = 1
+    limit: Int = 20
+    filter: TransactionFilter
+    sort: TransactionSort
+  ): [Transaction!]!
+
+  # Get transaction by ID
+  getTransaction(id: ID!): Transaction!
+
+  # Get user's transaction history (admin only)
+  getUserTransactions(
+    userId: ID!
+    page: Int = 1
+    limit: Int = 20
+    filter: TransactionFilter
+    sort: TransactionSort
+  ): [Transaction!]!
+
+  # ===== PAYMENT QUERIES =====
+  # Get payment analytics (admin only)
+  getPaymentAnalytics(dateFrom: DateTime, dateTo: DateTime): PaymentAnalytics!
+
+  # Get bank codes for cashout
+  getBankCodes: [BankCode!]!
+}
+
+# ===== MUTATIONS =====
+extend type Mutation {
+  # ===== WALLET MUTATIONS =====
+  # Top up wallet
+  topUpWallet(input: TopUpWalletInput!): WalletTopUpResult!
+
+  # ===== PAYMENT MUTATIONS =====
+  # Process trip payment
+  processTripPayment(input: ProcessTripPaymentInput!): PaymentResult!
+
+  # Driver cashout
+  driverCashout(input: CashoutInput!): CashoutResult!
+
+  # Refund trip payment (admin only)
+  refundTripPayment(tripId: ID!, reason: String!): RefundResult!
+
+  # ===== ADMIN MUTATIONS =====
+  # Credit user wallet (admin only)
+  creditUserWallet(
+    userId: ID!
+    amount: Float!
+    description: String!
+    purpose: TransactionPurpose = bonus
+  ): Transaction!
+
+  # Debit user wallet (admin only)
+  debitUserWallet(
+    userId: ID!
+    amount: Float!
+    description: String!
+    purpose: TransactionPurpose = penalty
+  ): Transaction!
+}

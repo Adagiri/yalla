@@ -8,3 +8,7 @@ trip type
 saved locations
 
 - Pin for customers
+
+Payments:
+Payment integration
+Real time system integration

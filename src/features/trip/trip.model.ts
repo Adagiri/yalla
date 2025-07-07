@@ -61,7 +61,6 @@ export interface TripDocument extends Document {
 
   // Payment
   paymentMethod: 'cash' | 'card' | 'wallet';
-  paymentStatus: 'pending' | 'completed' | 'failed';
 
   // Timestamps
   requestedAt: Date;
@@ -69,6 +68,8 @@ export interface TripDocument extends Document {
   startedAt?: Date;
   completedAt?: Date;
   cancelledAt?: Date;
+  cancelledBy?: 'customer' | 'driver';
+  cancellationReason?: String;
 
   // Real-time tracking
   driverLocation?: {
@@ -99,6 +100,35 @@ export interface TripDocument extends Document {
 
   assignedBy: string;
   timeline: object[];
+
+  // Payment-related fields
+  paymentReference?: string; // Paystack or other payment reference
+  paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
+
+  // Commission and earnings breakdown
+  driverEarnings?: number; // Amount driver receives (in kobo)
+  platformCommission?: number; // Platform commission (in kobo)
+
+  // Payment processing
+  paymentProcessedAt?: Date;
+  paymentFailureReason?: string;
+
+  // Refund information
+  refundAmount?: number;
+  refundReason?: string;
+  refundedAt?: Date;
+
+  // Cash payment specific
+  cashReceived?: boolean; // Driver confirms cash receipt
+  cashReceivedAt?: Date;
+
+  // Card payment specific
+  cardPaymentData?: {
+    authorizationCode?: string;
+    lastFour?: string;
+    brand?: string;
+    bank?: string;
+  };
 }
 
 const TripSchema = new Schema<TripDocument>(
@@ -178,17 +208,13 @@ const TripSchema = new Schema<TripDocument>(
       required: true,
     },
 
-    paymentStatus: {
-      type: String,
-      enum: ['pending', 'completed', 'failed'],
-      default: 'pending',
-    },
-
     requestedAt: { type: Date, default: Date.now },
     acceptedAt: { type: Date },
     startedAt: { type: Date },
     completedAt: { type: Date },
     cancelledAt: { type: Date },
+    cancelledBy: { type: String, enum: ['driver', 'customer'] },
+    cancellationReason: { type: String },
 
     driverLocation: {
       type: { type: String, enum: ['Point'] },
@@ -244,6 +270,33 @@ const TripSchema = new Schema<TripDocument>(
         metadata: { type: mongoose.Schema.Types.Mixed },
       },
     ],
+
+    paymentReference: { type: String, index: true },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'completed', 'failed', 'refunded'],
+      default: 'pending',
+    },
+
+    driverEarnings: { type: Number }, // in kobo
+    platformCommission: { type: Number }, // in kobo
+
+    paymentProcessedAt: { type: Date },
+    paymentFailureReason: { type: String },
+
+    refundAmount: { type: Number },
+    refundReason: { type: String },
+    refundedAt: { type: Date },
+
+    cashReceived: { type: Boolean, default: false },
+    cashReceivedAt: { type: Date },
+
+    cardPaymentData: {
+      authorizationCode: String,
+      lastFour: String,
+      brand: String,
+      bank: String,
+    },
   },
   {
     timestamps: true,

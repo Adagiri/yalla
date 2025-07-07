@@ -38,8 +38,24 @@ import {
 } from '../../utils/general';
 import AWSServices from '../../services/aws.services';
 import PaystackService from '../../services/paystack.services';
+import WalletService from '../../services/wallet.service';
 
 class GeneralService {
+  /**
+   * Auto-create wallet for new verified users
+   */
+  static async createWalletForNewUser(userId: string, userType: AccountType) {
+    try {
+      await WalletService.createWallet({
+        userId,
+        userType,
+      });
+      console.log(`Wallet created for new ${userType}: ${userId}`);
+    } catch (error: any) {
+      console.error(`Error creating wallet for ${userType} ${userId}:`, error);
+    }
+  }
+
   static async getBankCodes() {
     try {
       const banks = await PaystackService.getBanks();
@@ -329,6 +345,8 @@ class GeneralService {
             name: entity.firstname,
           },
         });
+
+        await this.createWalletForNewUser(entity._id, entity.accountType);
       }
 
       if (isPhoneVerification) {
@@ -361,6 +379,8 @@ class GeneralService {
           isPhoneVerified: false,
           phone: entity.phone,
         });
+
+        await this.createWalletForNewUser(entity._id, entity.accountType);
       }
 
       if (isMfaVerification) {

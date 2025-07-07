@@ -6,6 +6,10 @@ import Location from '../location/location.model';
 import mongoose from 'mongoose';
 import NotificationService from '../../services/notification.services';
 import TripNotificationService from '../../services/trip-notification.service';
+import PaymentService from '../../services/payment.service';
+import WalletService from '../../services/wallet.service';
+import Transaction from '../transaction/transaction.model';
+import Customer from '../customer/customer.model';
 
 interface CreateTripInput {
   customerId: string;
@@ -30,7 +34,7 @@ class TripService {
     userId?: string,
     userType?: 'customer' | 'driver' | 'admin'
   ) {
-    console.log("user type: ", userType)
+    console.log('user type: ', userType);
     try {
       let query: any = { _id: tripId };
 
@@ -944,6 +948,319 @@ class TripService {
     } catch (error: any) {
       console.error('Error calculating surge multiplier:', error);
       return 1.0; // Default to no surge on error
+    }
+  }
+
+  static async completeTripWithPayment(tripId: string, driverId: string) {
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const trip = await Trip.findOne({
+        _id: tripId,
+        driverId,
+        status: 'in_progress',
+      });
+
+      if (!trip) throw new ErrorResponse(404, 'Active trip not found');
+
+      // Update trip status to completed
+      trip.status = 'completed';
+      trip.completedAt = new Date();
+      await trip.save({ session });
+
+      // Process payment based on payment method
+      let paymentResult;
+
+      switch (trip.paymentMethod) {
+        case 'wallet':
+          paymentResult = await PaymentService.processTripPayment({
+            tripId: tripId,
+            customerId: trip.customerId,
+            driverId: trip.driverId,
+            amount: trip.pricing.finalAmount,
+            paymentMethod: 'wallet',
+          });
+          break;
+
+        case 'cash':
+          paymentResult = await PaymentService.processTripPayment({
+            tripId: tripId,
+            customerId: trip.customerId,
+            driverId: trip.driverId,
+            amount: trip.pricing.finalAmount,
+            paymentMethod: 'cash',
+          });
+          break;
+
+        case 'card':
+          // For card payments, we'll initiate the payment and let webhook handle completion
+          paymentResult = await PaymentService.processTripPayment({
+            tripId: tripId,
+            customerId: trip.customerId,
+            driverId: trip.driverId,
+            amount: trip.pricing.finalAmount,
+            paymentMethod: 'card',
+          });
+          break;
+
+        default:
+          throw new ErrorResponse(400, 'Invalid payment method');
+      }
+
+      // Update driver statistics
+      const driver = await Driver.findById(driverId);
+      if (driver) {
+        driver.isAvailable = true;
+        driver.currentTripId = undefined;
+        driver.stats.totalTrips += 1;
+
+        // Only update earnings for wallet and cash payments (card payments are handled by webhook)
+        if (trip.paymentMethod === 'wallet' || trip.paymentMethod === 'cash') {
+          const driverEarnings = trip.pricing.finalAmount * 0.75; // 75% to driver
+          driver.stats.totalEarnings += driverEarnings;
+        }
+
+        await driver.save({ session });
+      }
+
+      await session.commitTransaction();
+
+      return {
+        trip,
+        paymentResult,
+      };
+    } catch (error: any) {
+      await session.abortTransaction();
+      throw new ErrorResponse(
+        500,
+        'Error completing trip with payment',
+        error.message
+      );
+    } finally {
+      session.endSession();
+    }
+  }
+
+  /**
+   * Check if customer has sufficient wallet balance for trip
+   */
+  static async checkCustomerBalance(
+    customerId: string,
+    amount: number
+  ): Promise<boolean> {
+    try {
+      const wallet = await WalletService.getUserWallet(customerId);
+      return wallet.balance >= amount * 100; // Convert to kobo for comparison
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Create trip with payment method validation
+   */
+  static async createTripWithPaymentValidation(input: CreateTripInput) {
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      // Validate payment method
+      if (input.paymentMethod === 'wallet') {
+        const hasSufficientBalance = await this.checkCustomerBalance(
+          input.customerId,
+          input.priceOffered || 0
+        );
+
+        if (!hasSufficientBalance) {
+          throw new ErrorResponse(
+            400,
+            'Insufficient wallet balance. Please top up your wallet or choose a different payment method.'
+          );
+        }
+      }
+
+      // Create trip using existing logic
+      const trip = await this.createTrip(input);
+
+      await session.commitTransaction();
+      return trip;
+    } catch (error: any) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  /**
+   * Cancel trip with refund processing
+   */
+  static async cancelTripWithRefund(
+    tripId: string,
+    cancelledBy: 'customer' | 'driver',
+    reason?: string
+  ) {
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const trip = await Trip.findById(tripId);
+      if (!trip) throw new ErrorResponse(404, 'Trip not found');
+
+      if (trip.status === 'completed' || trip.status === 'cancelled') {
+        throw new ErrorResponse(400, 'Trip cannot be cancelled');
+      }
+
+      // Check if payment was already processed
+      const shouldRefund =
+        trip.paymentStatus === 'completed' && trip.paymentMethod === 'wallet';
+
+      // Cancel trip
+      trip.status = 'cancelled';
+      trip.cancelledAt = new Date();
+      trip.cancelledBy = cancelledBy;
+      trip.cancellationReason = reason;
+      await trip.save({ session });
+
+      // Process refund if applicable
+      let refundResult;
+      if (shouldRefund) {
+        refundResult = await PaymentService.refundTripPayment(
+          tripId,
+          reason || 'Trip cancelled'
+        );
+      }
+
+      // Update driver availability if assigned
+      if (trip.driverId) {
+        const driver = await Driver.findById(trip.driverId);
+        if (driver) {
+          driver.isAvailable = true;
+          driver.currentTripId = undefined;
+          await driver.save({ session });
+        }
+      }
+
+      await session.commitTransaction();
+
+      return {
+        trip,
+        refundResult,
+      };
+    } catch (error: any) {
+      await session.abortTransaction();
+      throw new ErrorResponse(500, 'Error cancelling trip', error.message);
+    } finally {
+      session.endSession();
+    }
+  }
+
+  /**
+   * Get trip with payment details
+   */
+  static async getTripWithPaymentDetails(
+    tripId: string,
+    userId?: string,
+    userType?: 'driver' | 'customer' | 'admin'
+  ) {
+    try {
+      const trip = await this.getTripById(tripId, userId, userType);
+
+      if (!trip) return null;
+
+      // Get related transactions if payment was processed
+      if (trip.paymentStatus === 'completed') {
+        const Transaction = require('../../models/transaction.model').default;
+        const transactions = await Transaction.find({
+          tripId: trip._id,
+          status: 'completed',
+        }).sort({ createdAt: -1 });
+
+        return {
+          ...trip.toObject(),
+          transactions,
+        };
+      }
+
+      return trip;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching trip with payment details',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Generate payment receipt
+   */
+  static async generatePaymentReceipt(tripId: string) {
+    try {
+      const trip = await Trip.findById(tripId).populate('customerId driverId');
+      if (!trip) throw new ErrorResponse(404, 'Trip not found');
+
+      if (trip.paymentStatus !== 'completed') {
+        throw new ErrorResponse(400, 'Payment not completed for this trip');
+      }
+
+      const transactions = await Transaction.find({
+        tripId: trip._id,
+        status: 'completed',
+      });
+
+      const customer = await Customer.findById(trip.customerId).select(
+        'firstname lastname phone'
+      );
+
+      if (!customer) {
+        throw new ErrorResponse(400, 'Customer not found');
+      }
+
+      const driver = await Driver.findById(trip.driverId).select(
+        'firstname lastname phone'
+      );
+
+      if (!driver) {
+        throw new ErrorResponse(400, 'Customer not found');
+      }
+
+      const receipt = {
+        tripDetails: {
+          tripNumber: trip.tripNumber,
+          date: trip.completedAt,
+          pickup: trip.pickup.address,
+          destination: trip.destination.address,
+          distance: `${(trip.route.distance / 1000).toFixed(2)} km`,
+          duration: `${Math.round(trip.route.duration / 60)} mins`,
+        },
+        paymentDetails: {
+          method: trip.paymentMethod,
+          amount: trip.pricing.finalAmount,
+          breakdown: trip.pricing.breakdown,
+          currency: trip.pricing.currency,
+          status: trip.paymentStatus,
+        },
+        customerDetails: {
+          name: `${customer.firstname} ${customer.lastname}`,
+          phone: customer.phone.fullPhone,
+        },
+        driverDetails: {
+          name: `${driver.firstname} ${driver.lastname}`,
+          phone: driver.phone.fullPhone,
+        },
+        transactions,
+        receiptNumber: `RCP-${trip.tripNumber}-${Date.now()}`,
+        generatedAt: new Date(),
+      };
+
+      return receipt;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error generating receipt', error.message);
     }
   }
 }
