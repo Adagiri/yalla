@@ -36,8 +36,8 @@ type GeoJSONPoint {
 Represents a GeoJSON Polygon for area boundaries.
 """
 type GeoJSONPolygon {
-  type: String!
-  coordinates: [[[Float!]!]!]! # Array of linear rings
+  type: String
+  coordinates: [[[Float!]!]!] # Array of linear rings
 }
 
 """

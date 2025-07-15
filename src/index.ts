@@ -318,4 +318,6 @@ async function handleReversedTransfer(data: any) {
   }
 }
 
+// app.post('/api/invoices/generate-invoices', handleInvoiceWebhook);
+
 app.post('/api/paystack/transaction-completion-webhook', handlePaystackWebhook);

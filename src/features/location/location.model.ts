@@ -63,7 +63,7 @@ const LocationSchema = new Schema<LocationDocument>(
       type: {
         type: String,
         enum: ['Polygon'],
-        default: 'Polygon',
+        // default: 'Polygon',
       },
       coordinates: {
         type: [[[Number]]],
