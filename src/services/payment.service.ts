@@ -1,10 +1,20 @@
 import mongoose from 'mongoose';
-import Trip from '../features/trip/trip.model';
+import Trip, { TripDocument } from '../features/trip/trip.model';
 import WalletService from './wallet.service';
 import PaystackService from './paystack.services';
 import { ErrorResponse } from '../utils/responses';
 import Driver from '../features/driver/driver.model';
 import Customer from '../features/customer/customer.model';
+
+interface SuccessfulCardPaymentResult {
+  success: boolean;
+  trip: TripDocument | null;
+  amounts: {
+    total: number;
+    driverEarnings: number;
+    platformCommission: number;
+  };
+}
 
 interface ProcessTripPaymentInput {
   tripId: string;
@@ -290,18 +300,13 @@ class PaymentService {
   /**
    * Process successful card payment from webhook
    */
-  static async processSuccessfulCardPayment(paystackData: any) {
+  static async processSuccessfulCardPayment(paystackData: any): Promise<SuccessfulCardPaymentResult> {
     const session = await mongoose.startSession();
 
     try {
       session.startTransaction();
 
       const { reference, amount, metadata } = paystackData;
-
-      if (metadata.purpose === 'wallet_topup') {
-        // Handle wallet top-up
-        return await WalletService.processSuccessfulPayment(paystackData);
-      }
 
       if (metadata.purpose === 'trip_payment') {
         // Handle trip payment

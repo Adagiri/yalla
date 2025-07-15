@@ -1,6 +1,23 @@
+import express from 'express';
 import PaymentService from './services/payment.service';
 import WalletService from './services/wallet.service';
 import NotificationService from './services/notification.services';
+import { createWebhookHash } from './utils/general';
+import { ENV } from './config/env';
+import { connectDB } from './config/db-connection';
+import { startApolloServer } from './graphql/server';
+
+const app = express();
+app.use(express.json());
+
+connectDB().then(() => {
+  startApolloServer(app).then((httpServer) => {
+    const PORT = ENV.PORT || 8000;
+    httpServer.listen(PORT, () => {
+      console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
+    });
+  });
+});
 
 const handlePaystackWebhook: any = async (
   req: Request,
@@ -11,7 +28,7 @@ const handlePaystackWebhook: any = async (
 
   if (hash === headers['x-paystack-signature']) {
     try {
-      const { event, data } = req.body;
+      const { event, data }: any = req.body;
 
       console.log('Paystack webhook received:', event, data.reference);
 
@@ -65,58 +82,61 @@ async function handleSuccessfulPayment(data: any) {
       const result = await WalletService.processSuccessfulPayment(data);
 
       // Send notification to user
-      await NotificationService.sendNotification({
-        userId: metadata.userId,
-        userType: result.wallet.userType,
-        type: 'wallet_topup_success',
-        title: '💰 Wallet Top-up Successful!',
-        message: `Your wallet has been credited with ₦${(amount / 100).toLocaleString()}`,
-        data: {
-          amount: amount / 100,
-          newBalance: result.wallet.balance / 100,
-          reference,
-        },
-      });
+      // await NotificationService.sendNotification({
+      //   userId: metadata.userId,
+      //   userType: result.wallet.userType,
+      //   type: 'wallet_topup_success',
+      //   title: '💰 Wallet Top-up Successful!',
+      //   message: `Your wallet has been credited with ₦${(amount / 100).toLocaleString()}`,
+      //   data: {
+      //     amount: amount / 100,
+      //     newBalance: result.wallet.balance / 100,
+      //     reference,
+      //   },
+      // });
 
       console.log(
         `Wallet top-up completed for user ${metadata.userId}: ₦${amount / 100}`
       );
     } else if (metadata?.purpose === 'trip_payment') {
       // Handle trip payment
+
       const result = await PaymentService.processSuccessfulCardPayment(data);
 
       // Send notifications to customer and driver
       const trip = result.trip;
 
-      // Notify customer
-      await NotificationService.sendTripNotification(
-        trip.customerId,
-        'customer',
-        'payment_successful',
-        {
-          ...trip.toObject(),
-          amount: amount / 100,
-          reference,
-        }
-      );
-
-      // Notify driver about earnings
-      if (trip.driverId) {
+      if (trip) {
+        // Notify customer
         await NotificationService.sendTripNotification(
-          trip.driverId,
-          'driver',
-          'earnings_received',
+          trip.customerId,
+          'customer',
+          'payment_successful',
           {
             ...trip.toObject(),
-            earnings: result.amounts.driverEarnings,
+            amount: amount / 100,
             reference,
           }
         );
-      }
 
-      console.log(
-        `Trip payment completed for trip ${trip.tripNumber}: ₦${amount / 100}`
-      );
+        // Notify driver about earnings
+        if (trip.driverId) {
+          await NotificationService.sendTripNotification(
+            trip.driverId,
+            'driver',
+            'earnings_received',
+            {
+              ...trip.toObject(),
+              earnings: result.amounts.driverEarnings,
+              reference,
+            }
+          );
+        }
+
+        console.log(
+          `Trip payment completed for trip ${trip.tripNumber}: ₦${amount / 100}`
+        );
+      }
     } else {
       console.log(`Unknown payment purpose: ${metadata?.purpose}`);
     }
@@ -148,18 +168,18 @@ async function handleFailedPayment(data: any) {
 
     if (transaction) {
       // Send failure notification
-      await NotificationService.sendNotification({
-        userId: transaction.userId,
-        userType: transaction.userType,
-        type: 'payment_failed',
-        title: '❌ Payment Failed',
-        message: `Your payment of ₦${transaction.amount / 100} could not be processed`,
-        data: {
-          amount: transaction.amount / 100,
-          reference,
-          reason: data.gateway_response,
-        },
-      });
+      // await NotificationService.sendNotification({
+      //   userId: transaction.userId,
+      //   userType: transaction.userType,
+      //   type: 'payment_failed',
+      //   title: '❌ Payment Failed',
+      //   message: `Your payment of ₦${transaction.amount / 100} could not be processed`,
+      //   data: {
+      //     amount: transaction.amount / 100,
+      //     reference,
+      //     reason: data.gateway_response,
+      //   },
+      // });
 
       console.log(
         `Payment failed for user ${transaction.userId}: ${data.gateway_response}`
@@ -196,18 +216,18 @@ async function handleSuccessfulTransfer(data: any) {
 
     if (transaction) {
       // Send success notification
-      await NotificationService.sendNotification({
-        userId: transaction.userId,
-        userType: 'driver',
-        type: 'cashout_successful',
-        title: '💸 Cashout Successful!',
-        message: `₦${(amount / 100).toLocaleString()} has been sent to your bank account`,
-        data: {
-          amount: amount / 100,
-          reference,
-          accountDetails: transaction.metadata.accountName,
-        },
-      });
+      // await NotificationService.sendNotification({
+      //   userId: transaction.userId,
+      //   userType: 'driver',
+      //   type: 'cashout_successful',
+      //   title: '💸 Cashout Successful!',
+      //   message: `₦${(amount / 100).toLocaleString()} has been sent to your bank account`,
+      //   data: {
+      //     amount: amount / 100,
+      //     reference,
+      //     accountDetails: transaction.metadata.accountName,
+      //   },
+      // });
 
       console.log(
         `Cashout completed for driver ${transaction.userId}: ₦${amount / 100}`
@@ -260,18 +280,18 @@ async function handleFailedTransfer(data: any) {
       });
 
       // Send notification
-      await NotificationService.sendNotification({
-        userId: transaction.userId,
-        userType: 'driver',
-        type: 'cashout_failed',
-        title: '❌ Cashout Failed',
-        message: `Your cashout of ₦${(amount / 100).toLocaleString()} failed. Amount has been returned to your wallet.`,
-        data: {
-          amount: amount / 100,
-          reference,
-          reason: data.gateway_response,
-        },
-      });
+      // await NotificationService.sendNotification({
+      //   userId: transaction.userId,
+      //   userType: 'driver',
+      //   type: 'cashout_failed',
+      //   title: '❌ Cashout Failed',
+      //   message: `Your cashout of ₦${(amount / 100).toLocaleString()} failed. Amount has been returned to your wallet.`,
+      //   data: {
+      //     amount: amount / 100,
+      //     reference,
+      //     reason: data.gateway_response,
+      //   },
+      // });
 
       console.log(
         `Cashout failed and reversed for driver ${transaction.userId}: ₦${amount / 100}`
@@ -298,4 +318,4 @@ async function handleReversedTransfer(data: any) {
   }
 }
 
-export { handlePaystackWebhook };
+app.post('/api/paystack/transaction-completion-webhook', handlePaystackWebhook);

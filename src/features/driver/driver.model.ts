@@ -273,6 +273,11 @@ driverSchema.index({ currentLocation: '2dsphere' });
 driverSchema.index({ isOnline: 1, isAvailable: 1 });
 driverSchema.index({ locationId: 1 });
 
+driverSchema.index({ walletId: 1 });
+driverSchema.index({ 'bankAccounts.accountNumber': 1 });
+driverSchema.index({ 'savedCards.authorizationCode': 1 });
+driverSchema.index({ lastCashoutAt: -1 });
+
 driverSchema.pre<DriverModelType>('save', function (next) {
   if (this.phone && this.phone.fullPhone) {
     const phoneNumber = parsePhoneNumberFromString(this.phone.fullPhone);

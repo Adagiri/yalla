@@ -40,6 +40,33 @@ export interface CustomerModelType extends Document {
   profilePhotoSet: boolean;
   personalInfoSet: boolean;
 
+  walletId?: string;
+
+  // Saved payment methods
+  savedCards: Array<{
+    authorizationCode: string;
+    lastFour: string;
+    brand: string;
+    bank: string;
+    isDefault: boolean;
+    createdAt: Date;
+  }>;
+
+  // Payment preferences
+  paymentPreferences: {
+    preferredMethod: 'wallet' | 'card' | 'cash';
+    autoTopUp: boolean;
+    autoTopUpThreshold: number; // in kobo
+    autoTopUpAmount: number; // in kobo
+    preferredCard?: string; // authorization code
+  };
+
+  // Spending tracking
+  totalSpentAllTime: number; // in kobo
+  totalWalletTopUps: number; // in kobo
+  averageSpendPerTrip: number; // in kobo
+  lastPaymentAt?: Date;
+
   deviceTokens: string[];
 
   createdAt: Date;
@@ -105,6 +132,36 @@ const customerSchema = new Schema<CustomerModelType>(
     personalInfoSet: { type: Boolean, default: false },
     deviceTokens: { type: [String], default: [] },
 
+    walletId: { type: String, ref: 'Wallet' },
+
+    savedCards: [
+      {
+        authorizationCode: { type: String, required: true },
+        lastFour: { type: String, required: true },
+        brand: { type: String, required: true },
+        bank: { type: String, required: true },
+        isDefault: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    paymentPreferences: {
+      preferredMethod: {
+        type: String,
+        enum: ['wallet', 'card', 'cash'],
+        default: 'card',
+      },
+      autoTopUp: { type: Boolean, default: false },
+      autoTopUpThreshold: { type: Number, default: 500000 }, // ₦5,000
+      autoTopUpAmount: { type: Number, default: 1000000 }, // ₦10,000
+      preferredCard: { type: String },
+    },
+
+    totalSpentAllTime: { type: Number, default: 0 },
+    totalWalletTopUps: { type: Number, default: 0 },
+    averageSpendPerTrip: { type: Number, default: 0 },
+    lastPaymentAt: { type: Date },
+
     createdAt: {
       type: Date,
       default: Date.now,
@@ -144,6 +201,9 @@ customerSchema.pre(
 );
 
 customerSchema.index({ locationId: 1 });
+customerSchema.index({ walletId: 1 });
+customerSchema.index({ 'savedCards.authorizationCode': 1 });
+customerSchema.index({ lastPaymentAt: -1 });
 
 customerSchema.pre<CustomerModelType>('save', function (next) {
   if (this.phone && this.phone.fullPhone) {

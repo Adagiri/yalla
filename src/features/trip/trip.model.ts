@@ -313,6 +313,12 @@ TripSchema.index({ status: 1, requestedAt: -1 });
 TripSchema.index({ driverId: 1, status: 1 });
 TripSchema.index({ customerId: 1, status: 1 });
 
+TripSchema.index({ paymentReference: 1 });
+TripSchema.index({ paymentStatus: 1 });
+TripSchema.index({ paymentProcessedAt: -1 });
+TripSchema.index({ driverId: 1, paymentStatus: 1 });
+TripSchema.index({ customerId: 1, paymentStatus: 1 });
+
 // Virtual for trip duration
 TripSchema.virtual('actualDuration').get(function () {
   if (this.startedAt && this.completedAt) {
