@@ -3,6 +3,11 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { v4 as uuidv4 } from 'uuid';
 import { AccountType, AuthChannelEnum } from '../../constants/general';
 import { LocationType, PhoneType } from '../../types/general';
+import {
+  PAYMENT_MODEL_CONFIG,
+  PaymentModel,
+  PaymentModelEnum,
+} from '../../constants/payment-models';
 
 export interface DriverModelType extends Document {
   _id: string;
@@ -103,6 +108,32 @@ export interface DriverModelType extends Document {
   totalCashouts: number; // in kobo
   pendingEarnings: number; // in kobo
   lastCashoutAt?: Date;
+
+  paymentModel: PaymentModel;
+  paymentModelHistory: Array<{
+    model: PaymentModel;
+    changedAt: Date;
+    changedBy?: string; // Admin ID who made the change
+    reason?: string;
+  }>;
+
+  // Commission model specific (only relevant if using COMMISSION model)
+  commissionSettings: {
+    customRate?: number;
+    isActive: boolean;
+  };
+
+  // Subscription model specific
+  subscriptionSettings: {
+    requireActiveSubscription: boolean;
+    allowFallbackToCommission: boolean; // If subscription expires, fall back to commission
+  };
+
+  earningsBreakdown: {
+    subscriptionEarnings: number;
+    commissionEarnings: number;
+    totalEarnings: number;
+  };
 
   createdAt: Date;
   updatedAt: Date;
@@ -230,6 +261,76 @@ const driverSchema = new Schema<DriverModelType>(
     totalCashouts: { type: Number, default: 0 },
     pendingEarnings: { type: Number, default: 0 },
     lastCashoutAt: { type: Date },
+
+    paymentModel: {
+      type: String,
+      enum: PaymentModelEnum,
+      default: PAYMENT_MODEL_CONFIG.DEFAULT_MODEL,
+    },
+
+    paymentModelHistory: [
+      {
+        model: {
+          type: String,
+          enum: PaymentModelEnum,
+          required: true,
+        },
+        changedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        changedBy: {
+          type: String, // Admin ID
+        },
+        reason: {
+          type: String,
+        },
+      },
+    ],
+
+    commissionSettings: {
+      customRate: {
+        type: Number,
+        min: 0,
+        max: 1,
+      },
+      isActive: {
+        type: Boolean,
+        default: true,
+      },
+    },
+
+    subscriptionSettings: {
+      requireActiveSubscription: {
+        type: Boolean,
+        default: PAYMENT_MODEL_CONFIG.SUBSCRIPTION_ENFORCEMENT,
+      },
+      allowFallbackToCommission: {
+        type: Boolean,
+        default: false,
+      },
+    },
+
+    earningsBreakdown: {
+      subscriptionEarnings: {
+        type: Number,
+        default: 0,
+        get: (value: number) => Math.round(value / 100), // Convert from kobo
+        set: (value: number) => Math.round(value * 100), // Convert to kobo
+      },
+      commissionEarnings: {
+        type: Number,
+        default: 0,
+        get: (value: number) => Math.round(value / 100),
+        set: (value: number) => Math.round(value * 100),
+      },
+      totalEarnings: {
+        type: Number,
+        default: 0,
+        get: (value: number) => Math.round(value / 100),
+        set: (value: number) => Math.round(value * 100),
+      },
+    },
 
     createdAt: {
       type: Date,

@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
+import { PaymentModel, PaymentModelEnum } from '../../constants/payment-models';
 
 export interface TripDocument extends Document {
   id: string;
@@ -117,6 +118,11 @@ export interface TripDocument extends Document {
   refundAmount?: number;
   refundReason?: string;
   refundedAt?: Date;
+
+  // Add to TripDocument interface and schema
+  paymentModel: PaymentModel;
+
+  commissionRate: number;
 
   // Cash payment specific
   cashReceived?: boolean; // Driver confirms cash receipt
@@ -280,6 +286,14 @@ const TripSchema = new Schema<TripDocument>(
 
     driverEarnings: { type: Number }, // in kobo
     platformCommission: { type: Number }, // in kobo
+
+    // Add to TripDocument interface and schema
+    paymentModel: {
+      type: String,
+      enum: PaymentModelEnum
+    },
+
+    commissionRate: { type: Number }, // Commission rate used
 
     paymentProcessedAt: { type: Date },
     paymentFailureReason: { type: String },

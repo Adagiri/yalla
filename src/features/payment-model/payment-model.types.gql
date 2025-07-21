@@ -1,0 +1,148 @@
+# Enums
+enum PaymentModel {
+  SUBSCRIPTION
+  COMMISSION
+}
+
+# Types
+type PaymentModelHistory {
+  model: PaymentModel!
+  changedAt: DateTime!
+  changedBy: ID
+  reason: String
+}
+
+type CommissionSettings {
+  customRate: Float
+  isActive: Boolean!
+}
+
+type SubscriptionSettings {
+  requireActiveSubscription: Boolean!
+  allowFallbackToCommission: Boolean!
+}
+
+type EarningsBreakdown {
+  subscriptionEarnings: Float!
+  commissionEarnings: Float!
+  totalEarnings: Float!
+}
+
+type PaymentModelCalculation {
+  model: PaymentModel!
+  driverEarnings: Float!
+  platformEarnings: Float!
+  commissionRate: Float!
+  hasActiveSubscription: Boolean
+  subscriptionId: ID
+  message: String
+}
+
+type PaymentModelStats {
+  modelDistribution: [ModelDistribution!]!
+  subscriptionMetrics: SubscriptionMetrics!
+  totalDrivers: Int!
+}
+
+type ModelDistribution {
+  model: PaymentModel!
+  count: Int!
+  totalEarnings: Float!
+  avgEarnings: Float!
+}
+
+type SubscriptionMetrics {
+  activeSubscriptions: Int!
+  totalSubscriptionEarnings: Float!
+}
+
+type PaymentModelSwitchResult {
+  success: Boolean!
+  previousModel: PaymentModel!
+  newModel: PaymentModel!
+  message: String!
+}
+
+# Inputs
+input SwitchPaymentModelInput {
+  driverId: ID!
+  newModel: PaymentModel!
+  reason: String
+}
+
+input UpdateCommissionSettingsInput {
+  driverId: ID!
+  customRate: Float
+  isActive: Boolean
+}
+
+input UpdateSubscriptionSettingsInput {
+  driverId: ID!
+  requireActiveSubscription: Boolean
+  allowFallbackToCommission: Boolean
+}
+
+# Updated Driver type to include payment model fields
+extend type Driver {
+  paymentModel: PaymentModel!
+  paymentModelHistory: [PaymentModelHistory!]!
+  commissionSettings: CommissionSettings!
+  subscriptionSettings: SubscriptionSettings!
+  earningsBreakdown: EarningsBreakdown!
+  canAcceptRides: Boolean!
+  effectivePaymentModel: PaymentModelCalculation
+}
+
+# Updated Trip type to include payment model information
+extend type Trip {
+  paymentModel: PaymentModel
+  driverEarnings: Float
+  platformCommission: Float
+  commissionRate: Float
+}
+
+# Queries
+extend type Query {
+  # Get payment model statistics (Admin only)
+  getPaymentModelStats: PaymentModelStats!
+  
+  # Check if driver can accept rides
+  canDriverAcceptRides(driverId: ID!): Boolean!
+  
+  # Get driver's effective payment model for a trip amount
+  getDriverPaymentModel(driverId: ID!, tripAmount: Float!): PaymentModelCalculation!
+  
+  # Get drivers by payment model
+  getDriversByPaymentModel(
+    model: PaymentModel!
+    page: Int = 1
+    limit: Int = 20
+  ): [Driver]!
+}
+
+# Mutations
+extend type Mutation {
+  # Admin: Switch driver's payment model
+  switchDriverPaymentModel(input: SwitchPaymentModelInput!): PaymentModelSwitchResult!
+  
+  # Admin: Update driver's commission settings
+  updateDriverCommissionSettings(input: UpdateCommissionSettingsInput!): Driver!
+  
+  # Admin: Update driver's subscription settings
+  updateDriverSubscriptionSettings(input: UpdateSubscriptionSettingsInput!): Driver!
+  
+  # Driver: Request payment model change (creates admin review task)
+  requestPaymentModelChange(
+    newModel: PaymentModel!
+    reason: String!
+  ): Boolean!
+}
+
+# Subscriptions
+extend type Subscription {
+  # Payment model changes for a driver
+  paymentModelUpdated(driverId: ID!): Driver!
+  
+  # Real-time payment model statistics for admin dashboard
+  paymentModelStatsUpdated: PaymentModelStats!
+}

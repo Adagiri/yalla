@@ -1,0 +1,194 @@
+# src/features/subscription/subscription.types.gql
+
+# Enums
+enum SubscriptionPlanType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+# Types
+type SubscriptionPlan {
+  id: ID!
+  name: String!
+  type: SubscriptionPlanType!
+  price: Float!
+  description: String
+  features: [String!]!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DriverSubscription {
+  id: ID!
+  driverId: ID!
+  planId: ID!
+  plan: SubscriptionPlan!
+  driver: Driver!
+  status: SubscriptionStatus!
+  startDate: DateTime!
+  endDate: DateTime!
+  autoRenew: Boolean!
+  paymentReference: String
+  subscriptionNumber: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type SubscriptionPaymentResult {
+  success: Boolean!
+  subscription: DriverSubscription
+  paymentLink: String
+  reference: String
+  message: String!
+}
+
+type SubscriptionStats {
+  totalSubscriptions: Int!
+  activeSubscriptions: Int!
+  expiredSubscriptions: Int!
+  totalRevenue: Float!
+  planDistribution: [PlanDistribution!]!
+}
+
+type PlanDistribution {
+  planId: ID!
+  planName: String!
+  count: Int!
+  revenue: Float!
+}
+
+type PaginatedSubscriptions {
+  subscriptions: [DriverSubscription!]!
+  total: Int!
+  page: Int!
+  totalPages: Int!
+}
+
+type PaginatedPlans {
+  plans: [SubscriptionPlan!]!
+  total: Int!
+  page: Int!
+  totalPages: Int!
+}
+
+# Inputs
+input CreateSubscriptionPlanInput {
+  name: String!
+  type: SubscriptionPlanType!
+  price: Float!
+  description: String
+  features: [String!]
+}
+
+input UpdateSubscriptionPlanInput {
+  name: String
+  price: Float
+  description: String
+  features: [String!]
+  isActive: Boolean
+}
+
+input SubscribeDriverInput {
+  planId: ID!
+  paymentMethod: SubscriptionPaymentMethod!
+  autoRenew: Boolean = true
+}
+
+enum SubscriptionPaymentMethod {
+  WALLET
+  PAYSTACK
+}
+
+# Queries
+extend type Query {
+  # Get active subscription plans
+  getActiveSubscriptionPlans: [SubscriptionPlan!]!
+
+  # Get all subscription plans (Admin)
+  getAllSubscriptionPlans(
+    page: Int = 1
+    limit: Int = 20
+    isActive: Boolean
+  ): PaginatedPlans!
+
+  # Get subscription plan by ID
+  getSubscriptionPlan(id: ID!): SubscriptionPlan
+
+  # Get driver's active subscription
+  getDriverActiveSubscription(driverId: ID): DriverSubscription
+
+  # Get driver's subscription history
+  getDriverSubscriptionHistory(
+    driverId: ID
+    page: Int = 1
+    limit: Int = 20
+  ): PaginatedSubscriptions!
+
+  # Get all driver subscriptions (Admin)
+  getAllDriverSubscriptions(
+    page: Int = 1
+    limit: Int = 20
+    status: SubscriptionStatus
+    planId: ID
+  ): PaginatedSubscriptions!
+
+  # Get subscription statistics (Admin)
+  getSubscriptionStats: SubscriptionStats!
+
+  # Check if driver can accept rides
+  canDriverAcceptRides(driverId: ID): Boolean!
+}
+
+# Mutations
+extend type Mutation {
+  # Admin: Create subscription plan
+  createSubscriptionPlan(input: CreateSubscriptionPlanInput!): SubscriptionPlan!
+
+  # Admin: Update subscription plan
+  updateSubscriptionPlan(
+    id: ID!
+    input: UpdateSubscriptionPlanInput!
+  ): SubscriptionPlan!
+
+  # Admin: Toggle subscription plan status
+  toggleSubscriptionPlanStatus(id: ID!): SubscriptionPlan!
+
+  # Admin: Delete subscription plan
+  deleteSubscriptionPlan(id: ID!): Boolean!
+
+  # Driver: Subscribe to a plan
+  subscribeDriver(input: SubscribeDriverInput!): SubscriptionPaymentResult!
+
+  # Driver: Cancel subscription
+  cancelSubscription(subscriptionId: ID!): DriverSubscription!
+
+  # Driver: Toggle auto-renewal
+  toggleAutoRenewal(subscriptionId: ID!): DriverSubscription!
+
+  # Admin: Manually activate subscription
+  activateSubscription(subscriptionId: ID!): DriverSubscription!
+
+  # Admin: Manually cancel subscription
+  adminCancelSubscription(
+    subscriptionId: ID!
+    reason: String
+  ): DriverSubscription!
+}
+
+# Subscriptions
+extend type Subscription {
+  # Subscription status updates for driver
+  subscriptionUpdated(driverId: ID!): DriverSubscription!
+
+  # Real-time subscription statistics for admin
+  subscriptionStatsUpdated: SubscriptionStats!
+}

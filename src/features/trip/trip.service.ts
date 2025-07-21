@@ -10,6 +10,7 @@ import PaymentService from '../../services/payment.service';
 import WalletService from '../../services/wallet.service';
 import Transaction from '../transaction/transaction.model';
 import Customer from '../customer/customer.model';
+import PaymentModelService from '../payment-model/payment-model.services';
 
 interface CreateTripInput {
   customerId: string;
@@ -437,41 +438,68 @@ class TripService {
     const session = await mongoose.startSession();
 
     try {
-      session.startTransaction();
-
-      const trip = await Trip.findOne({
-        _id: tripId,
-        driverId,
-        status: 'in_progress',
-      });
-
-      if (!trip) throw new ErrorResponse(404, 'Active trip not found');
-
-      trip.status = 'completed';
-      trip.completedAt = new Date();
-
-      // Update payment status if cash
-      if (trip.paymentMethod === 'cash') {
-        trip.paymentStatus = 'completed';
+      const trip = await Trip.findById(tripId).populate('driverId customerId');
+      if (!trip) {
+        throw new ErrorResponse(404, 'Trip not found');
       }
 
-      await trip.save({ session });
-
-      // Update driver
-      const driver = await Driver.findById(driverId);
-      if (driver) {
-        driver.isAvailable = true;
-        driver.currentTripId = undefined;
-        driver.stats.totalTrips += 1;
-        driver.stats.totalEarnings += trip.pricing.finalAmount * 0.75; // 75% to driver
-        await driver.save({ session });
+      // Verify authorization
+      if (trip.driverId !== driverId) {
+        throw new ErrorResponse(403, 'Not authorized to complete this trip');
       }
 
-      await session.commitTransaction();
+      // Process payment based on driver's payment model
+      const paymentResult = await PaymentModelService.processTripPayment(
+        trip.driverId,
+        tripId,
+        trip.pricing.finalAmount,
+        trip.paymentMethod
+      );
 
-      return trip;
+      // Update trip status
+      const updatedTrip = await Trip.findByIdAndUpdate(
+        tripId,
+        {
+          status: 'completed',
+          completedAt: new Date(),
+          driverEarnings: paymentResult.driverEarnings,
+          platformCommission: paymentResult.platformEarnings,
+          paymentModel: paymentResult.model,
+          $push: {
+            timeline: {
+              event: 'trip_completed',
+              timestamp: new Date(),
+              metadata: {
+                paymentModel: paymentResult.model,
+                driverEarnings: paymentResult.driverEarnings,
+                platformEarnings: paymentResult.platformEarnings,
+              },
+            },
+          },
+        },
+        { new: true }
+      );
+
+      // Send notifications
+
+      if (updatedTrip) {
+        await NotificationService.sendTripNotification(
+          trip.driverId,
+          'driver',
+          'earnings_received',
+          {
+            ...updatedTrip.toObject(),
+            paymentModel: paymentResult.model,
+            message: paymentResult.message,
+          }
+        );
+      }
+
+      return {
+        trip: updatedTrip,
+        paymentResult,
+      };
     } catch (error: any) {
-      await session.abortTransaction();
       throw new ErrorResponse(500, 'Error completing trip', error.message);
     } finally {
       session.endSession();

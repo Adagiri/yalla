@@ -1,0 +1,773 @@
+# ===== ENUMS =====
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  SUPPORT
+  ANALYST
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  VIEW
+  ASSIGN
+  APPROVE
+  SUSPEND
+  ACTIVATE
+}
+
+enum SystemStatus {
+  HEALTHY
+  WARNING
+  CRITICAL
+}
+
+enum AlertType {
+  WARNING
+  CRITICAL
+}
+
+enum BroadcastTarget {
+  ALL
+  DRIVERS
+  CUSTOMERS
+}
+
+# ===== CORE ADMIN TYPES =====
+type Admin {
+  id: ID!
+  firstname: String!
+  lastname: String!
+  email: String!
+  role: AdminRole!
+  permissions: [String!]!
+  department: String!
+  employeeId: String
+  isActive: Boolean!
+  accessLevel: Int!
+  timezone: String!
+  language: String!
+  profilePhoto: String
+  phone: String
+  lastLoginAt: DateTime
+  lastActiveAt: DateTime
+  notificationPreferences: NotificationPreferences!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type NotificationPreferences {
+  email: Boolean!
+  sms: Boolean!
+  push: Boolean!
+  criticalAlerts: Boolean!
+}
+
+type AuthPayload {
+  admin: Admin!
+  token: String!
+  permissions: [String!]!
+  expiresAt: DateTime!
+}
+
+# ===== DASHBOARD & ANALYTICS TYPES =====
+type DashboardMetrics {
+  realTime: RealTimeMetrics!
+  financial: FinancialMetrics!
+  operational: OperationalMetrics!
+  growth: GrowthMetrics!
+}
+
+type RealTimeMetrics {
+  activeTrips: Int!
+  onlineDrivers: Int!
+  availableDrivers: Int!
+  pendingRequests: Int!
+  completedTripsToday: Int!
+  revenueToday: Float!
+}
+
+type FinancialMetrics {
+  totalRevenue: Float!
+  subscriptionRevenue: Float!
+  commissionRevenue: Float!
+  pendingPayouts: Float!
+  totalPayouts: Float!
+  averageTransactionValue: Float!
+  paymentSuccessRate: Float!
+}
+
+type OperationalMetrics {
+  totalDrivers: Int!
+  activeDrivers: Int!
+  totalCustomers: Int!
+  activeCustomers: Int!
+  tripCompletionRate: Float!
+  averageResponseTime: Float!
+  customerSatisfactionScore: Float!
+}
+
+type GrowthMetrics {
+  newDriversThisMonth: Int!
+  newCustomersThisMonth: Int!
+  driverRetentionRate: Float!
+  customerRetentionRate: Float!
+  monthOverMonthGrowth: Float!
+}
+
+type RevenueAnalytics {
+  subscriptionRevenue: [RevenueDataPoint!]!
+  commissionRevenue: [RevenueDataPoint!]!
+}
+
+type RevenueDataPoint {
+  date: String!
+  revenue: Float!
+  count: Int!
+}
+
+type DriverPerformanceAnalytics {
+  driverId: ID!
+  driverName: String!
+  paymentModel: PaymentModel!
+  totalTrips: Int!
+  totalEarnings: Float!
+  averageRating: Float!
+  totalDistance: Float!
+  totalDuration: Float!
+  earningsPerTrip: Float!
+  averageDistance: Float!
+}
+
+type GeographicAnalytics {
+  pickupArea: String
+  destinationArea: String
+  tripCount: Int!
+  totalRevenue: Float!
+  averageFare: Float!
+  averageDistance: Float!
+}
+
+# ===== DRIVER MANAGEMENT TYPES =====
+type PaginatedDrivers {
+  drivers: [DriverDetails!]!
+  total: Int!
+  page: Int!
+  totalPages: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type DriverDetails {
+  driver: Driver!
+  activeSubscription: DriverSubscription
+  tripStats: DriverTripStats!
+  walletBalance: Float!
+}
+
+type DriverTripStats {
+  totalTrips: Int!
+  totalEarnings: Float!
+  averageRating: Float!
+  totalDistance: Float!
+}
+
+# ===== CUSTOMER MANAGEMENT TYPES =====
+type PaginatedCustomers {
+  customers: [CustomerDetails!]!
+  total: Int!
+  page: Int!
+  totalPages: Int!
+}
+
+type CustomerDetails {
+  customer: Customer!
+  tripStats: CustomerTripStats!
+  walletBalance: Float!
+}
+
+type CustomerTripStats {
+  totalTrips: Int!
+  totalSpent: Float!
+  averageRating: Float!
+}
+
+# ===== TRIP MANAGEMENT TYPES =====
+type PaginatedTrips {
+  trips: [Trip!]!
+  total: Int!
+  page: Int!
+  totalPages: Int!
+}
+
+type TripAssignmentResult {
+  success: Boolean!
+  trip: Trip!
+  message: String!
+}
+
+# ===== FINANCIAL MANAGEMENT TYPES =====
+type PayoutProcessingResult {
+  id: ID!
+  status: String!
+  error: String
+}
+
+type WalletCreditResult {
+  success: Boolean!
+  transaction: Transaction!
+  newBalance: Float!
+}
+
+# ===== SYSTEM HEALTH & MONITORING =====
+type SystemHealth {
+  timestamp: DateTime!
+  apiMetrics: ApiMetrics!
+  databaseMetrics: DatabaseMetrics!
+  businessMetrics: BusinessMetrics!
+  externalServices: ExternalServices!
+  overallStatus: SystemStatus!
+  alerts: [SystemAlert!]!
+}
+
+type ApiMetrics {
+  responseTime: Int!
+  requestCount: Int!
+  errorRate: Float!
+  activeConnections: Int!
+}
+
+type DatabaseMetrics {
+  connectionCount: Int!
+  queryTime: Float!
+  slowQueries: Int!
+  storage: StorageMetrics!
+}
+
+type StorageMetrics {
+  used: Float!
+  available: Float!
+  percentage: Float!
+}
+
+type BusinessMetrics {
+  activeTrips: Int!
+  onlineDrivers: Int!
+  pendingRequests: Int!
+  systemErrors: Int!
+}
+
+type ExternalServices {
+  paystack: ServiceHealth!
+  aws: ServiceHealth!
+  maps: ServiceHealth!
+  sms: ServiceHealth!
+}
+
+type ServiceHealth {
+  status: SystemStatus!
+  responseTime: Int!
+}
+
+type SystemAlert {
+  type: AlertType!
+  message: String!
+  component: String!
+}
+
+# ===== AUDIT LOGGING =====
+type AuditLog {
+  id: ID!
+  adminId: ID!
+  adminEmail: String!
+  adminRole: AdminRole!
+  action: String!
+  resource: String!
+  resourceId: ID
+  changes: AuditChanges
+  httpMethod: String
+  endpoint: String
+  ipAddress: String
+  success: Boolean!
+  errorMessage: String
+  timestamp: DateTime!
+}
+
+type AuditChanges {
+  before: JSON
+  after: JSON
+  fieldsChanged: [String!]
+}
+
+type PaginatedAuditLogs {
+  logs: [AuditLog!]!
+  total: Int!
+  page: Int!
+  totalPages: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type AuditStats {
+  dailyStats: [DailyAuditStats!]!
+  topAdmins: [AdminActivity!]!
+  topActions: [ActionStats!]!
+}
+
+type DailyAuditStats {
+  date: String!
+  successful: Int!
+  failed: Int!
+  total: Int!
+}
+
+type AdminActivity {
+  adminId: ID!
+  adminEmail: String!
+  actionCount: Int!
+  successfulActions: Int!
+}
+
+type ActionStats {
+  action: String!
+  resource: String!
+  count: Int!
+}
+
+# ===== COMMUNICATION =====
+type BroadcastResult {
+  sent: Int!
+  target: BroadcastTarget!
+  title: String!
+  message: String!
+}
+
+type EmailTemplate {
+  name: String!
+  subject: String!
+  html: String!
+  text: String!
+}
+
+# ===== INPUT TYPES =====
+input AdminLoginInput {
+  email: String!
+  password: String!
+}
+
+input CreateAdminInput {
+  firstname: String!
+  lastname: String!
+  email: String!
+  password: String!
+  role: AdminRole!
+  department: String
+  permissions: [String!]
+}
+
+input UpdateAdminInput {
+  firstname: String
+  lastname: String
+  email: String
+  role: AdminRole
+  department: String
+  permissions: [String!]
+  isActive: Boolean
+  accessLevel: Int
+  timezone: String
+  language: String
+}
+
+input DateRangeInput {
+  startDate: DateTime!
+  endDate: DateTime!
+}
+
+input DriverFilterInput {
+  status: String
+  paymentModel: PaymentModel
+  searchTerm: String
+  isActive: Boolean
+}
+
+input CustomerFilterInput {
+  searchTerm: String
+  isActive: Boolean
+}
+
+input TripFilterInput {
+  status: TripStatus
+  paymentMethod: PaymentMethod
+  paymentModel: PaymentModel
+  dateRange: DateRangeInput
+}
+
+input AuditLogFilterInput {
+  adminId: ID
+  resource: String
+  action: String
+  success: Boolean
+  startDate: DateTime
+  endDate: DateTime
+}
+
+input BroadcastNotificationInput {
+  target: BroadcastTarget!
+  title: String!
+  message: String!
+  userType: String
+}
+
+input EmailTemplateInput {
+  name: String!
+  subject: String!
+  html: String!
+  text: String!
+}
+
+input WalletCreditInput {
+  userId: ID!
+  amount: Float!
+  reason: String!
+}
+
+# ===== QUERIES =====
+extend type Query {
+  # ===== AUTHENTICATION & ADMIN MANAGEMENT =====
+  adminLogin(input: AdminLoginInput!): AuthPayload!
+  getCurrentAdmin: Admin!
+  getAllAdmins(page: Int = 1, limit: Int = 20): PaginatedAdmins!
+  getAdminById(id: ID!): Admin
+
+  # ===== DASHBOARD & ANALYTICS =====
+  getDashboardMetrics(dateRange: DateRangeInput): DashboardMetrics!
+  getRevenueAnalytics(
+    period: String = "daily"
+    days: Int = 30
+  ): RevenueAnalytics!
+  getDriverPerformanceAnalytics(
+    driverId: ID
+    dateRange: DateRangeInput
+  ): [DriverPerformanceAnalytics!]!
+  getGeographicAnalytics(dateRange: DateRangeInput): [GeographicAnalytics!]!
+  getPaymentModelAnalytics(dateRange: DateRangeInput): PaymentModelAnalytics!
+
+  # ===== DRIVER MANAGEMENT =====
+  getAllDrivers(
+    page: Int = 1
+    limit: Int = 20
+    filters: DriverFilterInput
+  ): PaginatedDrivers!
+  getDriverDetails(driverId: ID!): DriverDetails!
+  getDriverTripHistory(
+    driverId: ID!
+    page: Int = 1
+    limit: Int = 20
+    dateRange: DateRangeInput
+  ): PaginatedTrips!
+
+  # ===== CUSTOMER MANAGEMENT =====
+  getAllCustomers(
+    page: Int = 1
+    limit: Int = 20
+    filters: CustomerFilterInput
+  ): PaginatedCustomers!
+  getCustomerDetails(customerId: ID!): CustomerDetails!
+  getCustomerTripHistory(
+    customerId: ID!
+    page: Int = 1
+    limit: Int = 20
+    dateRange: DateRangeInput
+  ): PaginatedTrips!
+
+  # ===== TRIP MANAGEMENT =====
+  getAllTrips(
+    page: Int = 1
+    limit: Int = 20
+    filters: TripFilterInput
+  ): PaginatedTrips!
+  getTripDetails(tripId: ID!): Trip!
+  getLiveTrips: [Trip!]!
+
+  # ===== FINANCIAL MANAGEMENT =====
+  getFinancialOverview(dateRange: DateRangeInput): FinancialMetrics!
+  getPendingPayouts(page: Int = 1, limit: Int = 20): PaginatedTransactions!
+  getTransactionHistory(
+    page: Int = 1
+    limit: Int = 20
+    filters: TransactionFilterInput
+  ): PaginatedTransactions!
+
+  # ===== SUBSCRIPTION MANAGEMENT =====
+  # (Already defined in subscription schema - reference here)
+
+  # ===== SYSTEM HEALTH & MONITORING =====
+  getSystemHealth: SystemHealth!
+  getSystemHealthHistory(hours: Int = 24): [SystemHealth!]!
+
+  # ===== AUDIT LOGGING =====
+  getAuditLogs(
+    page: Int = 1
+    limit: Int = 50
+    filters: AuditLogFilterInput
+  ): PaginatedAuditLogs!
+  getAuditStats(days: Int = 30): AuditStats!
+
+  # ===== COMMUNICATION =====
+  getEmailTemplates: [EmailTemplate!]!
+  getEmailTemplate(name: String!): EmailTemplate
+  getNotificationHistory(
+    page: Int = 1
+    limit: Int = 20
+    userType: String
+  ): PaginatedNotifications!
+}
+
+# ===== MUTATIONS =====
+extend type Mutation {
+  # ===== ADMIN MANAGEMENT =====
+  createAdmin(input: CreateAdminInput!): Admin!
+  updateAdmin(id: ID!, input: UpdateAdminInput!): Admin!
+  deactivateAdmin(id: ID!): Admin!
+  changeAdminPassword(oldPassword: String!, newPassword: String!): Boolean!
+  resetAdminPassword(adminId: ID!): String! # Returns temporary password
+  # ===== DRIVER MANAGEMENT =====
+  updateDriverStatus(driverId: ID!, isActive: Boolean!): Driver!
+  suspendDriver(driverId: ID!, reason: String!): Driver!
+  activateDriver(driverId: ID!): Driver!
+  approveDriverDocuments(driverId: ID!, documentType: String!): Driver!
+  rejectDriverDocuments(
+    driverId: ID!
+    documentType: String!
+    reason: String!
+  ): Driver!
+  updateDriverCommissionRate(driverId: ID!, rate: Float!): Driver!
+
+  # ===== CUSTOMER MANAGEMENT =====
+  updateCustomerStatus(customerId: ID!, isActive: Boolean!): Customer!
+  suspendCustomer(customerId: ID!, reason: String!): Customer!
+  activateCustomer(customerId: ID!): Customer!
+
+  # ===== TRIP MANAGEMENT =====
+  assignTripToDriver(tripId: ID!, driverId: ID!): TripAssignmentResult!
+  cancelTripAdmin(tripId: ID!, reason: String!): Trip!
+  refundTrip(tripId: ID!, amount: Float!, reason: String!): Trip!
+  overrideTripPricing(tripId: ID!, newAmount: Float!, reason: String!): Trip!
+
+  # ===== FINANCIAL MANAGEMENT =====
+  processPendingPayouts: [PayoutProcessingResult!]!
+  processSpecificPayout(payoutId: ID!): PayoutProcessingResult!
+  creditUserWallet(input: WalletCreditInput!): WalletCreditResult!
+  debitUserWallet(input: WalletDebitInput!): WalletDebitResult!
+  refundTransaction(transactionId: ID!, reason: String!): Transaction!
+  adjustWalletBalance(
+    userId: ID!
+    amount: Float!
+    reason: String!
+  ): WalletAdjustmentResult!
+
+  # ===== SUBSCRIPTION MANAGEMENT =====
+  # (Reference existing subscription mutations)
+  forceSubscriptionRenewal(subscriptionId: ID!): DriverSubscription!
+  bulkSubscriptionOperation(
+    operation: String!
+    subscriptionIds: [ID!]!
+  ): BulkOperationResult!
+
+  # ===== SYSTEM CONFIGURATION =====
+  updateSystemSettings(settings: SystemSettingsInput!): SystemSettings!
+  updatePricingConfiguration(config: PricingConfigInput!): PricingConfig!
+  updateBusinessRules(rules: BusinessRulesInput!): BusinessRules!
+
+  # ===== COMMUNICATION =====
+  sendBroadcastNotification(
+    input: BroadcastNotificationInput!
+  ): BroadcastResult!
+  sendCustomNotification(
+    userIds: [ID!]!
+    userType: String!
+    title: String!
+    message: String!
+  ): NotificationResult!
+
+  # ===== EMAIL TEMPLATES =====
+  createEmailTemplate(input: EmailTemplateInput!): EmailTemplate!
+  updateEmailTemplate(name: String!, input: EmailTemplateInput!): EmailTemplate!
+  deleteEmailTemplate(name: String!): Boolean!
+
+  # ===== BULK OPERATIONS =====
+  bulkDriverOperation(
+    operation: String!
+    driverIds: [ID!]!
+  ): BulkOperationResult!
+  bulkCustomerOperation(
+    operation: String!
+    customerIds: [ID!]!
+  ): BulkOperationResult!
+  bulkTripOperation(operation: String!, tripIds: [ID!]!): BulkOperationResult!
+
+  # ===== DATA EXPORT =====
+  exportDriverData(
+    filters: DriverFilterInput
+    format: String = "CSV"
+  ): ExportResult!
+  exportCustomerData(
+    filters: CustomerFilterInput
+    format: String = "CSV"
+  ): ExportResult!
+  exportTripData(
+    filters: TripFilterInput
+    format: String = "CSV"
+  ): ExportResult!
+  exportFinancialData(
+    dateRange: DateRangeInput!
+    format: String = "CSV"
+  ): ExportResult!
+}
+
+# ===== SUBSCRIPTIONS (Real-time Updates) =====
+extend type Subscription {
+  # ===== REAL-TIME DASHBOARD =====
+  dashboardMetricsUpdated: DashboardMetrics!
+  systemHealthUpdated: SystemHealth!
+
+  # ===== LIVE TRIP MONITORING =====
+  liveTripUpdates: Trip!
+  newTripCreated: Trip!
+  tripStatusChanged(tripId: ID): Trip!
+
+  # ===== FINANCIAL MONITORING =====
+  newTransaction: Transaction!
+  payoutProcessed: Transaction!
+
+  # ===== SYSTEM ALERTS =====
+  systemAlert: SystemAlert!
+  criticalError: SystemError!
+
+  # ===== ADMIN ACTIVITY =====
+  adminActionPerformed: AuditLog!
+}
+
+# ===== ADDITIONAL HELPER TYPES =====
+type PaginatedAdmins {
+  admins: [Admin!]!
+  total: Int!
+  page: Int!
+  totalPages: Int!
+}
+
+type BulkOperationResult {
+  success: Int!
+  failed: Int!
+  total: Int!
+  errors: [String!]
+}
+
+type ExportResult {
+  success: Boolean!
+  downloadUrl: String
+  filename: String!
+  recordCount: Int!
+}
+
+type SystemSettings {
+  maintenanceMode: Boolean!
+  allowNewRegistrations: Boolean!
+  maxTripsPerDriver: Int!
+  emergencyMode: Boolean!
+}
+
+type PricingConfig {
+  baseFare: Float!
+  perKmRate: Float!
+  perMinuteRate: Float!
+  surgeMultiplier: Float!
+  minimumFare: Float!
+}
+
+type BusinessRules {
+  maxWaitTime: Int!
+  autoAssignRadius: Float!
+  driverAcceptanceTime: Int!
+  customerCancellationFee: Float!
+}
+
+input SystemSettingsInput {
+  maintenanceMode: Boolean
+  allowNewRegistrations: Boolean
+  maxTripsPerDriver: Int
+  emergencyMode: Boolean
+}
+
+input PricingConfigInput {
+  baseFare: Float
+  perKmRate: Float
+  perMinuteRate: Float
+  surgeMultiplier: Float
+  minimumFare: Float
+}
+
+input BusinessRulesInput {
+  maxWaitTime: Int
+  autoAssignRadius: Float
+  driverAcceptanceTime: Int
+  customerCancellationFee: Float
+}
+
+input WalletDebitInput {
+  userId: ID!
+  amount: Float!
+  reason: String!
+}
+
+type WalletDebitResult {
+  success: Boolean!
+  transaction: Transaction!
+  newBalance: Float!
+}
+
+type WalletAdjustmentResult {
+  success: Boolean!
+  transaction: Transaction!
+  previousBalance: Float!
+  newBalance: Float!
+  adjustment: Float!
+}
+
+input TransactionFilterInput {
+  userId: ID
+  type: String
+  status: String
+  purpose: String
+  dateRange: DateRangeInput
+}
+
+type PaginatedTransactions {
+  transactions: [Transaction!]!
+  total: Int!
+  page: Int!
+  totalPages: Int!
+}
+
+type PaginatedNotifications {
+  notifications: [Notification!]!
+  total: Int!
+  page: Int!
+  totalPages: Int!
+}
+
+type NotificationResult {
+  sent: Int!
+  failed: Int!
+  total: Int!
+}
+
+type SystemError {
+  id: ID!
+  message: String!
+  component: String!
+  severity: String!
+  timestamp: DateTime!
+}

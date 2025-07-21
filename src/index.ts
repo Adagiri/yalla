@@ -1,11 +1,15 @@
 import express from 'express';
-import PaymentService from './services/payment.service';
 import WalletService from './services/wallet.service';
 import NotificationService from './services/notification.services';
 import { createWebhookHash } from './utils/general';
 import { ENV } from './config/env';
 import { connectDB } from './config/db-connection';
 import { startApolloServer } from './graphql/server';
+import {
+  DriverSubscription,
+  SubscriptionPlan,
+} from './features/subscription/subscription.model';
+import SubscriptionService from './features/subscription/subscription.service';
 
 const app = express();
 app.use(express.json());
@@ -20,9 +24,9 @@ connectDB().then(() => {
 });
 
 const handlePaystackWebhook: any = async (
-  req: Request,
-  res: any
-): Promise<void> => {
+  req: express.Request,
+  res: express.Response
+) => {
   const hash = createWebhookHash(ENV.PAYSTACK_SECRET_KEY, req.body);
   const headers: any = req.headers;
 
@@ -77,72 +81,90 @@ async function handleSuccessfulPayment(data: any) {
 
     console.log('Processing successful payment:', reference);
 
-    if (metadata?.purpose === 'wallet_topup') {
+    if (metadata?.purpose === 'driver_subscription') {
+      // Handle driver subscription payment
+      await handleSubscriptionPayment(data);
+    } else if (metadata?.purpose === 'wallet_topup') {
       // Handle wallet top-up
       const result = await WalletService.processSuccessfulPayment(data);
 
-      // Send notification to user
-      // await NotificationService.sendNotification({
-      //   userId: metadata.userId,
-      //   userType: result.wallet.userType,
-      //   type: 'wallet_topup_success',
-      //   title: '💰 Wallet Top-up Successful!',
-      //   message: `Your wallet has been credited with ₦${(amount / 100).toLocaleString()}`,
-      //   data: {
-      //     amount: amount / 100,
-      //     newBalance: result.wallet.balance / 100,
-      //     reference,
-      //   },
-      // });
-
-      console.log(
-        `Wallet top-up completed for user ${metadata.userId}: ₦${amount / 100}`
-      );
-    } else if (metadata?.purpose === 'trip_payment') {
-      // Handle trip payment
-
-      const result = await PaymentService.processSuccessfulCardPayment(data);
-
-      // Send notifications to customer and driver
-      const trip = result.trip;
-
-      if (trip) {
-        // Notify customer
-        await NotificationService.sendTripNotification(
-          trip.customerId,
-          'customer',
-          'payment_successful',
-          {
-            ...trip.toObject(),
-            amount: amount / 100,
-            reference,
-          }
-        );
-
-        // Notify driver about earnings
-        if (trip.driverId) {
-          await NotificationService.sendTripNotification(
-            trip.driverId,
-            'driver',
-            'earnings_received',
-            {
-              ...trip.toObject(),
-              earnings: result.amounts.driverEarnings,
-              reference,
-            }
-          );
-        }
-
-        console.log(
-          `Trip payment completed for trip ${trip.tripNumber}: ₦${amount / 100}`
-        );
-      }
+      // Send notification using the new sendNotification method
+      await NotificationService.sendNotification({
+        userId: metadata.userId,
+        userType: result.wallet.userType,
+        type: 'wallet_topup_success',
+        title: '💰 Wallet Top-up Successful!',
+        message: `Your wallet has been credited with ₦${amount / 100}`,
+        data: {
+          amount: amount / 100,
+          reference,
+          newBalance: result.wallet.balance / 100,
+        },
+        sendSMS: true,
+      });
     } else {
-      console.log(`Unknown payment purpose: ${metadata?.purpose}`);
+      // Handle regular trip payments
+      console.log(`Payment processed for reference: ${reference}`);
     }
   } catch (error: any) {
     console.error('Error handling successful payment:', error);
-    throw error;
+  }
+}
+
+/**
+ * Handle subscription payment success
+ */
+async function handleSubscriptionPayment(data: any) {
+  try {
+    const { reference, metadata } = data;
+    const { driverId, subscriptionId } = metadata;
+
+    // Activate the subscription
+    const subscription = await DriverSubscription.findByIdAndUpdate(
+      subscriptionId,
+      {
+        status: 'active',
+        paymentReference: reference,
+      },
+      { new: true }
+    );
+
+    if (subscription) {
+      const plan = await SubscriptionPlan.findById(subscription.planId);
+
+      if (plan) {
+        // Credit driver's wallet (subscription payment goes to wallet first)
+        await WalletService.creditWallet({
+          userId: driverId,
+          amount: plan.price,
+          type: 'credit',
+          purpose: 'subscription_payment',
+          description: `Subscription payment received: ${plan.name}`,
+          paymentMethod: 'card',
+          // paymentReference: reference,
+        });
+
+        // Send subscription activated notification
+        await NotificationService.sendNotification({
+          userId: driverId,
+          userType: 'driver',
+          type: 'subscription_activated',
+          title: '✅ Subscription Activated!',
+          message: `Your ${plan.name} subscription is now active. You can start accepting rides!`,
+          data: {
+            planName: plan.name,
+            subscriptionId: subscription._id,
+            expiresAt: subscription.endDate,
+          },
+          sendSMS: true,
+          sendEmail: true,
+        });
+
+        console.log(`Subscription activated for driver ${driverId}`);
+      }
+    }
+  } catch (error: any) {
+    console.error('Error handling subscription payment:', error);
   }
 }
 
@@ -151,40 +173,48 @@ async function handleSuccessfulPayment(data: any) {
  */
 async function handleFailedPayment(data: any) {
   try {
-    const { reference, metadata } = data;
+    const { reference, metadata, gateway_response } = data;
 
-    console.log('Processing failed payment:', reference);
+    if (metadata?.purpose === 'driver_subscription') {
+      // Handle failed subscription payment
+      const { driverId, subscriptionId } = metadata;
 
-    // Find the pending transaction and mark as failed
-    const Transaction = require('./models/transaction.model').default;
-    const transaction = await Transaction.findOneAndUpdate(
-      { paymentReference: reference, status: 'pending' },
-      {
-        status: 'failed',
-        metadata: { ...metadata, failureReason: data.gateway_response },
-      },
-      { new: true }
-    );
+      await DriverSubscription.findByIdAndUpdate(subscriptionId, {
+        status: 'cancelled',
+      });
 
-    if (transaction) {
-      // Send failure notification
-      // await NotificationService.sendNotification({
-      //   userId: transaction.userId,
-      //   userType: transaction.userType,
-      //   type: 'payment_failed',
-      //   title: '❌ Payment Failed',
-      //   message: `Your payment of ₦${transaction.amount / 100} could not be processed`,
-      //   data: {
-      //     amount: transaction.amount / 100,
-      //     reference,
-      //     reason: data.gateway_response,
-      //   },
-      // });
-
-      console.log(
-        `Payment failed for user ${transaction.userId}: ${data.gateway_response}`
-      );
+      await NotificationService.sendNotification({
+        userId: driverId,
+        userType: 'driver',
+        type: 'subscription_payment_failed',
+        title: '❌ Subscription Payment Failed',
+        message: `Your subscription payment could not be processed: ${gateway_response}`,
+        data: {
+          reference,
+          reason: gateway_response,
+        },
+        sendSMS: true,
+      });
+    } else if (metadata?.purpose === 'wallet_topup') {
+      // Handle failed wallet top-up
+      await NotificationService.sendNotification({
+        userId: metadata.userId,
+        userType: metadata.payerType,
+        type: 'wallet_topup_failed',
+        title: '❌ Wallet Top-up Failed',
+        message: `Your wallet top-up could not be processed: ${gateway_response}`,
+        data: {
+          amount: data.amount / 100,
+          reference,
+          reason: gateway_response,
+        },
+        sendSMS: true,
+      });
     }
+
+    console.log(
+      `Payment failed for reference ${reference}: ${gateway_response}`
+    );
   } catch (error: any) {
     console.error('Error handling failed payment:', error);
   }
@@ -200,7 +230,8 @@ async function handleSuccessfulTransfer(data: any) {
     console.log('Processing successful transfer:', reference);
 
     // Update transaction status
-    const Transaction = require('./models/transaction.model').default;
+    const Transaction =
+      require('./features/transaction/transaction.model').default;
     const transaction = await Transaction.findOneAndUpdate(
       {
         'metadata.transferReference': reference,
@@ -215,23 +246,20 @@ async function handleSuccessfulTransfer(data: any) {
     );
 
     if (transaction) {
-      // Send success notification
-      // await NotificationService.sendNotification({
-      //   userId: transaction.userId,
-      //   userType: 'driver',
-      //   type: 'cashout_successful',
-      //   title: '💸 Cashout Successful!',
-      //   message: `₦${(amount / 100).toLocaleString()} has been sent to your bank account`,
-      //   data: {
-      //     amount: amount / 100,
-      //     reference,
-      //     accountDetails: transaction.metadata.accountName,
-      //   },
-      // });
-
-      console.log(
-        `Cashout completed for driver ${transaction.userId}: ₦${amount / 100}`
-      );
+      // Send success notification using the new sendNotification method
+      await NotificationService.sendNotification({
+        userId: transaction.userId,
+        userType: 'driver',
+        type: 'cashout_successful',
+        title: '💸 Cashout Successful!',
+        message: `₦${amount / 100} has been transferred to your bank account`,
+        data: {
+          amount: amount / 100,
+          reference,
+          recipientCode: recipient?.recipient_code,
+        },
+        sendSMS: true,
+      });
     }
   } catch (error: any) {
     console.error('Error handling successful transfer:', error);
@@ -247,55 +275,47 @@ async function handleFailedTransfer(data: any) {
 
     console.log('Processing failed transfer:', reference);
 
-    // Find and update transaction
-    const Transaction = require('./models/transaction.model').default;
-    const transaction = await Transaction.findOne({
-      'metadata.transferReference': reference,
-      purpose: 'cashout',
-    });
+    // Update transaction status and refund driver
+    const Transaction =
+      require('./features/transaction/transaction.model').default;
+    const transaction = await Transaction.findOneAndUpdate(
+      {
+        'metadata.transferReference': reference,
+        purpose: 'cashout',
+        status: 'pending',
+      },
+      {
+        status: 'failed',
+        failureReason: data.gateway_response,
+      },
+      { new: true }
+    );
 
     if (transaction) {
-      // Reverse the wallet debit
+      // Refund the amount to driver's wallet
       await WalletService.creditWallet({
         userId: transaction.userId,
-        amount: transaction.amount / 100,
+        amount: transaction.amount,
         type: 'credit',
-        purpose: 'adjustment',
-        description: `Cashout reversal: ${transaction.description}`,
+        purpose: 'cashout_refund',
+        description: `Cashout refund for failed transfer: ${reference}`,
         paymentMethod: 'system',
-        metadata: {
-          originalTransactionId: transaction._id,
-          reversalReason: 'Transfer failed',
-          originalReference: reference,
-        },
       });
 
-      // Update original transaction
-      await Transaction.findByIdAndUpdate(transaction._id, {
-        status: 'failed',
-        metadata: {
-          ...transaction.metadata,
-          failureReason: data.gateway_response,
+      // Send failure notification
+      await NotificationService.sendNotification({
+        userId: transaction.userId,
+        userType: 'driver',
+        type: 'cashout_failed',
+        title: '❌ Cashout Failed',
+        message: `Your cashout of ₦${amount / 100} failed. Amount has been refunded to your wallet.`,
+        data: {
+          amount: amount / 100,
+          reference,
+          reason: data.gateway_response,
         },
+        sendSMS: true,
       });
-
-      // Send notification
-      // await NotificationService.sendNotification({
-      //   userId: transaction.userId,
-      //   userType: 'driver',
-      //   type: 'cashout_failed',
-      //   title: '❌ Cashout Failed',
-      //   message: `Your cashout of ₦${(amount / 100).toLocaleString()} failed. Amount has been returned to your wallet.`,
-      //   data: {
-      //     amount: amount / 100,
-      //     reference,
-      //     reason: data.gateway_response,
-      //   },
-      // });
-
-      console.log(
-        `Cashout failed and reversed for driver ${transaction.userId}: ₦${amount / 100}`
-      );
     }
   } catch (error: any) {
     console.error('Error handling failed transfer:', error);
@@ -311,13 +331,64 @@ async function handleReversedTransfer(data: any) {
 
     console.log('Processing reversed transfer:', reference);
 
-    // Similar to failed transfer - reverse the transaction
-    await handleFailedTransfer(data);
+    // Find and update the transaction
+    const Transaction =
+      require('./features/transaction/transaction.model').default;
+    const transaction = await Transaction.findOneAndUpdate(
+      {
+        'metadata.transferReference': reference,
+        purpose: 'cashout',
+        status: 'completed',
+      },
+      {
+        status: 'reversed',
+      },
+      { new: true }
+    );
+
+    if (transaction) {
+      // Refund the amount to driver's wallet
+      await WalletService.creditWallet({
+        userId: transaction.userId,
+        amount: transaction.amount,
+        type: 'credit',
+        purpose: 'cashout_reversal',
+        description: `Cashout reversal for transfer: ${reference}`,
+        paymentMethod: 'system',
+      });
+
+      // Send reversal notification
+      await NotificationService.sendNotification({
+        userId: transaction.userId,
+        userType: 'driver',
+        type: 'cashout_reversed',
+        title: '🔄 Cashout Reversed',
+        message: `Your cashout of ₦${amount / 100} has been reversed. Amount credited back to your wallet.`,
+        data: {
+          amount: amount / 100,
+          reference,
+        },
+        sendSMS: true,
+      });
+    }
   } catch (error: any) {
     console.error('Error handling reversed transfer:', error);
   }
 }
 
-// app.post('/api/invoices/generate-invoices', handleInvoiceWebhook);
+// Start auto-renewal job (run every hour)
+setInterval(
+  async () => {
+    try {
+      await SubscriptionService.processAutoRenewals();
+    } catch (error) {
+      console.error('Error in auto-renewal job:', error);
+    }
+  },
+  60 * 60 * 1000
+); // Every hour
 
-app.post('/api/paystack/transaction-completion-webhook', handlePaystackWebhook);
+// Paystack webhook handler
+app.post('/webhook/paystack', handlePaystackWebhook);
+
+export default app;

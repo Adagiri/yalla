@@ -1,8 +1,11 @@
+import { PaymentModel } from '../../constants/payment-models';
+import PaymentModelService from '../payment-model/payment-model.services';
 import { ContextType } from '../../types';
 import { ContextUser } from '../../types/auth';
 import { Pagination } from '../../types/list-resources';
 import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
 import { ErrorResponse } from '../../utils/responses';
+import Driver from '../driver/driver.model';
 import TripService from './trip.service';
 
 interface CreateTripInput {
@@ -84,6 +87,30 @@ class TripController {
     { tripId }: { tripId: string },
     { user }: ContextType
   ) {
+    if (user.accountType !== 'DRIVER') {
+      throw new ErrorResponse(403, 'Only drivers can accept trips');
+    }
+
+    // Check if driver can accept rides based on their payment model
+    const canAcceptRides = await PaymentModelService.canDriverAcceptRides(
+      user.id
+    );
+    if (!canAcceptRides) {
+      // Get driver details to provide specific message
+      const driver = await Driver.findById(user.id);
+
+      if (driver?.paymentModel === PaymentModel.SUBSCRIPTION) {
+        throw new ErrorResponse(
+          403,
+          'Active subscription required to accept rides. Please subscribe to a plan or contact support.'
+        );
+      } else {
+        throw new ErrorResponse(
+          403,
+          'Your account is not eligible to accept rides. Please contact support.'
+        );
+      }
+    }
     return await TripService.acceptTrip(tripId, user.id);
   }
 
@@ -183,7 +210,7 @@ class TripController {
 
   // Get single trip by ID
   static async getTrip(_: any, { id }: { id: string }, { user }: ContextType) {
-    console.log(user)
+    console.log(user);
     const userType =
       user.accountType === 'ADMIN'
         ? 'admin'

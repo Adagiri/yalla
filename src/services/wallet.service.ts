@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Wallet from '../features/wallet/wallet.model';
+import Wallet from '../models/wallet.model';
 import { ErrorResponse } from '../utils/responses';
 import PaystackService from '../services/paystack.services';
 import Transaction from '../features/transaction/transaction.model';
