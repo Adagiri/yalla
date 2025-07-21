@@ -8,11 +8,13 @@ import {
   PaymentModel,
   PaymentModelEnum,
 } from '../../constants/payment-models';
+import { VehicleDocument } from '../vehicle/vehicle.model';
 
 export interface DriverModelType extends Document {
   _id: string;
   id?: string; // UUID
   firstname: string;
+  vehicle?: VehicleDocument;
   lastname: string;
   email: string;
   phone: PhoneType;

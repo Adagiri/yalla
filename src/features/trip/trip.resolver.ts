@@ -1,6 +1,9 @@
 import { combineResolvers } from 'graphql-resolvers';
 import TripController from './trip.controller';
 import { protectEntities } from '../../utils/auth-middleware';
+import { pubsub } from '../../graphql/pubsub';
+import { withFilter } from 'graphql-subscriptions';
+import { SUBSCRIPTION_EVENTS } from '../../graphql/subscription-events';
 
 const tripResolvers = {
   Query: {
@@ -9,7 +12,7 @@ const tripResolvers = {
       protectEntities(['CUSTOMER', 'DRIVER', 'ADMIN']),
       TripController.getTrip
     ),
-    
+
     // Get trip history for logged in user
     getTripHistory: combineResolvers(
       protectEntities(['CUSTOMER', 'DRIVER']),
@@ -109,24 +112,56 @@ const tripResolvers = {
     ),
   },
 
-  // Subscription resolvers for real-time updates
   Subscription: {
-    // Trip status updates
-    // tripUpdated: {
-    //   // This would need to be implemented with your subscription system
-    //   // subscribe: () => pubsub.asyncIterator(['TRIP_UPDATED']),
-    //   resolve: (payload: any) => payload.tripUpdated,
-    // },
-    // // Driver location updates during trip
-    // driverLocationUpdated: {
-    //   // subscribe: () => pubsub.asyncIterator(['DRIVER_LOCATION_UPDATED']),
-    //   resolve: (payload: any) => payload.driverLocationUpdated,
-    // },
-    // // New trip requests for drivers
-    // newTripRequest: {
-    //   // subscribe: () => pubsub.asyncIterator(['NEW_TRIP_REQUEST']),
-    //   resolve: (payload: any) => payload.newTripRequest,
-    // },
+    // Driver receives new trip requests
+    newTripRequest: {
+      subscribe: withFilter(
+        () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.NEW_TRIP_REQUEST),
+        (payload, variables, context) => {
+          // Only send to the targeted driver
+          return payload.newTripRequest.targetDriverId === variables.driverId;
+        }
+      ),
+    },
+
+    // Customer gets notified when trip is accepted
+    tripAccepted: {
+      subscribe: withFilter(
+        () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.TRIP_ACCEPTED),
+        (payload, variables, context) => {
+          // Only notify the customer who requested the trip
+          return payload.tripAccepted.customerId === variables.customerId;
+        }
+      ),
+    },
+
+    // Real-time trip status updates
+    tripStatusChanged: {
+      subscribe: withFilter(
+        () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.TRIP_STATUS_CHANGED),
+        (payload, variables, context) => {
+          // Filter by tripId and ensure user is involved in the trip
+          const trip = payload.tripStatusChanged;
+          const { userId, userType } = context.user || {};
+
+          return (
+            trip._id === variables.tripId &&
+            (trip.customerId === userId || trip.driverId === userId)
+          );
+        }
+      ),
+    },
+
+    // Customer tracks driver location
+    driverLocationUpdate: {
+      subscribe: withFilter(
+        () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.DRIVER_LOCATION_UPDATE),
+        (payload, variables, context) => {
+          // Only for the specific trip
+          return payload.driverLocationUpdate.tripId === variables.tripId;
+        }
+      ),
+    },
   },
 };
 

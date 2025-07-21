@@ -14,6 +14,15 @@ import SubscriptionService from './features/subscription/subscription.service';
 const app = express();
 app.use(express.json());
 
+declare global {
+  namespace Express {
+    interface Request {
+      sessionID?: string;
+      session?: any;
+    }
+  }
+}
+
 connectDB().then(() => {
   startApolloServer(app).then((httpServer) => {
     const PORT = ENV.PORT || 8000;

@@ -16,35 +16,18 @@ Real time system integration
 
 
 =====================================================================
+this call should run independently on it own
+      await SubscriptionService.publishNewTripRequest(driverIds, {
+        id: trip._id,
+        pickup: trip.pickup,
+        destination: trip.destination,
+        customer: customer,
+        pricing: trip.pricing,
+        estimatedArrival: trip.estimatedArrival,
+      });
 
-1.
-in audit-log.service file, I get this type error here:
 
-sessionId: input.request?.sessionID,
+for trip accepted subscription, we need to make sure that drivers who were informed of the trip availability are informed of the trip token.
 
-Property 'sessionID' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
-
-2. 
-
-Get this type error too:
-
-'mongoose.connection.db' is possibly 'undefined'.
-
-in file:
-
-system-monitoring-service.ts
-
-in this place:  const dbStats = await mongoose.connection.db.stats();
-
-3. 
-
-In admin-auth.service.ts file, I get this type error:
-
-The operand of a 'delete' operator must be optional.ts(2790)
-
-(property) AdminModelType.password: string
-
-at this place of the code: delete adminResponse.password;
-
-4. 
+what if finding drivers found no drivers for a long time, what happens?, what logic can we add?
 

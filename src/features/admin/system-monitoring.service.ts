@@ -102,6 +102,16 @@ class SystemMonitoringService {
    */
   private static async getDatabaseMetrics() {
     try {
+      // Check if mongoose is connected and db is available
+      if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
+        return {
+          connectionCount: 0,
+          queryTime: 0,
+          slowQueries: 0,
+          storage: { used: 0, available: 0, percentage: 0 },
+        };
+      }
+
       const dbStats = await mongoose.connection.db.stats();
       const slowQueries = 0; // Placeholder - implement slow query monitoring
 
@@ -121,6 +131,7 @@ class SystemMonitoringService {
         },
       };
     } catch (error) {
+      console.error('Error getting database metrics:', error);
       return {
         connectionCount: 0,
         queryTime: 0,

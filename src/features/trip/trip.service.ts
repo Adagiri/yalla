@@ -11,6 +11,7 @@ import WalletService from '../../services/wallet.service';
 import Transaction from '../transaction/transaction.model';
 import Customer from '../customer/customer.model';
 import PaymentModelService from '../payment-model/payment-model.services';
+import { SubscriptionService } from '../../services/subscription.service';
 
 interface CreateTripInput {
   customerId: string;
@@ -118,6 +119,8 @@ class TripService {
         input.destination.coordinates
       );
 
+      const customer = await Customer.findById(input.customerId);
+
       // Check if pickup/destination are within any estate
       const [pickupLocation, destinationLocation] = await Promise.all([
         Location.findOne({
@@ -214,18 +217,20 @@ class TripService {
         tripType === 'within_estate' ? 2000 : 5000 // Search radius in meters
       );
 
-      // 🎯 CLEAN REFACTORED NOTIFICATION LOGIC
-      await TripNotificationService.broadcastTripToDrivers(
-        trip,
-        nearbyDrivers,
-        input.customerId
-      );
+      const driverIds = nearbyDrivers.map((d) => d._id);
 
-      // This would use WebSocket or push notifications
+      // Publish to subscriptions
+      await SubscriptionService.publishNewTripRequest(driverIds, {
+        id: trip._id,
+        pickup: trip.pickup,
+        destination: trip.destination,
+        customer: customer,
+        pricing: trip.pricing,
+        estimatedArrival: trip.estimatedArrival,
+      });
 
       await session.commitTransaction();
 
-      console.log(trip);
       return trip;
     } catch (error: any) {
       await session.abortTransaction();
@@ -283,7 +288,7 @@ class TripService {
 
       const [trip, driver] = await Promise.all([
         Trip.findById(tripId),
-        Driver.findById(driverId),
+        Driver.findById(driverId).populate('vehicle'),
       ]);
 
       if (!trip) throw new ErrorResponse(404, 'Trip not found');
@@ -319,11 +324,20 @@ class TripService {
       driver.currentTripId = tripId;
       await driver.save({ session });
 
+      // Publish trip accepted event
+      await SubscriptionService.publishTripAccepted(tripId, trip.customerId, {
+        id: driver._id,
+        name: `${driver.firstname} ${driver.lastname}`,
+        phone: driver.phone,
+        photo: driver.profilePhoto,
+        rating: driver.stats.averageRating,
+        vehicle: driver.vehicle,
+      });
+
+      // Publish status change
+      await SubscriptionService.publishTripStatusChanged(trip);
+
       await session.commitTransaction();
-
-      await TripNotificationService.notifyDriversTripTaken(tripId, driverId);
-
-      return trip;
 
       return trip;
     } catch (error: any) {

@@ -123,8 +123,22 @@ const adminSchema = new Schema<AdminModelType>(
   },
   {
     timestamps: true,
-    toJSON: { getters: true },
-    toObject: { getters: true },
+    toJSON: {
+      getters: true,
+      transform: function (doc, ret) {
+        delete ret.password; // Safe to delete here
+        delete ret.__v;
+        return ret;
+      },
+    },
+    toObject: {
+      getters: true,
+      transform: function (doc, ret) {
+        delete ret.password; // Safe to delete here
+        delete ret.__v;
+        return ret;
+      },
+    },
   }
 );
 

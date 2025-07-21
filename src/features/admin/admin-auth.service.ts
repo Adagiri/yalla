@@ -46,8 +46,7 @@ class AdminAuthService {
       const token = this.generateAdminToken(admin);
 
       // Remove password from response
-      const adminData = admin.toObject();
-      delete adminData.password;
+      const adminData = admin.toJSON();
 
       return {
         admin: adminData,
@@ -162,8 +161,7 @@ class AdminAuthService {
       await admin.save();
 
       // Remove password from response
-      const adminResponse = admin.toObject();
-      delete adminResponse.password;
+      const adminResponse = admin.toJSON();
 
       return adminResponse;
     } catch (error: any) {

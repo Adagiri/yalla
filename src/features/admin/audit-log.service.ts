@@ -41,7 +41,7 @@ class AuditLogService {
         endpoint: input.request?.originalUrl,
         userAgent: input.request?.get('User-Agent'),
         ipAddress: this.getClientIP(input.request),
-        sessionId: input.request?.sessionID,
+        sessionId: input.request?.session?.id,
         requestId: input.request?.headers['x-request-id'] as string,
       });
 
