@@ -16,6 +16,23 @@ const subscriber = new Redis({
   db: 4,
 });
 
+// Connection event handlers
+publisher.on('connect', () => {
+  console.log('✅ Redis Publisher connected for GraphQL subscriptions');
+});
+
+subscriber.on('connect', () => {
+  console.log('✅ Redis Subscriber connected for GraphQL subscriptions');
+});
+
+publisher.on('error', (error) => {
+  console.error('❌ Redis Publisher error:', error);
+});
+
+subscriber.on('error', (error) => {
+  console.error('❌ Redis Subscriber error:', error);
+});
+
 export const pubsub = new RedisPubSub({
   publisher,
   subscriber,

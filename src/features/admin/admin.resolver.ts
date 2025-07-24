@@ -6,6 +6,79 @@ import { pubsub } from '../../graphql/pubsub';
 
 const adminResolvers = {
   Query: {
+    // ===== AUTHENTICATION & ADMIN MANAGEMENT =====
+    getCurrentAdmin: combineResolvers(
+      // protectAdmin,
+      AdminController.getCurrentAdmin
+    ),
+    getAllAdmins: combineResolvers(
+      // protectAdmin,
+      AdminController.getAllAdmins
+    ),
+    getAdminById: combineResolvers(
+      // protectAdmin,
+      AdminController.getAdminById
+    ),
+
+    // ===== DASHBOARD & ANALYTICS =====
+    getDashboardMetrics: combineResolvers(
+      // protectAdmin,
+      AdminController.getDashboardMetrics
+    ),
+    getSystemHealth: combineResolvers(
+      // protectAdmin,
+      AdminController.getSystemHealth
+    ),
+
+    // ===== NOTIFICATIONS =====
+    getMyNotifications: combineResolvers(
+      // protectAdmin,
+      AdminController.getMyNotifications
+    ),
+    getNotificationStats: combineResolvers(
+      // protectAdmin,
+      AdminController.getNotificationStats
+    ),
+
+    // ===== SYSTEM CONFIGURATION =====
+    getSystemConfigs: combineResolvers(
+      // protectAdmin,
+      AdminController.getSystemConfigs
+    ),
+    getSystemConfig: combineResolvers(
+      // protectAdmin,
+      AdminController.getSystemConfig
+    ),
+    getConfigsByCategory: combineResolvers(
+      // protectAdmin,
+      AdminController.getConfigsByCategory
+    ),
+    getConfigCategories: combineResolvers(
+      // protectAdmin,
+      AdminController.getConfigCategories
+    ),
+
+    // ===== AUDIT LOGS =====
+    getAuditLogs: combineResolvers(
+      // protectAdmin,
+      AdminController.getAuditLogs
+    ),
+    getAuditStats: combineResolvers(
+      // protectAdmin,
+      AdminController.getAuditStats
+    ),
+
+    // ===== SYSTEM MONITORING =====
+    getSystemHealthHistory: combineResolvers(
+      // protectAdmin,
+      AdminController.getSystemHealthHistory
+    ),
+    getSystemAlerts: combineResolvers(
+      // protectAdmin,
+      AdminController.getSystemAlerts
+    ),
+
+    // ===== EMAIL TEMPLATES (EXISTING) =====
     listEmailTemplates: combineResolvers(
       // protectAdmin,
       AdminController.listEmailTemplates
@@ -13,6 +86,90 @@ const adminResolvers = {
   },
 
   Mutation: {
+    // ===== AUTHENTICATION =====
+    adminLogin: combineResolvers(AdminController.adminLogin),
+    adminLogout: combineResolvers(
+      // protectAdmin,
+      AdminController.adminLogout
+    ),
+
+    // ===== ADMIN MANAGEMENT =====
+    createAdmin: combineResolvers(
+      // protectSuperAdmin,
+      AdminController.createAdmin
+    ),
+    updateAdmin: combineResolvers(
+      // protectSuperAdmin,
+      AdminController.updateAdmin
+    ),
+    activateAdmin: combineResolvers(
+      // protectSuperAdmin,
+      AdminController.activateAdmin
+    ),
+    deactivateAdmin: combineResolvers(
+      // protectSuperAdmin,
+      AdminController.deactivateAdmin
+    ),
+    deleteAdmin: combineResolvers(
+      // protectSuperAdmin,
+      AdminController.deleteAdmin
+    ),
+
+    // ===== NOTIFICATIONS =====
+    createNotification: combineResolvers(
+      // protectAdmin,
+      AdminController.createNotification
+    ),
+    broadcastNotification: combineResolvers(
+      // protectAdmin,
+      AdminController.broadcastNotification
+    ),
+    markNotificationAsRead: combineResolvers(
+      // protectAdmin,
+      AdminController.markNotificationAsRead
+    ),
+    markAllNotificationsAsRead: combineResolvers(
+      // protectAdmin,
+      AdminController.markAllNotificationsAsRead
+    ),
+    deleteNotification: combineResolvers(
+      // protectAdmin,
+      AdminController.deleteNotification
+    ),
+
+    // ===== SYSTEM CONFIGURATION =====
+    createSystemConfig: combineResolvers(
+      // protectSuperAdmin,
+      AdminController.createSystemConfig
+    ),
+    updateSystemConfig: combineResolvers(
+      // protectAdmin,
+      AdminController.updateSystemConfig
+    ),
+    deleteSystemConfig: combineResolvers(
+      // protectSuperAdmin,
+      AdminController.deleteSystemConfig
+    ),
+    bulkUpdateConfigs: combineResolvers(
+      // protectAdmin,
+      AdminController.bulkUpdateConfigs
+    ),
+
+    // ===== SYSTEM MANAGEMENT =====
+    resolveSystemAlert: combineResolvers(
+      // protectAdmin,
+      AdminController.resolveSystemAlert
+    ),
+    triggerSystemHealthCheck: combineResolvers(
+      // protectAdmin,
+      AdminController.triggerSystemHealthCheck
+    ),
+    cleanupOldData: combineResolvers(
+      // protectSuperAdmin,
+      AdminController.cleanupOldData
+    ),
+
+    // ===== EMAIL TEMPLATES (EXISTING) =====
     createEmailTemplate: combineResolvers(
       // protectAdmin,
       AdminController.createEmailTemplate
@@ -28,7 +185,7 @@ const adminResolvers = {
   },
 
   Subscription: {
-    // Admin receives notifications
+    // ===== REAL-TIME NOTIFICATIONS =====
     adminNotificationReceived: {
       subscribe: withFilter(
         () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.ADMIN_NOTIFICATION),
@@ -45,7 +202,7 @@ const adminResolvers = {
       ),
     },
 
-    // System health monitoring
+    // ===== SYSTEM MONITORING =====
     systemHealthUpdated: {
       subscribe: withFilter(
         () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.SYSTEM_HEALTH_UPDATE),
@@ -57,7 +214,18 @@ const adminResolvers = {
       ),
     },
 
-    // Audit log streaming
+    systemAlertCreated: {
+      subscribe: withFilter(
+        () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.SYSTEM_ALERT_CREATED),
+        (payload, variables, context) => {
+          // Only for admins with appropriate permissions
+          const user = context.user;
+          return user && ['super_admin', 'admin'].includes(user.role);
+        }
+      ),
+    },
+
+    // ===== AUDIT TRAIL =====
     auditLogCreated: {
       subscribe: withFilter(
         () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.AUDIT_LOG_CREATED),
@@ -76,7 +244,19 @@ const adminResolvers = {
       ),
     },
 
-    // System configuration changes
+    // ===== ADMIN ACTIVITY =====
+    adminStatusChanged: {
+      subscribe: withFilter(
+        () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.ADMIN_STATUS_CHANGED),
+        (payload, variables, context) => {
+          // Only for admins to see other admin status changes
+          const user = context.user;
+          return user && ['super_admin', 'admin'].includes(user.role);
+        }
+      ),
+    },
+
+    // ===== CONFIGURATION CHANGES =====
     systemConfigUpdated: {
       subscribe: withFilter(
         () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.SYSTEM_CONFIG_UPDATED),
