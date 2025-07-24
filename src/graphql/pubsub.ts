@@ -6,14 +6,14 @@ const publisher = new Redis({
   host: ENV.REDIS_HOST,
   port: parseInt(ENV.REDIS_PORT),
   password: ENV.REDIS_PASSWORD,
-  db: 4,
+  db: 0,
 });
 
 const subscriber = new Redis({
   host: ENV.REDIS_HOST,
   port: parseInt(ENV.REDIS_PORT),
   password: ENV.REDIS_PASSWORD,
-  db: 4,
+  db: 0,
 });
 
 // Connection event handlers

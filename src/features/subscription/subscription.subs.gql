@@ -1,0 +1,41 @@
+type SubscriptionUpdatedPayload {
+  driverId: ID!
+  subscription: DriverSubscription!
+  previousStatus: SubscriptionStatus
+  updatedAt: DateTime!
+  changedBy: ID # Admin who made the change
+}
+
+type SubscriptionStatsUpdatedPayload {
+  stats: SubscriptionStats!
+  updatedAt: DateTime!
+  period: String!
+}
+
+type SubscriptionPaymentUpdatePayload {
+  driverId: ID!
+  subscriptionId: ID!
+  paymentStatus: String!
+  paymentReference: String
+  amount: Float!
+  updatedAt: DateTime!
+}
+
+type SubscriptionExpiryNotificationPayload {
+  driverId: ID!
+  subscription: DriverSubscription!
+  daysUntilExpiry: Int!
+  autoRenewEnabled: Boolean!
+}
+
+extend type Subscription {
+  subscriptionUpdated(driverId: ID!): SubscriptionUpdatedPayload!
+
+  subscriptionStatsUpdated: SubscriptionStatsUpdatedPayload!
+
+  subscriptionPaymentUpdate(driverId: ID!): SubscriptionPaymentUpdatePayload!
+
+  subscriptionExpiryNotification(
+    driverId: ID!
+  ): SubscriptionExpiryNotificationPayload!
+}

@@ -1,18 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
-import { AccountType, AuthChannelEnum } from '../../constants/general';
 
-export interface AdminModelType extends Document {
-  _id: string;
-  id?: string;
+export interface AdminDocument extends Document {
   firstname: string;
   lastname: string;
   email: string;
   password: string;
-  accountType: AccountType;
-
-  // Admin-specific fields
-  role: 'super_admin' | 'admin' | 'manager' | 'support' | 'analyst';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'SUPPORT' | 'ANALYST';
   permissions: string[];
   department: string;
   employeeId?: string;
@@ -20,22 +13,10 @@ export interface AdminModelType extends Document {
   // Authentication & Security
   isEmailVerified: boolean;
   isMFAEnabled: boolean;
-  authChannels: string[];
   lastLoginAt?: Date;
   lastActiveAt?: Date;
-  loginAttempts: number;
-  lockedUntil?: Date;
-
-  // Access Control
   isActive: boolean;
-  accessLevel: number; // 1-10 (10 being highest)
-  allowedIPs?: string[];
-  sessionTimeoutMinutes: number;
-
-  // Audit Trail
-  createdBy?: string;
-  lastModifiedBy?: string;
-  lastPasswordChange?: Date;
+  accessLevel: number;
 
   // Profile
   profilePhoto?: string;
@@ -43,83 +24,50 @@ export interface AdminModelType extends Document {
   timezone: string;
   language: string;
 
-  // Preferences
-  dashboardConfig?: any;
-  notificationPreferences: {
-    email: boolean;
-    sms: boolean;
-    push: boolean;
-    criticalAlerts: boolean;
-  };
+  // Stats
+  totalLogins: number;
+  totalActions: number;
 
+  createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
+
+  // Methods
+  toSafeObject(): any;
 }
 
-const adminSchema = new Schema<AdminModelType>(
+const adminSchema = new Schema(
   {
-    _id: { type: String, default: uuidv4 },
-    accountType: { type: String, default: AccountType.ADMIN },
-
-    // Basic Info
     firstname: { type: String, required: true },
     lastname: { type: String, required: true },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
-    },
+    email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true, select: false },
-
-    // Admin Role & Permissions
     role: {
       type: String,
-      enum: ['super_admin', 'admin', 'manager', 'support', 'analyst'],
-      default: 'admin',
+      required: true,
+      enum: ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SUPPORT', 'ANALYST'],
+      default: 'ADMIN',
     },
-    permissions: { type: [String], default: [] },
-    department: { type: String, default: 'operations' },
+    permissions: [{ type: String }],
+    department: { type: String, required: true },
     employeeId: { type: String, unique: true, sparse: true },
 
-    // Authentication
     isEmailVerified: { type: Boolean, default: false },
     isMFAEnabled: { type: Boolean, default: false },
-    authChannels: {
-      type: [String],
-      enum: AuthChannelEnum,
-      default: ['EMAIL'],
-    },
     lastLoginAt: { type: Date },
     lastActiveAt: { type: Date },
-    loginAttempts: { type: Number, default: 0 },
-    lockedUntil: { type: Date },
-
-    // Access Control
     isActive: { type: Boolean, default: true },
-    accessLevel: { type: Number, min: 1, max: 10, default: 5 },
-    allowedIPs: { type: [String] },
-    sessionTimeoutMinutes: { type: Number, default: 480 }, // 8 hours
+    accessLevel: { type: Number, default: 1 },
 
-    // Audit
-    createdBy: { type: String },
-    lastModifiedBy: { type: String },
-    lastPasswordChange: { type: Date, default: Date.now },
-
-    // Profile
     profilePhoto: { type: String },
     phone: { type: String },
-    timezone: { type: String, default: 'Africa/Lagos' },
+    timezone: { type: String, default: 'UTC' },
     language: { type: String, default: 'en' },
 
-    // Preferences
-    dashboardConfig: { type: Schema.Types.Mixed },
-    notificationPreferences: {
-      email: { type: Boolean, default: true },
-      sms: { type: Boolean, default: false },
-      push: { type: Boolean, default: true },
-      criticalAlerts: { type: Boolean, default: true },
-    },
+    totalLogins: { type: Number, default: 0 },
+    totalActions: { type: Number, default: 0 },
+
+    createdBy: { type: String },
   },
   {
     timestamps: true,
@@ -142,10 +90,19 @@ const adminSchema = new Schema<AdminModelType>(
   }
 );
 
-// Indexes for performance
+// Indexes
 adminSchema.index({ email: 1 });
-adminSchema.index({ role: 1, isActive: 1 });
-adminSchema.index({ lastActiveAt: 1 });
-adminSchema.index({ createdAt: -1 });
+adminSchema.index({ role: 1 });
+adminSchema.index({ isActive: 1 });
 
-export default mongoose.model<AdminModelType>('Admin', adminSchema);
+// Methods
+adminSchema.methods.toSafeObject = function () {
+  const obj = this.toObject();
+  delete obj.password;
+  return {
+    ...obj,
+    id: obj._id,
+  };
+};
+
+export default mongoose.model<AdminDocument>('Admin', adminSchema);

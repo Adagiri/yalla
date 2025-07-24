@@ -1,185 +1,185 @@
+// src/features/admin/admin.resolver.ts - Fixed to match controller
 import { combineResolvers } from 'graphql-resolvers';
 import AdminController from './admin.controller';
 import { withFilter } from 'graphql-subscriptions';
 import { SUBSCRIPTION_EVENTS } from '../../graphql/subscription-events';
 import { pubsub } from '../../graphql/pubsub';
+import { protectEntities } from '../../utils/auth-middleware';
 
 const adminResolvers = {
   Query: {
     // ===== AUTHENTICATION & ADMIN MANAGEMENT =====
     getCurrentAdmin: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getCurrentAdmin
     ),
     getAllAdmins: combineResolvers(
-      // protectAdmin,
+      protectEntities(['SUPER_ADMIN']),
       AdminController.getAllAdmins
     ),
     getAdminById: combineResolvers(
-      // protectAdmin,
+      protectEntities(['SUPER_ADMIN', 'ADMIN']),
       AdminController.getAdminById
     ),
 
     // ===== DASHBOARD & ANALYTICS =====
     getDashboardMetrics: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getDashboardMetrics
     ),
     getSystemHealth: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getSystemHealth
+    ),
+    getSystemHealthHistory: combineResolvers(
+      protectEntities(['ADMIN']),
+      AdminController.getSystemHealthHistory
+    ),
+    getSystemAlerts: combineResolvers(
+      protectEntities(['ADMIN']),
+      AdminController.getSystemAlerts
     ),
 
     // ===== NOTIFICATIONS =====
     getMyNotifications: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getMyNotifications
     ),
     getNotificationStats: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getNotificationStats
     ),
 
     // ===== SYSTEM CONFIGURATION =====
     getSystemConfigs: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getSystemConfigs
     ),
     getSystemConfig: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getSystemConfig
     ),
     getConfigsByCategory: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getConfigsByCategory
     ),
     getConfigCategories: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getConfigCategories
     ),
 
     // ===== AUDIT LOGS =====
     getAuditLogs: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getAuditLogs
     ),
     getAuditStats: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.getAuditStats
     ),
 
-    // ===== SYSTEM MONITORING =====
-    getSystemHealthHistory: combineResolvers(
-      // protectAdmin,
-      AdminController.getSystemHealthHistory
-    ),
-    getSystemAlerts: combineResolvers(
-      // protectAdmin,
-      AdminController.getSystemAlerts
-    ),
-
-    // ===== EMAIL TEMPLATES (EXISTING) =====
+    // ===== EMAIL TEMPLATES =====
     listEmailTemplates: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.listEmailTemplates
     ),
   },
 
   Mutation: {
     // ===== AUTHENTICATION =====
-    adminLogin: combineResolvers(AdminController.adminLogin),
+    adminLogin: AdminController.adminLogin,
     adminLogout: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.adminLogout
     ),
 
     // ===== ADMIN MANAGEMENT =====
     createAdmin: combineResolvers(
-      // protectSuperAdmin,
+      // protectEntities(['SUPER_ADMIN']),
       AdminController.createAdmin
     ),
     updateAdmin: combineResolvers(
-      // protectSuperAdmin,
+      protectEntities(['SUPER_ADMIN']),
       AdminController.updateAdmin
     ),
     activateAdmin: combineResolvers(
-      // protectSuperAdmin,
+      protectEntities(['SUPER_ADMIN']),
       AdminController.activateAdmin
     ),
     deactivateAdmin: combineResolvers(
-      // protectSuperAdmin,
+      protectEntities(['SUPER_ADMIN']),
       AdminController.deactivateAdmin
     ),
     deleteAdmin: combineResolvers(
-      // protectSuperAdmin,
+      protectEntities(['SUPER_ADMIN']),
       AdminController.deleteAdmin
     ),
 
     // ===== NOTIFICATIONS =====
     createNotification: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.createNotification
     ),
     broadcastNotification: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.broadcastNotification
     ),
     markNotificationAsRead: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.markNotificationAsRead
     ),
     markAllNotificationsAsRead: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.markAllNotificationsAsRead
     ),
     deleteNotification: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.deleteNotification
     ),
 
     // ===== SYSTEM CONFIGURATION =====
     createSystemConfig: combineResolvers(
-      // protectSuperAdmin,
+      protectEntities(['SUPER_ADMIN']),
       AdminController.createSystemConfig
     ),
     updateSystemConfig: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.updateSystemConfig
     ),
     deleteSystemConfig: combineResolvers(
-      // protectSuperAdmin,
+      protectEntities(['SUPER_ADMIN']),
       AdminController.deleteSystemConfig
     ),
     bulkUpdateConfigs: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.bulkUpdateConfigs
     ),
 
     // ===== SYSTEM MANAGEMENT =====
     resolveSystemAlert: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.resolveSystemAlert
     ),
     triggerSystemHealthCheck: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.triggerSystemHealthCheck
     ),
     cleanupOldData: combineResolvers(
-      // protectSuperAdmin,
+      protectEntities(['SUPER_ADMIN']),
       AdminController.cleanupOldData
     ),
 
-    // ===== EMAIL TEMPLATES (EXISTING) =====
+    // ===== EMAIL TEMPLATES =====
     createEmailTemplate: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.createEmailTemplate
     ),
     updateEmailTemplate: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.updateEmailTemplate
     ),
     deleteEmailTemplate: combineResolvers(
-      // protectAdmin,
+      protectEntities(['ADMIN']),
       AdminController.deleteEmailTemplate
     ),
   },
@@ -209,7 +209,7 @@ const adminResolvers = {
         (payload, variables, context) => {
           // Only for admins with appropriate permissions
           const user = context.user;
-          return user && ['super_admin', 'admin'].includes(user.role);
+          return user && ['SUPER_ADMIN', 'admin'].includes(user.role);
         }
       ),
     },
@@ -220,7 +220,7 @@ const adminResolvers = {
         (payload, variables, context) => {
           // Only for admins with appropriate permissions
           const user = context.user;
-          return user && ['super_admin', 'admin'].includes(user.role);
+          return user && ['SUPER_ADMIN', 'admin'].includes(user.role);
         }
       ),
     },
@@ -235,7 +235,7 @@ const adminResolvers = {
 
           // Filter by admin ID if specified, and check permissions
           const hasPermission =
-            user && ['super_admin', 'admin'].includes(user.role);
+            user && ['SUPER_ADMIN', 'admin'].includes(user.role);
           const matchesFilter =
             !variables.adminId || auditLog.adminId === variables.adminId;
 
@@ -251,7 +251,7 @@ const adminResolvers = {
         (payload, variables, context) => {
           // Only for admins to see other admin status changes
           const user = context.user;
-          return user && ['super_admin', 'admin'].includes(user.role);
+          return user && ['SUPER_ADMIN', 'admin'].includes(user.role);
         }
       ),
     },
@@ -266,7 +266,7 @@ const adminResolvers = {
 
           // Check permissions and category filter
           const hasPermission =
-            user && ['super_admin', 'admin'].includes(user.role);
+            user && ['SUPER_ADMIN', 'admin'].includes(user.role);
           const matchesCategory =
             !variables.category || config.category === variables.category;
 

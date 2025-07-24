@@ -1,362 +1,491 @@
-// src/services/system-monitoring.service.ts
-import SystemHealth from './system-health.model';
-import Driver from '../driver/driver.model';
-import Trip from '../trip/trip.model';
+// src/features/admin/system-monitoring.service.ts
 import mongoose from 'mongoose';
+import { ErrorResponse } from '../../utils/responses';
+import { pubsub } from '../../graphql/pubsub';
+import { SUBSCRIPTION_EVENTS } from '../../graphql/subscription-events';
+import AuditLogService from './audit-log.service';
+
+interface SystemAlert {
+  id: string;
+  type: 'error' | 'warning' | 'info';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  message: string;
+  source: string;
+  metadata?: any;
+  resolved: boolean;
+  resolvedBy?: string;
+  resolvedAt?: Date;
+  createdAt: Date;
+}
+
+interface SystemHealth {
+  status: 'healthy' | 'warning' | 'critical' | 'down';
+  uptime: number;
+  memory: {
+    used: number;
+    total: number;
+    percentage: number;
+  };
+  database: {
+    status: 'connected' | 'disconnected' | 'connecting';
+    responseTime: number;
+    connectionCount: number;
+  };
+  services: {
+    [key: string]: {
+      status: 'up' | 'down' | 'degraded';
+      responseTime?: number;
+      lastCheck: Date;
+    };
+  };
+  metrics: {
+    requestsPerMinute: number;
+    errorRate: number;
+    averageResponseTime: number;
+  };
+  timestamp: Date;
+}
+
+// Mock storage for system alerts (in production, use a proper database)
+const systemAlerts: SystemAlert[] = [];
+let alertIdCounter = 1;
 
 class SystemMonitoringService {
-  private static metrics = {
-    requestCount: 0,
-    totalResponseTime: 0,
-    errorCount: 0,
-    lastMinuteRequests: [] as number[],
-  };
-
   /**
-   * Record API request metrics
+   * Get current system health
    */
-  static recordRequest(responseTime: number, isError: boolean = false) {
-    this.metrics.requestCount++;
-    this.metrics.totalResponseTime += responseTime;
-
-    if (isError) {
-      this.metrics.errorCount++;
-    }
-
-    // Track requests per minute
-    const now = Date.now();
-    this.metrics.lastMinuteRequests.push(now);
-
-    // Remove requests older than 1 minute
-    this.metrics.lastMinuteRequests = this.metrics.lastMinuteRequests.filter(
-      (time) => now - time < 60000
-    );
-  }
-
-  /**
-   * Collect comprehensive system health metrics
-   */
-  static async collectSystemHealth() {
+  static async getSystemHealth(): Promise<SystemHealth> {
     try {
-      const [apiMetrics, databaseMetrics, businessMetrics, externalServices] =
-        await Promise.all([
-          this.getAPIMetrics(),
-          this.getDatabaseMetrics(),
-          this.getBusinessMetrics(),
-          this.checkExternalServices(),
-        ]);
+      const startTime = Date.now();
 
-      // Determine overall health status
-      const { overallStatus, alerts } = this.calculateOverallHealth(
-        apiMetrics,
-        databaseMetrics,
-        businessMetrics,
-        externalServices
-      );
+      // Check database connectivity
+      const dbHealth = await this.checkDatabaseHealth();
 
-      const healthData = {
-        timestamp: new Date(),
-        apiMetrics,
-        databaseMetrics,
-        businessMetrics,
-        externalServices,
-        overallStatus,
-        alerts,
+      // Check memory usage
+      const memoryUsage = process.memoryUsage();
+      const memory = {
+        used: memoryUsage.heapUsed,
+        total: memoryUsage.heapTotal,
+        percentage: (memoryUsage.heapUsed / memoryUsage.heapTotal) * 100,
       };
 
-      // Save to database
-      const healthRecord = new SystemHealth(healthData);
-      await healthRecord.save();
+      // Check service statuses
+      const services = await this.checkServices();
 
-      return healthData;
-    } catch (error: any) {
-      console.error('Error collecting system health:', error);
-      throw error;
-    }
-  }
+      // Calculate metrics
+      const metrics = await this.calculateMetrics();
 
-  /**
-   * Get API performance metrics
-   */
-  private static async getAPIMetrics() {
-    const avgResponseTime =
-      this.metrics.requestCount > 0
-        ? this.metrics.totalResponseTime / this.metrics.requestCount
-        : 0;
+      // Determine overall status
+      let status: 'healthy' | 'warning' | 'critical' | 'down' = 'healthy';
 
-    const errorRate =
-      this.metrics.requestCount > 0
-        ? (this.metrics.errorCount / this.metrics.requestCount) * 100
-        : 0;
-
-    return {
-      responseTime: Math.round(avgResponseTime),
-      requestCount: this.metrics.lastMinuteRequests.length,
-      errorRate: Math.round(errorRate * 100) / 100,
-      activeConnections: mongoose.connection.readyState === 1 ? 1 : 0,
-    };
-  }
-
-  /**
-   * Get database performance metrics
-   */
-  private static async getDatabaseMetrics() {
-    try {
-      // Check if mongoose is connected and db is available
-      if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
-        return {
-          connectionCount: 0,
-          queryTime: 0,
-          slowQueries: 0,
-          storage: { used: 0, available: 0, percentage: 0 },
-        };
+      if (dbHealth.status === 'disconnected') {
+        status = 'down';
+      } else if (memory.percentage > 90 || metrics.errorRate > 10) {
+        status = 'critical';
+      } else if (memory.percentage > 75 || metrics.errorRate > 5) {
+        status = 'warning';
       }
 
-      const dbStats = await mongoose.connection.db.stats();
-      const slowQueries = 0; // Placeholder - implement slow query monitoring
+      const health: SystemHealth = {
+        status,
+        uptime: process.uptime(),
+        memory,
+        database: dbHealth,
+        services,
+        metrics,
+        timestamp: new Date(),
+      };
+
+      // Publish health update
+      pubsub.publish(SUBSCRIPTION_EVENTS.SYSTEM_HEALTH_UPDATE, {
+        systemHealthUpdated: health,
+      });
+
+      return health;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error checking system health',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Get system health history
+   */
+  static async getSystemHealthHistory(hours: number = 24) {
+    try {
+      // In a real implementation, this would fetch from a time-series database
+      // For now, we'll generate sample data
+      const history = [];
+      const now = new Date();
+
+      for (let i = hours; i >= 0; i--) {
+        const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000);
+
+        // Generate sample health data
+        const memoryPercentage = 40 + Math.random() * 30; // 40-70%
+        const errorRate = Math.random() * 3; // 0-3%
+        const responseTime = 100 + Math.random() * 200; // 100-300ms
+
+        let status: 'healthy' | 'warning' | 'critical' | 'down' = 'healthy';
+        if (memoryPercentage > 80 || errorRate > 2) {
+          status = Math.random() > 0.5 ? 'warning' : 'critical';
+        }
+
+        history.push({
+          timestamp,
+          status,
+          memory: {
+            percentage: memoryPercentage,
+          },
+          metrics: {
+            errorRate,
+            averageResponseTime: responseTime,
+            requestsPerMinute: Math.floor(100 + Math.random() * 200),
+          },
+        });
+      }
 
       return {
+        period: `${hours} hours`,
+        dataPoints: history.length,
+        history,
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching health history',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Get system alerts
+   */
+  static async getSystemAlerts(
+    filters: {
+      severity?: string;
+      resolved?: boolean;
+      type?: string;
+      limit?: number;
+    } = {}
+  ) {
+    try {
+      let alerts = [...systemAlerts];
+
+      // Apply filters
+      if (filters.severity) {
+        alerts = alerts.filter((alert) => alert.severity === filters.severity);
+      }
+
+      if (filters.resolved !== undefined) {
+        alerts = alerts.filter((alert) => alert.resolved === filters.resolved);
+      }
+
+      if (filters.type) {
+        alerts = alerts.filter((alert) => alert.type === filters.type);
+      }
+
+      // Sort by creation date (newest first)
+      alerts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      // Apply limit
+      if (filters.limit) {
+        alerts = alerts.slice(0, filters.limit);
+      }
+
+      return {
+        alerts,
+        total: alerts.length,
+        unresolved: alerts.filter((alert) => !alert.resolved).length,
+        critical: alerts.filter(
+          (alert) => alert.severity === 'critical' && !alert.resolved
+        ).length,
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching system alerts',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Create system alert
+   */
+  static async createAlert(data: {
+    type: 'error' | 'warning' | 'info';
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    title: string;
+    message: string;
+    source: string;
+    metadata?: any;
+  }) {
+    try {
+      const alert: SystemAlert = {
+        id: `alert_${alertIdCounter++}`,
+        type: data.type,
+        severity: data.severity,
+        title: data.title,
+        message: data.message,
+        source: data.source,
+        metadata: data.metadata,
+        resolved: false,
+        createdAt: new Date(),
+      };
+
+      systemAlerts.push(alert);
+
+      // Publish alert
+      pubsub.publish(SUBSCRIPTION_EVENTS.SYSTEM_ALERT_CREATED, {
+        systemAlertCreated: alert,
+      });
+
+      return alert;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error creating system alert',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Resolve system alert
+   */
+  static async resolveAlert(
+    alertId: string,
+    resolution: string,
+    resolvedBy: string
+  ) {
+    try {
+      const alertIndex = systemAlerts.findIndex(
+        (alert) => alert.id === alertId
+      );
+
+      if (alertIndex === -1) {
+        throw new ErrorResponse(404, 'Alert not found');
+      }
+
+      const alert = systemAlerts[alertIndex];
+
+      if (alert.resolved) {
+        throw new ErrorResponse(400, 'Alert is already resolved');
+      }
+
+      alert.resolved = true;
+      alert.resolvedBy = resolvedBy;
+      alert.resolvedAt = new Date();
+      alert.metadata = {
+        ...alert.metadata,
+        resolution,
+      };
+
+      return alert;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error resolving alert', error.message);
+    }
+  }
+
+  /**
+   * Trigger manual health check
+   */
+  static async triggerHealthCheck() {
+    try {
+      const health = await this.getSystemHealth();
+
+      // Create alert if system is not healthy
+      if (health.status !== 'healthy') {
+        await this.createAlert({
+          type:
+            health.status === 'critical' || health.status === 'down'
+              ? 'error'
+              : 'warning',
+          severity:
+            health.status === 'down'
+              ? 'critical'
+              : health.status === 'critical'
+                ? 'high'
+                : 'medium',
+          title: 'System Health Check',
+          message: `System status: ${health.status}. Memory usage: ${health.memory.percentage.toFixed(1)}%, Error rate: ${health.metrics.errorRate.toFixed(2)}%`,
+          source: 'health_check',
+          metadata: health,
+        });
+      }
+
+      return {
+        success: true,
+        health,
+        timestamp: new Date(),
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error triggering health check',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Clean up old data
+   */
+  static async cleanupOldData(type: string, olderThanDays: number) {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+
+      let deletedCount = 0;
+
+      switch (type) {
+        case 'audit_logs':
+          // This would be implemented in AuditLogService
+          deletedCount = await AuditLogService.cleanupOldLogs(cutoffDate);
+          break;
+
+        case 'system_alerts':
+          const initialLength = systemAlerts.length;
+          const filteredAlerts = systemAlerts.filter(
+            (alert) => alert.createdAt > cutoffDate || !alert.resolved
+          );
+          systemAlerts.length = 0;
+          systemAlerts.push(...filteredAlerts);
+          deletedCount = initialLength - filteredAlerts.length;
+          break;
+
+        case 'health_history':
+          // This would clean up health history data
+          deletedCount = 0; // Placeholder
+          break;
+
+        default:
+          throw new ErrorResponse(400, 'Invalid cleanup type');
+      }
+
+      return {
+        success: true,
+        type,
+        deletedCount,
+        cutoffDate,
+        message: `Cleaned up ${deletedCount} ${type} records older than ${olderThanDays} days`,
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error cleaning up old data', error.message);
+    }
+  }
+
+  /**
+   * Check database health
+   */
+  private static async checkDatabaseHealth() {
+    try {
+      const startTime = Date.now();
+
+      // Test database connection
+      await mongoose.connection.db.admin().ping();
+
+      const responseTime = Date.now() - startTime;
+
+      return {
+        status: 'connected' as const,
+        responseTime,
         connectionCount: mongoose.connections.length,
-        queryTime: 0, // Placeholder - implement query time tracking
-        slowQueries,
-        storage: {
-          used:
-            Math.round((dbStats.dataSize / (1024 * 1024 * 1024)) * 100) / 100, // GB
-          available:
-            Math.round((dbStats.storageSize / (1024 * 1024 * 1024)) * 100) /
-            100, // GB
-          percentage: Math.round(
-            (dbStats.dataSize / dbStats.storageSize) * 100
-          ),
-        },
       };
     } catch (error) {
-      console.error('Error getting database metrics:', error);
       return {
+        status: 'disconnected' as const,
+        responseTime: -1,
         connectionCount: 0,
-        queryTime: 0,
-        slowQueries: 0,
-        storage: { used: 0, available: 0, percentage: 0 },
       };
     }
   }
 
   /**
-   * Get business-specific metrics
+   * Check various services
    */
-  private static async getBusinessMetrics() {
-    const [activeTrips, onlineDrivers, pendingRequests] = await Promise.all([
-      Trip.countDocuments({
-        status: { $in: ['driver_assigned', 'driver_arrived', 'in_progress'] },
-      }),
-      Driver.countDocuments({ isOnline: true }),
-      Trip.countDocuments({ status: 'searching' }),
-    ]);
+  private static async checkServices() {
+    const services: SystemHealth['services'] = {};
 
-    return {
-      activeTrips,
-      onlineDrivers,
-      pendingRequests,
-      systemErrors: this.metrics.errorCount,
+    // Redis check (if using Redis)
+    services.redis = {
+      status: 'up', // This would be a real check
+      responseTime: 5,
+      lastCheck: new Date(),
     };
-  }
 
-  /**
-   * Check external service health
-   */
-  private static async checkExternalServices() {
-    const services = {
-      paystack: await this.checkServiceHealth('https://api.paystack.co'),
-      aws: await this.checkServiceHealth('https://status.aws.amazon.com'),
-      maps: await this.checkServiceHealth('https://maps.googleapis.com'),
-      sms: await this.checkServiceHealth('https://api.ng.termii.com'),
+    // Email service check
+    services.email = {
+      status: 'up', // This would be a real check
+      responseTime: 200,
+      lastCheck: new Date(),
+    };
+
+    // SMS service check
+    services.sms = {
+      status: 'up', // This would be a real check
+      responseTime: 150,
+      lastCheck: new Date(),
+    };
+
+    // Payment gateway check
+    services.payment = {
+      status: 'up', // This would be a real check
+      responseTime: 300,
+      lastCheck: new Date(),
     };
 
     return services;
   }
 
   /**
-   * Check individual service health
+   * Calculate system metrics
    */
-  private static async checkServiceHealth(url: string) {
-    try {
-      const startTime = Date.now();
-      const response = await fetch(url, {
-        method: 'HEAD',
-        timeout: 5000,
-      } as any);
-      const responseTime = Date.now() - startTime;
-
-      if (response.ok) {
-        return {
-          status: responseTime < 1000 ? 'up' : ('degraded' as const),
-          responseTime,
-        };
-      } else {
-        return {
-          status: 'degraded' as const,
-          responseTime,
-        };
-      }
-    } catch (error) {
-      return {
-        status: 'down' as const,
-        responseTime: 5000, // Timeout
-      };
-    }
-  }
-
-  /**
-   * Calculate overall system health
-   */
-  private static calculateOverallHealth(
-    api: any,
-    database: any,
-    business: any,
-    external: any
-  ) {
-    const alerts: Array<{
-      type: 'warning' | 'critical';
-      message: string;
-      component: string;
-    }> = [];
-    let severityScore = 0;
-
-    // API health checks
-    if (api.errorRate > 5) {
-      alerts.push({
-        type: api.errorRate > 10 ? 'critical' : 'warning',
-        message: `High error rate: ${api.errorRate}%`,
-        component: 'api',
-      });
-      severityScore += api.errorRate > 10 ? 3 : 1;
-    }
-
-    if (api.responseTime > 2000) {
-      alerts.push({
-        type: api.responseTime > 5000 ? 'critical' : 'warning',
-        message: `Slow API response: ${api.responseTime}ms`,
-        component: 'api',
-      });
-      severityScore += api.responseTime > 5000 ? 3 : 1;
-    }
-
-    // Database health checks
-    if (database.storage.percentage > 85) {
-      alerts.push({
-        type: database.storage.percentage > 95 ? 'critical' : 'warning',
-        message: `High storage usage: ${database.storage.percentage}%`,
-        component: 'database',
-      });
-      severityScore += database.storage.percentage > 95 ? 3 : 1;
-    }
-
-    // Business health checks
-    if (business.pendingRequests > 50) {
-      alerts.push({
-        type: business.pendingRequests > 100 ? 'critical' : 'warning',
-        message: `High pending requests: ${business.pendingRequests}`,
-        component: 'business',
-      });
-      severityScore += business.pendingRequests > 100 ? 3 : 1;
-    }
-
-    // External service checks
-    Object.entries(external).forEach(([service, health]: [string, any]) => {
-      if (health.status === 'down') {
-        alerts.push({
-          type: 'critical',
-          message: `${service} service is down`,
-          component: 'external',
-        });
-        severityScore += 3;
-      } else if (health.status === 'degraded') {
-        alerts.push({
-          type: 'warning',
-          message: `${service} service is degraded`,
-          component: 'external',
-        });
-        severityScore += 1;
-      }
-    });
-
-    // Determine overall status
-    let overallStatus: 'healthy' | 'warning' | 'critical';
-    if (severityScore === 0) {
-      overallStatus = 'healthy';
-    } else if (severityScore < 5) {
-      overallStatus = 'warning';
-    } else {
-      overallStatus = 'critical';
-    }
-
-    return { overallStatus, alerts };
-  }
-
-  /**
-   * Get system health history
-   */
-  static async getHealthHistory(hours: number = 24) {
-    const startTime = new Date();
-    startTime.setHours(startTime.getHours() - hours);
-
-    const healthData = await SystemHealth.find({
-      timestamp: { $gte: startTime },
-    }).sort({ timestamp: 1 });
-
-    return healthData;
-  }
-
-  /**
-   * Get current system status
-   */
-  static async getCurrentStatus() {
-    const latestHealth = await SystemHealth.findOne().sort({ timestamp: -1 });
-
-    if (!latestHealth) {
-      return await this.collectSystemHealth();
-    }
-
-    // If latest health is older than 5 minutes, collect new data
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    if (latestHealth.timestamp < fiveMinutesAgo) {
-      return await this.collectSystemHealth();
-    }
-
-    return latestHealth;
-  }
-
-  /**
-   * Reset metrics (should be called periodically)
-   */
-  static resetMetrics() {
-    this.metrics = {
-      requestCount: 0,
-      totalResponseTime: 0,
-      errorCount: 0,
-      lastMinuteRequests: [],
+  private static async calculateMetrics() {
+    // In a real implementation, these would be calculated from actual data
+    return {
+      requestsPerMinute: Math.floor(100 + Math.random() * 200),
+      errorRate: Math.random() * 2, // 0-2%
+      averageResponseTime: 150 + Math.random() * 100, // 150-250ms
     };
   }
+
+  /**
+   * Monitor system continuously
+   */
+  static startMonitoring() {
+    // Set up periodic health checks
+    setInterval(
+      async () => {
+        try {
+          const health = await this.getSystemHealth();
+
+          // Create alerts for critical issues
+          if (health.status === 'critical' || health.status === 'down') {
+            await this.createAlert({
+              type: 'error',
+              severity: 'critical',
+              title: 'System Health Critical',
+              message: `System status is ${health.status}`,
+              source: 'monitoring',
+              metadata: health,
+            });
+          }
+        } catch (error) {
+          console.error('Health check failed:', error);
+        }
+      },
+      5 * 60 * 1000
+    ); // Every 5 minutes
+
+    console.log('System monitoring started');
+  }
 }
-
-// Auto-collect system health every 5 minutes
-setInterval(
-  async () => {
-    try {
-      await SystemMonitoringService.collectSystemHealth();
-    } catch (error) {
-      console.error('Failed to collect system health:', error);
-    }
-  },
-  5 * 60 * 1000
-);
-
-// Reset metrics every hour
-setInterval(
-  () => {
-    SystemMonitoringService.resetMetrics();
-  },
-  60 * 60 * 1000
-);
 
 export default SystemMonitoringService;

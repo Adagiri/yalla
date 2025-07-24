@@ -6,6 +6,10 @@ type Mutation {
   _: Int
 }
 
+type Subscription {
+  _: Int
+}
+
 extend type Query {
   getBankCodes: [BankCode]
   getImageUploadUrl(input: ImageUploadUrlInput!): ImageUploadUrlResponse!

@@ -1,0 +1,50 @@
+type NewTripRequestPayload {
+  tripId: ID!
+  customerId: ID!
+  customer: CustomerPartial!
+  pickup: TripLocation!
+  destination: TripLocation!
+  estimatedFare: Float!
+  distance: Float!
+  duration: Int!
+  requestedAt: DateTime!
+  targetDriverId: ID!
+  tripNumber: String!
+  verificationPin: String!
+}
+
+type TripAcceptedPayload {
+  tripId: ID!
+  customerId: ID!
+  driver: DriverPartial!
+  estimatedArrivalTime: Int!
+  acceptedAt: DateTime!
+  tripNumber: String!
+}
+
+type TripStatusChangedPayload {
+  trip: Trip!
+  previousStatus: TripStatus
+  updatedAt: DateTime!
+}
+
+type DriverLocationUpdatePayload {
+  tripId: ID!
+  driverId: ID!
+  location: DriverLocationInfo!
+  timestamp: DateTime!
+}
+
+extend type Subscription {
+  # Driver receives new trip requests
+  newTripRequest(driverId: ID!): NewTripRequestPayload!
+
+  # Customer gets notified when their trip is accepted
+  tripAccepted(customerId: ID!): TripAcceptedPayload!
+
+  # Real-time trip status updates for customers and drivers
+  tripStatusChanged(tripId: ID!): TripStatusChangedPayload!
+
+  # Customer tracks driver location during active trip
+  driverLocationUpdate(tripId: ID!): DriverLocationUpdatePayload!
+}

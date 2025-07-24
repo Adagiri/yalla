@@ -1,3 +1,4 @@
+# src/features/admin/admin.types.gql
 scalar DateTime
 scalar JSON
 
@@ -42,6 +43,19 @@ enum SystemHealthStatus {
   DOWN
 }
 
+enum AlertType {
+  ERROR
+  WARNING
+  INFO
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 # ===== ADMIN TYPES =====
 type Admin {
   id: ID!
@@ -75,7 +89,7 @@ type Admin {
   updatedAt: DateTime!
 }
 
-type AuthPayload {
+type AdminAuthPayload {
   token: String!
   admin: Admin!
   expiresAt: DateTime!
@@ -88,6 +102,135 @@ type PaginatedAdmins {
   totalPages: Int!
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
+}
+
+# ===== DASHBOARD & ANALYTICS =====
+type DashboardMetrics {
+  overview: OverviewMetrics!
+  todayStats: TodayStats!
+  trends: TrendMetrics!
+  tripsByStatus: TripsByStatus!
+  recentActivity: [RecentActivity!]!
+}
+
+type OverviewMetrics {
+  totalDrivers: Int!
+  activeDrivers: Int!
+  totalCustomers: Int!
+  activeCustomers: Int!
+  totalTrips: Int!
+  completedTrips: Int!
+  totalRevenue: Float!
+  platformCommission: Float!
+}
+
+type TodayStats {
+  tripsToday: Int!
+  revenueToday: Float!
+  newDriversToday: Int!
+  newCustomersToday: Int!
+  activeDriversToday: Int!
+}
+
+type TrendMetrics {
+  tripsGrowth: Float!
+  revenueGrowth: Float!
+  driversGrowth: Float!
+  customersGrowth: Float!
+}
+
+type TripsByStatus {
+  pending: Int!
+  active: Int!
+  completed: Int!
+  cancelled: Int!
+}
+
+type RecentActivity {
+  type: String!
+  description: String!
+  timestamp: DateTime!
+  amount: Float
+}
+
+# ===== SYSTEM HEALTH & MONITORING =====
+type SystemHealth {
+  status: SystemHealthStatus!
+  uptime: Float!
+  memory: MemoryUsage!
+  database: DatabaseHealth!
+  services: [ServiceHealth!]!
+  metrics: SystemMetrics!
+  timestamp: DateTime!
+}
+
+type MemoryUsage {
+  used: Float!
+  total: Float!
+  percentage: Float!
+}
+
+type DatabaseHealth {
+  status: String!
+  responseTime: Float!
+  connectionCount: Int!
+}
+
+type ServiceHealth {
+  name: String!
+  status: String!
+  responseTime: Float
+  lastCheck: DateTime!
+}
+
+type SystemMetrics {
+  requestsPerMinute: Float!
+  errorRate: Float!
+  averageResponseTime: Float!
+}
+
+type SystemHealthHistory {
+  period: String!
+  dataPoints: Int!
+  history: [HealthHistoryPoint!]!
+}
+
+type HealthHistoryPoint {
+  timestamp: DateTime!
+  status: SystemHealthStatus!
+  memory: MemoryUsageHistory!
+  metrics: MetricsHistory!
+}
+
+type MemoryUsageHistory {
+  percentage: Float!
+}
+
+type MetricsHistory {
+  errorRate: Float!
+  averageResponseTime: Float!
+  requestsPerMinute: Float!
+}
+
+type SystemAlert {
+  id: ID!
+  type: AlertType!
+  severity: AlertSeverity!
+  title: String!
+  message: String!
+  source: String!
+  metadata: JSON
+  resolved: Boolean!
+  resolvedBy: String
+  resolvedAt: DateTime
+  createdAt: DateTime!
+}
+
+type SystemAlerts {
+  alerts: [SystemAlert!]!
+  total: Int!
+  unresolved: Int!
+  critical: Int!
 }
 
 # ===== NOTIFICATIONS =====
@@ -146,6 +289,14 @@ type PriorityStat {
   unread: Int!
 }
 
+type BroadcastResult {
+  sent: Int!
+  target: String!
+  recipients: Int!
+  title: String!
+  message: String!
+}
+
 # ===== SYSTEM CONFIGURATION =====
 type SystemConfig {
   id: ID!
@@ -156,6 +307,7 @@ type SystemConfig {
   dataType: String!
   isPublic: Boolean!
   isRequired: Boolean!
+  defaultValue: JSON
 
   validationRules: ValidationRules
   requiredPermission: String
@@ -171,8 +323,11 @@ type SystemConfig {
 type ValidationRules {
   min: Float
   max: Float
+  minLength: Int
+  maxLength: Int
   allowedValues: [JSON!]
   regex: String
+  dataType: String
 }
 
 type PaginatedConfigs {
@@ -184,29 +339,35 @@ type PaginatedConfigs {
   hasPreviousPage: Boolean!
 }
 
+type ConfigUpdateResult {
+  configId: String!
+  success: Boolean!
+  config: SystemConfig
+  error: String
+}
+
 # ===== AUDIT LOGGING =====
 type AuditLog {
   id: ID!
-  adminId: ID!
-  adminEmail: String!
-  adminRole: AdminRole!
+  adminId: ID
+  adminEmail: String
+  adminRole: AdminRole
   admin: Admin
 
   action: String!
   resource: String!
-  resourceId: ID
+  resourceId: String
 
   changes: AuditChanges
-  httpMethod: String
-  endpoint: String
+  metadata: JSON
   ipAddress: String
+  userAgent: String
 
   success: Boolean!
   errorMessage: String
 
+  timeAgo: String!
   timestamp: DateTime!
-  sessionId: String
-  requestId: String
 }
 
 type AuditChanges {
@@ -225,320 +386,91 @@ type PaginatedAuditLogs {
 }
 
 type AuditStats {
-  dailyStats: [DailyAuditStats!]!
-  topAdmins: [AdminActivity!]!
-  topActions: [ActionStats!]!
+  period: String!
+  summary: AuditSummary!
+  dailyStats: [DailyAuditStat!]!
+  topAdmins: [TopAdmin!]!
+  topActions: [TopAction!]!
+  topResources: [TopResource!]!
+  errorAnalysis: [ErrorAnalysis!]!
 }
 
-type DailyAuditStats {
+type AuditSummary {
+  totalActions: Int!
+  successfulActions: Int!
+  failedActions: Int!
+  successRate: Float!
+  uniqueAdmins: Int!
+  uniqueResources: Int!
+  uniqueActions: Int!
+}
+
+type DailyAuditStat {
   date: String!
   successful: Int!
   failed: Int!
   total: Int!
 }
 
-type AdminActivity {
-  adminId: ID!
+type TopAdmin {
+  adminId: String!
   adminEmail: String!
+  adminRole: AdminRole!
   actionCount: Int!
   successfulActions: Int!
+  failedActions: Int!
+  successRate: Int!
+  lastActivity: DateTime!
 }
 
-type ActionStats {
+type TopAction {
   action: String!
   resource: String!
   count: Int!
+  successRate: Int!
 }
 
-# ===== SYSTEM MONITORING =====
-type SystemHealth {
-  id: ID!
-  timestamp: DateTime!
-  overallStatus: SystemHealthStatus!
-
-  apiMetrics: ApiMetrics!
-  databaseMetrics: DatabaseMetrics!
-  businessMetrics: BusinessMetrics!
-  externalServices: ExternalServiceHealth!
-
-  alerts: [SystemAlert!]!
+type TopResource {
+  resource: String!
+  count: Int!
+  uniqueAdmins: Int!
+  successRate: Int!
 }
 
-type ApiMetrics {
-  responseTime: Int!
-  requestCount: Int!
-  errorRate: Float!
-  activeConnections: Int!
+type ErrorAnalysis {
+  errorMessage: String!
+  count: Int!
+  affectedResources: [String!]!
+  affectedActions: [String!]!
+  lastOccurrence: DateTime!
 }
 
-type DatabaseMetrics {
-  connectionCount: Int!
-  queryTime: Float!
-  slowQueries: Int!
-  storage: StorageInfo!
-}
-
-type StorageInfo {
-  used: Float!
-  available: Float!
-  percentage: Int!
-}
-
-type BusinessMetrics {
-  activeTrips: Int!
-  onlineDrivers: Int!
-  pendingRequests: Int!
-  systemErrors: Int!
-}
-
-type ExternalServiceHealth {
-  paystack: ServiceStatus!
-  aws: ServiceStatus!
-  maps: ServiceStatus!
-  sms: ServiceStatus!
-}
-
-type ServiceStatus {
-  status: String!
-  responseTime: Int!
-  uptime: Float!
-}
-
-type SystemAlert {
-  id: ID!
-  title: String!
-  message: String!
-  severity: NotificationPriority!
-  component: String!
-  resolvedAt: DateTime
-  metadata: JSON
+# ===== EMAIL TEMPLATES =====
+type EmailTemplate {
+  name: String!
+  subject: String!
+  html: String!
+  text: String!
   createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
-# ===== ANALYTICS =====
-type DashboardMetrics {
-  totalAdmins: Int!
-  activeAdmins: Int!
-  todayLogins: Int!
-  criticalAlerts: Int!
-  systemUptime: Float!
-
-  recentActivities: [AuditLog!]!
-  systemHealth: SystemHealth!
-  notificationsSummary: NotificationStats!
-}
-
-# ===== INPUT TYPES =====
-input AdminLoginInput {
-  email: String!
-  password: String!
-}
-
-input CreateAdminInput {
-  firstname: String!
-  lastname: String!
-  email: String!
-  password: String!
-  role: AdminRole!
-  department: String!
-  permissions: [String!]!
-}
-
-input UpdateAdminInput {
-  firstname: String
-  lastname: String
-  email: String
-  role: AdminRole
-  department: String
-  permissions: [String!]
-  isActive: Boolean
-  accessLevel: Int
-}
-
-input CreateNotificationInput {
-  recipients: [ID!]!
-  title: String!
-  message: String!
-  type: NotificationType!
-  priority: NotificationPriority!
-  category: String!
-  actionRequired: Boolean
-  actionUrl: String
-  actionLabel: String
-  metadata: JSON
-}
-
-input BroadcastNotificationInput {
-  title: String!
-  message: String!
-  type: NotificationType!
-  priority: NotificationPriority!
-  category: String!
-  targetRoles: [AdminRole!]
-  targetDepartments: [String!]
-  actionRequired: Boolean
-  actionUrl: String
-  actionLabel: String
-  metadata: JSON
-}
-
-input CreateSystemConfigInput {
-  category: String!
-  key: String!
-  value: JSON!
-  description: String
-  dataType: String!
-  isPublic: Boolean
-  isRequired: Boolean
-}
-
-input UpdateSystemConfigInput {
-  value: JSON!
-}
-
-input NotificationFilters {
-  isRead: Boolean
-  type: NotificationType
-  priority: NotificationPriority
-  category: String
-  actionRequired: Boolean
-  page: Int
-  limit: Int
-}
-
-input AuditLogFilters {
-  adminId: ID
-  resource: String
-  action: String
-  success: Boolean
-  startDate: DateTime
-  endDate: DateTime
-  page: Int
-  limit: Int
-}
-
-input ConfigFilters {
-  category: String
-  isPublic: Boolean
-  searchTerm: String
-  page: Int
-  limit: Int
-}
-
-# ===== QUERIES =====
-type Query {
-  # ===== AUTHENTICATION & ADMIN MANAGEMENT =====
-  getCurrentAdmin: Admin!
-  getAllAdmins(page: Int = 1, limit: Int = 20): PaginatedAdmins!
-  getAdminById(id: ID!): Admin
-
-  # ===== DASHBOARD & ANALYTICS =====
-  getDashboardMetrics: DashboardMetrics!
-  getSystemHealth: SystemHealth!
-
-  # ===== NOTIFICATIONS =====
-  getMyNotifications(filters: NotificationFilters): PaginatedNotifications!
-  getNotificationStats: NotificationStats!
-
-  # ===== SYSTEM CONFIGURATION =====
-  getSystemConfigs(filters: ConfigFilters): PaginatedConfigs!
-  getSystemConfig(id: ID!): SystemConfig
-  getConfigsByCategory(category: String!): [SystemConfig!]!
-  getConfigCategories: [String!]!
-
-  # ===== AUDIT LOGS =====
-  getAuditLogs(filters: AuditLogFilters): PaginatedAuditLogs!
-  getAuditStats(days: Int = 30): AuditStats!
-
-  # ===== SYSTEM MONITORING =====
-  getSystemHealthHistory(hours: Int = 24): [SystemHealth!]!
-  getSystemAlerts(resolved: Boolean): [SystemAlert!]!
-}
-
-# ===== MUTATIONS =====
-type Mutation {
-  # ===== AUTHENTICATION =====
-  adminLogin(input: AdminLoginInput!): AuthPayload!
-  adminLogout: Boolean!
-
-  # ===== ADMIN MANAGEMENT =====
-  createAdmin(input: CreateAdminInput!): Admin!
-  updateAdmin(id: ID!, input: UpdateAdminInput!): Admin!
-  activateAdmin(id: ID!): Admin!
-  deactivateAdmin(id: ID!): Admin!
-  deleteAdmin(id: ID!): Boolean!
-
-  # ===== NOTIFICATIONS =====
-  createNotification(input: CreateNotificationInput!): [AdminNotification!]!
-  broadcastNotification(input: BroadcastNotificationInput!): BroadcastResult!
-  markNotificationAsRead(id: ID!): AdminNotification!
-  markAllNotificationsAsRead: BulkOperationResult!
-  deleteNotification(id: ID!): Boolean!
-
-  # ===== SYSTEM CONFIGURATION =====
-  createSystemConfig(input: CreateSystemConfigInput!): SystemConfig!
-  updateSystemConfig(id: ID!, input: UpdateSystemConfigInput!): SystemConfig!
-  deleteSystemConfig(id: ID!): Boolean!
-  bulkUpdateConfigs(updates: [ConfigUpdate!]!): [ConfigUpdateResult!]!
-
-  # ===== SYSTEM MANAGEMENT =====
-  resolveSystemAlert(id: ID!): SystemAlert!
-  triggerSystemHealthCheck: SystemHealth!
-  cleanupOldData(days: Int!): CleanupResult!
-}
-
-# ===== SUBSCRIPTIONS (Real-time) =====
-type Subscription {
-  # ===== REAL-TIME NOTIFICATIONS =====
-  adminNotificationReceived(adminId: ID!): AdminNotification!
-
-  # ===== SYSTEM MONITORING =====
-  systemHealthUpdated: SystemHealth!
-  systemAlertCreated: SystemAlert!
-
-  # ===== AUDIT TRAIL =====
-  auditLogCreated(adminId: ID): AuditLog!
-
-  # ===== ADMIN ACTIVITY =====
-  adminStatusChanged: AdminStatusUpdate!
-
-  # ===== CONFIGURATION CHANGES =====
-  systemConfigUpdated(category: String): SystemConfig!
-}
-
-# ===== SUBSCRIPTION PAYLOAD TYPES =====
-type AdminStatusUpdate {
-  adminId: ID!
-  isOnline: Boolean!
-  lastActiveAt: DateTime!
-}
-
-type BroadcastResult {
-  sent: Int!
-  recipients: [ID!]!
-  message: String!
-}
-
-type BulkOperationResult {
-  modifiedCount: Int!
-  message: String!
-}
-
-type ConfigUpdate {
-  configId: ID!
-  value: JSON!
-}
-
-type ConfigUpdateResult {
-  configId: ID!
+# ===== COMMON RESPONSE TYPES =====
+type SuccessResponse {
   success: Boolean!
-  config: SystemConfig
-  error: String
+  message: String!
+}
+
+type HealthCheckResult {
+  success: Boolean!
+  health: SystemHealth!
+  timestamp: DateTime!
 }
 
 type CleanupResult {
-  deletedLogs: Int!
-  deletedNotifications: Int!
-  freedSpace: String!
+  success: Boolean!
+  type: String!
+  deletedCount: Int!
+  cutoffDate: DateTime!
   message: String!
 }

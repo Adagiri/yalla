@@ -334,23 +334,3 @@ extend type Mutation {
   # Process payment for trip
   processPayment(input: PaymentProcessInput!): PaymentResult!
 }
-
-# ===== SUBSCRIPTIONS =====
-type Subscription {
-  # ===== CUSTOMER SUBSCRIPTIONS =====
-  # Trip status updates for customer
-  tripUpdates(tripId: ID!): Trip!
-
-  # Driver location updates during trip
-  driverLocation(tripId: ID!): DriverLocationInfo!
-
-  # ===== DRIVER SUBSCRIPTIONS =====
-  # New trip requests for drivers
-  newTripRequest: Trip!
-
-  # Trip status updates for driver
-  tripStatusUpdates(tripId: ID!): Trip!
-
-  # Trip assignment notifications (when admin manually assigns)
-  tripAssigned(driverId: ID!): Trip!
-}

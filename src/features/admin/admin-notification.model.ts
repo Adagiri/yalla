@@ -13,11 +13,11 @@ export interface AdminNotificationDocument extends Document {
   message: string;
 
   // Classification
-  type: 'info' | 'warning' | 'error' | 'success';
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   category: string; // 'system', 'payment', 'user_activity', 'security', etc.
 
-  // Action information
+  // Action INFOrmation
   actionRequired: boolean;
   actionUrl?: string; // URL to navigate to for action
   actionLabel?: string; // Button text like "Review", "Approve", "Fix Now"
@@ -67,14 +67,14 @@ const adminNotificationSchema = new Schema<AdminNotificationDocument>(
     // Classification
     type: {
       type: String,
-      enum: ['info', 'warning', 'error', 'success'],
-      default: 'info',
+      enum: ['INFO', 'WARNING', 'ERROR', 'SUCCESS'],
+      default: 'INFO',
       index: true,
     },
     priority: {
       type: String,
-      enum: ['low', 'medium', 'high', 'critical'],
-      default: 'medium',
+      enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+      default: 'MEDIUM',
       index: true,
     },
     category: {
@@ -105,6 +105,9 @@ const adminNotificationSchema = new Schema<AdminNotificationDocument>(
     // Additional data
     metadata: { type: Schema.Types.Mixed },
 
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+
     // Expiration
     expiresAt: {
       type: Date,
@@ -126,23 +129,23 @@ adminNotificationSchema.index({ actionRequired: 1, isRead: 1 });
 // Index for cleanup queries
 adminNotificationSchema.index({ createdAt: 1, isRead: 1 });
 
-// Pre-save middleware to set expiration for low priority notifications
+// Pre-save middleware to set expiration for LOW priority notifications
 adminNotificationSchema.pre('save', function (next) {
-  if (this.isNew && this.priority === 'low' && !this.expiresAt) {
+  if (this.isNew && this.priority === 'LOW' && !this.expiresAt) {
     // Low priority notifications expire after 30 days
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 30);
     this.expiresAt = expiry;
   }
 
-  if (this.isNew && this.priority === 'medium' && !this.expiresAt) {
+  if (this.isNew && this.priority === 'MEDIUM' && !this.expiresAt) {
     // Medium priority notifications expire after 60 days
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 60);
     this.expiresAt = expiry;
   }
 
-  // High and critical notifications don't auto-expire
+  // High and CRITICAL notifications don't auto-expire
 
   next();
 });
@@ -191,10 +194,10 @@ adminNotificationSchema.statics.getPriorityCounts = async function (
   ]);
 
   const result = {
-    low: 0,
-    medium: 0,
-    high: 0,
-    critical: 0,
+    LOW: 0,
+    MEDIUM: 0,
+    HIGH: 0,
+    CRITICAL: 0,
   };
 
   counts.forEach((item: any) => {
@@ -228,8 +231,8 @@ adminNotificationSchema.statics.createSystemNotification =
     recipientId: string;
     title: string;
     message: string;
-    type?: 'info' | 'warning' | 'error' | 'success';
-    priority?: 'low' | 'medium' | 'high' | 'critical';
+    type?: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
+    priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     category: string;
     actionRequired?: boolean;
     actionUrl?: string;
@@ -239,8 +242,8 @@ adminNotificationSchema.statics.createSystemNotification =
     return await this.create({
       ...data,
       senderId: 'system',
-      type: data.type || 'info',
-      priority: data.priority || 'medium',
+      type: data.type || 'INFO',
+      priority: data.priority || 'MEDIUM',
       actionRequired: data.actionRequired || false,
     });
   };

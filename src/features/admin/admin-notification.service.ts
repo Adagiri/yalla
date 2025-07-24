@@ -1,52 +1,249 @@
 import AdminNotification from './admin-notification.model';
-import AuditLogService from './audit-log.service';
-import NotificationService from '../../services/notification.services';
 import { ErrorResponse } from '../../utils/responses';
+import { pubsub } from '../../graphql/pubsub';
+import { SUBSCRIPTION_EVENTS } from '../../graphql/subscription-events';
 
-export interface CreateAdminNotificationInput {
-  recipients: string[]; // admin IDs
+interface NotificationInput {
+  recipientId: string;
+  senderId: string;
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'error' | 'success';
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  category: string; // e.g., 'system', 'payment', 'user_activity', 'security'
+  type?: 'info' | 'warning' | 'error' | 'success';
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  category: string;
   actionRequired?: boolean;
   actionUrl?: string;
   actionLabel?: string;
   metadata?: any;
-  senderId: string;
-  senderEmail: string;
 }
 
-export interface BroadcastNotificationInput {
+interface BroadcastInput {
+  senderId: string;
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'error' | 'success';
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  type?: 'info' | 'warning' | 'error' | 'success';
+  priority?: 'low' | 'medium' | 'high' | 'critical';
   category: string;
-  targetRoles?: string[]; // If specified, only send to admins with these roles
-  targetDepartments?: string[]; // If specified, only send to admins in these departments
+  target: 'ALL_ADMINS' | 'SUPER_ADMINS' | 'SPECIFIC_ROLE';
+  targetRole?: string;
   actionRequired?: boolean;
   actionUrl?: string;
   actionLabel?: string;
   metadata?: any;
-  senderId: string;
-  senderEmail: string;
 }
 
 class AdminNotificationService {
   /**
-   * Create notification for specific admins
+   * Get notifications for a specific admin
    */
-  static async createNotification(input: CreateAdminNotificationInput) {
+  static async getAdminNotifications(
+    adminId: string,
+    options: {
+      page?: number;
+      limit?: number;
+      unreadOnly?: boolean;
+      category?: string;
+      priority?: string;
+    } = {}
+  ) {
+    const {
+      page = 1,
+      limit = 20,
+      unreadOnly = false,
+      category,
+      priority,
+    } = options;
+
+    const query: any = { recipientId: adminId };
+
+    if (unreadOnly) query.isRead = false;
+    if (category) query.category = category;
+    if (priority) query.priority = priority;
+
+    const skip = (page - 1) * limit;
+
+    const [notifications, total, unreadCount] = await Promise.all([
+      AdminNotification.find(query)
+        .populate('sender', 'firstname lastname email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      AdminNotification.countDocuments(query),
+      AdminNotification.countDocuments({ recipientId: adminId, isRead: false }),
+    ]);
+
+    return {
+      notifications: notifications.map((n) => ({
+        ...n,
+        id: n._id,
+        timeAgo: this.getTimeAgo(n.createdAt),
+      })),
+      total,
+      unreadCount,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasNextPage: page < Math.ceil(total / limit),
+      hasPreviousPage: page > 1,
+    };
+  }
+
+  /**
+   * Get notification statistics for an admin
+   */
+  static async getNotificationStats(adminId: string) {
+    const [total, unread, critical, actionRequired, byCategory, byPriority] =
+      await Promise.all([
+        AdminNotification.countDocuments({ recipientId: adminId }),
+        AdminNotification.countDocuments({
+          recipientId: adminId,
+          isRead: false,
+        }),
+        AdminNotification.countDocuments({
+          recipientId: adminId,
+          priority: 'critical',
+          isRead: false,
+        }),
+        AdminNotification.countDocuments({
+          recipientId: adminId,
+          actionRequired: true,
+          isRead: false,
+        }),
+        AdminNotification.aggregate([
+          { $match: { recipientId: adminId } },
+          {
+            $group: {
+              _id: '$category',
+              count: { $sum: 1 },
+              unread: {
+                $sum: { $cond: [{ $eq: ['$isRead', false] }, 1, 0] },
+              },
+            },
+          },
+          { $sort: { count: -1 } },
+        ]),
+        AdminNotification.aggregate([
+          { $match: { recipientId: adminId } },
+          {
+            $group: {
+              _id: '$priority',
+              count: { $sum: 1 },
+              unread: {
+                $sum: { $cond: [{ $eq: ['$isRead', false] }, 1, 0] },
+              },
+            },
+          },
+          { $sort: { count: -1 } },
+        ]),
+      ]);
+
+    return {
+      total,
+      unread,
+      critical,
+      actionRequired,
+      byCategory: byCategory.map((item) => ({
+        category: item._id,
+        count: item.count,
+        unread: item.unread,
+      })),
+      byPriority: byPriority.map((item) => ({
+        priority: item._id,
+        count: item.count,
+        unread: item.unread,
+      })),
+    };
+  }
+
+  /**
+   * Create a new notification
+   */
+  static async createNotification(input: NotificationInput) {
     try {
-      const notifications = input.recipients.map((recipientId) => ({
+      const notification = new AdminNotification({
+        recipientId: input.recipientId,
+        senderId: input.senderId,
+        title: input.title,
+        message: input.message,
+        type: input.type || 'info',
+        priority: input.priority || 'medium',
+        category: input.category,
+        actionRequired: input.actionRequired || false,
+        actionUrl: input.actionUrl,
+        actionLabel: input.actionLabel,
+        metadata: input.metadata,
+      });
+
+      await notification.save();
+
+      // Populate sender for real-time notification
+      await notification.populate('sender', 'firstname lastname email');
+
+      // Publish real-time notification
+      pubsub.publish(SUBSCRIPTION_EVENTS.ADMIN_NOTIFICATION, {
+        adminNotificationReceived: notification.toSafeObject(),
+      });
+
+      return notification.toSafeObject();
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error creating notification',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Broadcast notification to multiple admins
+   */
+  static async broadcastNotification(input: BroadcastInput) {
+    try {
+      const Admin = require('./admin.model').default;
+
+      // Determine recipients based on target
+      let recipients: string[] = [];
+
+      switch (input.target) {
+        case 'ALL_ADMINS':
+          const allAdmins = await Admin.find({ isActive: true }).select('_id');
+          recipients = allAdmins.map((admin: any) => admin._id.toString());
+          break;
+
+        case 'SUPER_ADMINS':
+          const superAdmins = await Admin.find({
+            isActive: true,
+            role: 'SUPER_ADMIN',
+          }).select('_id');
+          recipients = superAdmins.map((admin: any) => admin._id.toString());
+          break;
+
+        case 'SPECIFIC_ROLE':
+          if (!input.targetRole) {
+            throw new ErrorResponse(
+              400,
+              'Target role is required for SPECIFIC_ROLE target'
+            );
+          }
+          const roleAdmins = await Admin.find({
+            isActive: true,
+            role: input.targetRole,
+          }).select('_id');
+          recipients = roleAdmins.map((admin: any) => admin._id.toString());
+          break;
+
+        default:
+          throw new ErrorResponse(400, 'Invalid broadcast target');
+      }
+
+      // Create notifications for all recipients
+      const notifications = recipients.map((recipientId) => ({
         recipientId,
         senderId: input.senderId,
         title: input.title,
         message: input.message,
-        type: input.type,
-        priority: input.priority,
+        type: input.type || 'info',
+        priority: input.priority || 'medium',
         category: input.category,
         actionRequired: input.actionRequired || false,
         actionUrl: input.actionUrl,
@@ -54,97 +251,24 @@ class AdminNotificationService {
         metadata: input.metadata,
       }));
 
-      const createdNotifications =
+      const savedNotifications =
         await AdminNotification.insertMany(notifications);
 
-      // Send real-time notifications (if using subscriptions/websockets)
-      for (const recipientId of input.recipients) {
-        await this.sendRealTimeNotification(recipientId, {
-          id: createdNotifications.find((n) => n.recipientId === recipientId)
-            ?._id,
-          title: input.title,
-          message: input.message,
-          type: input.type,
-          priority: input.priority,
-          actionRequired: input.actionRequired,
-          actionUrl: input.actionUrl,
-          actionLabel: input.actionLabel,
+        console.log(typeof savedNotifications[0].createdAt)
+
+      // Publish real-time notifications
+      savedNotifications.forEach((notification) => {
+        pubsub.publish(SUBSCRIPTION_EVENTS.ADMIN_NOTIFICATION, {
+          adminNotificationReceived: notification.toSafeObject(),
         });
-      }
-
-      // Log the action
-      await AuditLogService.logAction({
-        adminId: input.senderId,
-        adminEmail: input.senderEmail,
-        adminRole: 'system', // This would come from the actual admin
-        action: 'create_notification',
-        resource: 'admin_notification',
-        success: true,
-        changes: {
-          after: {
-            recipients: input.recipients,
-            title: input.title,
-            type: input.type,
-            priority: input.priority,
-          },
-        },
-      });
-
-      return createdNotifications;
-    } catch (error: any) {
-      throw new ErrorResponse(
-        500,
-        'Error creating admin notification',
-        error.message
-      );
-    }
-  }
-
-  /**
-   * Broadcast notification to multiple admins based on criteria
-   */
-  static async broadcastNotification(input: BroadcastNotificationInput) {
-    try {
-      // Get target admins based on roles and departments
-      const Admin = require('./admin.model').default;
-
-      const query: any = { isActive: true };
-
-      if (input.targetRoles?.length) {
-        query.role = { $in: input.targetRoles };
-      }
-
-      if (input.targetDepartments?.length) {
-        query.department = { $in: input.targetDepartments };
-      }
-
-      const targetAdmins = await Admin.find(query, '_id').lean();
-      const recipientIds = targetAdmins.map((admin: any) => admin._id);
-
-      if (recipientIds.length === 0) {
-        return { sent: 0, message: 'No matching admins found' };
-      }
-
-      // Create notifications
-      const result = await this.createNotification({
-        recipients: recipientIds,
-        title: input.title,
-        message: input.message,
-        type: input.type,
-        priority: input.priority,
-        category: input.category,
-        actionRequired: input.actionRequired,
-        actionUrl: input.actionUrl,
-        actionLabel: input.actionLabel,
-        metadata: input.metadata,
-        senderId: input.senderId,
-        senderEmail: input.senderEmail,
       });
 
       return {
-        sent: recipientIds.length,
-        recipients: recipientIds,
-        notifications: result,
+        sent: savedNotifications.length,
+        target: input.target,
+        recipients: recipients.length,
+        title: input.title,
+        message: input.message,
       };
     } catch (error: any) {
       throw new ErrorResponse(
@@ -153,66 +277,6 @@ class AdminNotificationService {
         error.message
       );
     }
-  }
-
-  /**
-   * Get notifications for an admin
-   */
-  static async getAdminNotifications(
-    adminId: string,
-    filters: {
-      isRead?: boolean;
-      type?: string;
-      priority?: string;
-      category?: string;
-      actionRequired?: boolean;
-      page?: number;
-      limit?: number;
-    }
-  ) {
-    const {
-      isRead,
-      type,
-      priority,
-      category,
-      actionRequired,
-      page = 1,
-      limit = 20,
-    } = filters;
-
-    const query: any = { recipientId: adminId };
-
-    if (isRead !== undefined) query.isRead = isRead;
-    if (type) query.type = type;
-    if (priority) query.priority = priority;
-    if (category) query.category = category;
-    if (actionRequired !== undefined) query.actionRequired = actionRequired;
-
-    const skip = (page - 1) * limit;
-
-    const [notifications, total, unreadCount] = await Promise.all([
-      AdminNotification.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('senderId', 'firstname lastname email')
-        .lean(),
-      AdminNotification.countDocuments(query),
-      AdminNotification.countDocuments({
-        recipientId: adminId,
-        isRead: false,
-      }),
-    ]);
-
-    return {
-      notifications,
-      total,
-      unreadCount,
-      page,
-      totalPages: Math.ceil(total / limit),
-      hasNextPage: page < Math.ceil(total / limit),
-      hasPreviousPage: page > 1,
-    };
   }
 
   /**
@@ -233,7 +297,7 @@ class AdminNotificationService {
         throw new ErrorResponse(404, 'Notification not found');
       }
 
-      return notification;
+      return notification.toSafeObject();
     } catch (error: any) {
       throw new ErrorResponse(
         500,
@@ -257,8 +321,8 @@ class AdminNotificationService {
       );
 
       return {
-        modifiedCount: result.modifiedCount,
-        message: `Marked ${result.modifiedCount} notifications as read`,
+        success: true,
+        markedCount: result.modifiedCount,
       };
     } catch (error: any) {
       throw new ErrorResponse(
@@ -283,7 +347,10 @@ class AdminNotificationService {
         throw new ErrorResponse(404, 'Notification not found');
       }
 
-      return { success: true, message: 'Notification deleted successfully' };
+      return {
+        success: true,
+        message: 'Notification deleted successfully',
+      };
     } catch (error: any) {
       throw new ErrorResponse(
         500,
@@ -294,166 +361,88 @@ class AdminNotificationService {
   }
 
   /**
-   * Get notification statistics for admin dashboard
+   * Create system notification
    */
-  static async getNotificationStats(adminId: string, days: number = 30) {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-
-    const [
-      totalNotifications,
-      unreadNotifications,
-      criticalNotifications,
-      actionRequiredNotifications,
-      categoryStats,
-      priorityStats,
-    ] = await Promise.all([
-      AdminNotification.countDocuments({
-        recipientId: adminId,
-        createdAt: { $gte: startDate },
-      }),
-      AdminNotification.countDocuments({
-        recipientId: adminId,
-        isRead: false,
-      }),
-      AdminNotification.countDocuments({
-        recipientId: adminId,
-        priority: 'critical',
-        isRead: false,
-      }),
-      AdminNotification.countDocuments({
-        recipientId: adminId,
-        actionRequired: true,
-        isRead: false,
-      }),
-      AdminNotification.aggregate([
-        {
-          $match: {
-            recipientId: adminId,
-            createdAt: { $gte: startDate },
-          },
-        },
-        {
-          $group: {
-            _id: '$category',
-            count: { $sum: 1 },
-            unread: {
-              $sum: { $cond: [{ $eq: ['$isRead', false] }, 1, 0] },
-            },
-          },
-        },
-        { $sort: { count: -1 } },
-      ]),
-      AdminNotification.aggregate([
-        {
-          $match: {
-            recipientId: adminId,
-            createdAt: { $gte: startDate },
-          },
-        },
-        {
-          $group: {
-            _id: '$priority',
-            count: { $sum: 1 },
-            unread: {
-              $sum: { $cond: [{ $eq: ['$isRead', false] }, 1, 0] },
-            },
-          },
-        },
-      ]),
-    ]);
-
-    return {
-      total: totalNotifications,
-      unread: unreadNotifications,
-      critical: criticalNotifications,
-      actionRequired: actionRequiredNotifications,
-      byCategory: categoryStats,
-      byPriority: priorityStats,
-    };
-  }
-
-  /**
-   * System alert notifications
-   */
-  static async createSystemAlert(alert: {
+  static async createSystemNotification(data: {
     title: string;
     message: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    component: string;
+    type?: 'info' | 'warning' | 'error' | 'success';
+    priority?: 'low' | 'medium' | 'high' | 'critical';
+    category: string;
+    actionRequired?: boolean;
+    actionUrl?: string;
+    actionLabel?: string;
     metadata?: any;
+    targetAdmins?: string[]; // If not provided, send to all admins
   }) {
-    // Determine target roles based on severity
-    let targetRoles = ['super_admin'];
-
-    if (alert.severity === 'critical') {
-      targetRoles = ['super_admin', 'admin'];
-    } else if (alert.severity === 'high') {
-      targetRoles = ['super_admin', 'admin', 'manager'];
-    }
-
-    return await this.broadcastNotification({
-      title: `🚨 System Alert: ${alert.title}`,
-      message: alert.message,
-      type: alert.severity === 'critical' ? 'error' : 'warning',
-      priority: alert.severity,
-      category: 'system_alert',
-      targetRoles,
-      actionRequired: alert.severity === 'critical',
-      metadata: {
-        component: alert.component,
-        ...alert.metadata,
-      },
-      senderId: 'system',
-      senderEmail: 'system@yourapp.com',
-    });
-  }
-
-  /**
-   * Send real-time notification (WebSocket/GraphQL subscription)
-   */
-  private static async sendRealTimeNotification(
-    recipientId: string,
-    data: any
-  ) {
     try {
-      // If using WebSocket
-      if (global.websocketService) {
-        global.websocketService.sendToUser(
-          recipientId,
-          'admin_notification',
-          data
-        );
+      const Admin = require('./admin.model').default;
+
+      let recipients: string[] = [];
+
+      if (data.targetAdmins && data.targetAdmins.length > 0) {
+        recipients = data.targetAdmins;
+      } else {
+        // Send to all active admins
+        const allAdmins = await Admin.find({ isActive: true }).select('_id');
+        recipients = allAdmins.map((admin: any) => admin._id.toString());
       }
 
-      // If using GraphQL subscriptions, you would publish here
-      // pubsub.publish('ADMIN_NOTIFICATION', { adminId: recipientId, notification: data });
-    } catch (error) {
-      console.error('Error sending real-time notification:', error);
+      const notifications = recipients.map((recipientId) => ({
+        recipientId,
+        senderId: 'system',
+        title: data.title,
+        message: data.message,
+        type: data.type || 'info',
+        priority: data.priority || 'medium',
+        category: data.category,
+        actionRequired: data.actionRequired || false,
+        actionUrl: data.actionUrl,
+        actionLabel: data.actionLabel,
+        metadata: data.metadata,
+      }));
+
+      const savedNotifications =
+        await AdminNotification.insertMany(notifications);
+
+      // Publish real-time notifications
+      savedNotifications.forEach((notification) => {
+        pubsub.publish(SUBSCRIPTION_EVENTS.ADMIN_NOTIFICATION, {
+          adminNotificationReceived: notification.toSafeObject(),
+        });
+      });
+
+      return {
+        sent: savedNotifications.length,
+        recipients: recipients.length,
+        title: data.title,
+        message: data.message,
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error creating system notification',
+        error.message
+      );
     }
   }
 
   /**
-   * Clean up old notifications
+   * Helper method to calculate time ago
    */
-  static async cleanupOldNotifications(daysToKeep: number = 90) {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+  private static getTimeAgo(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
 
-    try {
-      const result = await AdminNotification.deleteMany({
-        createdAt: { $lt: cutoffDate },
-        isRead: true, // Only delete read notifications
-      });
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
 
-      console.log(
-        `🧹 Cleaned up ${result.deletedCount} old admin notifications`
-      );
-      return result.deletedCount;
-    } catch (error) {
-      console.error('Error cleaning up old notifications:', error);
-      throw error;
-    }
+    return date.toLocaleDateString();
   }
 }
 

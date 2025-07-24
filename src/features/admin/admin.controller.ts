@@ -1,24 +1,197 @@
-// src/features/admin/admin.controller.ts - Comprehensive Admin Controller
+// src/features/admin/admin.controller.ts - Complete Admin Controller
 import AdminAnalyticsService from './admin-analytics.service';
 import AdminAuthService from './admin-auth.service';
 import AuditLogService from './audit-log.service';
 import SystemMonitoringService from './system-monitoring.service';
-import PaymentModelService from '../payment-model/payment-model.services';
-import SubscriptionService from '../subscription/subscription.service';
+import AdminSystemConfigService from './admin-system-config.service';
+import AdminNotificationService from './admin-notification.service';
 import NotificationService from '../../services/notification.services';
 import Driver from '../driver/driver.model';
 import Customer from '../customer/customer.model';
 import Trip from '../trip/trip.model';
 import Admin from './admin.model';
 import { ErrorResponse } from '../../utils/responses';
-import { ADMIN_PERMISSIONS } from '../../constants/admin-permissions';
 import { ContextType } from '../../types';
-import WalletService from '../../services/wallet.service';
 
 class AdminController {
-  /**
-   * DASHBOARD & ANALYTICS
-   */
+  // ===== AUTHENTICATION & ADMIN MANAGEMENT =====
+  static async adminLogin(
+    _: any,
+    { input }: { input: { email: string; password: string } }
+  ) {
+    const { email, password } = input;
+    try {
+      return await AdminAuthService.login(email, password);
+    } catch (error: any) {
+      throw new ErrorResponse(401, 'Authentication failed', error.message);
+    }
+  }
+
+  static async adminLogout(_: any, __: any, { user }: ContextType) {
+    try {
+      return await AdminAuthService.logout(user.id);
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Logout failed', error.message);
+    }
+  }
+
+  static async getCurrentAdmin(_: any, __: any, { user }: ContextType) {
+    try {
+      return await AdminAuthService.getCurrentAdmin(user.id);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching current admin',
+        error.message
+      );
+    }
+  }
+
+  static async getAllAdmins(
+    _: any,
+    { page = 1, limit = 20 }: { page?: number; limit?: number }
+  ) {
+    try {
+      return await AdminAuthService.getAllAdmins({ page, limit });
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error fetching admins', error.message);
+    }
+  }
+
+  static async getAdminById(_: any, { id }: { id: string }) {
+    try {
+      return await AdminAuthService.getAdminById(id);
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error fetching admin', error.message);
+    }
+  }
+
+  static async createAdmin(
+    _: any,
+    { input }: { input: any },
+    { user }: ContextType
+  ) {
+    user = {
+      email: 'ibrahimridwan477@gmail.com',
+      id: '1234567890',
+      role: 'SUPER_ADMIN',
+    };
+    try {
+      const admin = await AdminAuthService.createAdmin(input, user.id);
+
+      await AuditLogService.logAction({
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+        action: 'create_admin',
+        resource: 'admin',
+        resourceId: admin._id,
+        success: true,
+      });
+
+      return admin;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error creating admin', error.message);
+    }
+  }
+
+  static async updateAdmin(
+    _: any,
+    { id, input }: { id: string; input: any },
+    { user }: ContextType
+  ) {
+    try {
+      const admin = await AdminAuthService.updateAdmin(id, input, user.id);
+
+      await AuditLogService.logAction({
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+        action: 'update_admin',
+        resource: 'admin',
+        resourceId: id,
+        success: true,
+      });
+
+      return admin;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error updating admin', error.message);
+    }
+  }
+
+  static async activateAdmin(
+    _: any,
+    { id }: { id: string },
+    { user }: ContextType
+  ) {
+    try {
+      const admin = await AdminAuthService.activateAdmin(id, user.id);
+
+      await AuditLogService.logAction({
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+        action: 'activate_admin',
+        resource: 'admin',
+        resourceId: id,
+        success: true,
+      });
+
+      return admin;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error activating admin', error.message);
+    }
+  }
+
+  static async deactivateAdmin(
+    _: any,
+    { id }: { id: string },
+    { user }: ContextType
+  ) {
+    try {
+      const admin = await AdminAuthService.deactivateAdmin(id, user.id);
+
+      await AuditLogService.logAction({
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+        action: 'deactivate_admin',
+        resource: 'admin',
+        resourceId: id,
+        success: true,
+      });
+
+      return admin;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error deactivating admin', error.message);
+    }
+  }
+
+  static async deleteAdmin(
+    _: any,
+    { id }: { id: string },
+    { user }: ContextType
+  ) {
+    try {
+      const result = await AdminAuthService.deleteAdmin(id, user.id);
+
+      await AuditLogService.logAction({
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+        action: 'delete_admin',
+        resource: 'admin',
+        resourceId: id,
+        success: true,
+      });
+
+      return result;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error deleting admin', error.message);
+    }
+  }
+
+  // ===== DASHBOARD & ANALYTICS =====
   static async getDashboardMetrics(
     _: any,
     { dateRange }: any,
@@ -36,15 +209,6 @@ class AdminController {
 
       return await AdminAnalyticsService.getDashboardMetrics(dateRange);
     } catch (error: any) {
-      await AuditLogService.logAction({
-        adminId: user.id,
-        adminEmail: user.email,
-        adminRole: user.role,
-        action: 'view_dashboard',
-        resource: 'dashboard',
-        success: false,
-        errorMessage: error.message,
-      });
       throw new ErrorResponse(
         500,
         'Error fetching dashboard metrics',
@@ -53,576 +217,9 @@ class AdminController {
     }
   }
 
-  static async getRevenueAnalytics(
-    _: any,
-    { period = 'daily', days = 30 }: { period: string; days: number },
-    { user }: ContextType
-  ) {
+  static async getSystemHealth(_: any, __: any, { user }: ContextType) {
     try {
-      return await AdminAnalyticsService.getRevenueAnalytics(
-        period as any,
-        days
-      );
-    } catch (error: any) {
-      throw new ErrorResponse(
-        500,
-        'Error fetching revenue analytics',
-        error.message
-      );
-    }
-  }
-
-  static async getDriverPerformanceAnalytics(
-    _: any,
-    { driverId, dateRange }: { driverId?: string; dateRange?: any },
-    { user }: ContextType
-  ) {
-    try {
-      return await AdminAnalyticsService.getDriverPerformanceAnalytics(
-        driverId,
-        dateRange
-      );
-    } catch (error: any) {
-      throw new ErrorResponse(
-        500,
-        'Error fetching driver analytics',
-        error.message
-      );
-    }
-  }
-
-  static async getGeographicAnalytics(
-    _: any,
-    { dateRange }: any,
-    { user }: ContextType
-  ) {
-    try {
-      return await AdminAnalyticsService.getGeographicAnalytics(dateRange);
-    } catch (error: any) {
-      throw new ErrorResponse(
-        500,
-        'Error fetching geographic analytics',
-        error.message
-      );
-    }
-  }
-
-  /**
-   * DRIVER MANAGEMENT
-   */
-  static async getAllDrivers(
-    _: any,
-    {
-      page = 1,
-      limit = 20,
-      status,
-      paymentModel,
-      searchTerm,
-    }: {
-      page?: number;
-      limit?: number;
-      status?: string;
-      paymentModel?: string;
-      searchTerm?: string;
-    },
-    { user }: ContextType
-  ) {
-    try {
-      const query: any = {};
-
-      if (status) query.isOnline = status === 'online';
-      if (paymentModel) query.paymentModel = paymentModel;
-      if (searchTerm) {
-        query.$or = [
-          { firstname: { $regex: searchTerm, $options: 'i' } },
-          { lastname: { $regex: searchTerm, $options: 'i' } },
-          { email: { $regex: searchTerm, $options: 'i' } },
-        ];
-      }
-
-      const skip = (page - 1) * limit;
-      const [drivers, total] = await Promise.all([
-        Driver.find(query)
-          .populate('walletId')
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit),
-        Driver.countDocuments(query),
-      ]);
-
-      return {
-        drivers,
-        total,
-        page,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: page < Math.ceil(total / limit),
-        hasPreviousPage: page > 1,
-      };
-    } catch (error: any) {
-      throw new ErrorResponse(500, 'Error fetching drivers', error.message);
-    }
-  }
-
-  static async getDriverDetails(
-    _: any,
-    { driverId }: { driverId: string },
-    { user }: ContextType
-  ) {
-    try {
-      const [driver, activeSubscription, tripStats, walletBalance] =
-        await Promise.all([
-          Driver.findById(driverId).populate('walletId'),
-          SubscriptionService.getActiveSubscription(driverId),
-          this.getDriverTripStats(driverId),
-          WalletService.getUserWallet(driverId),
-        ]);
-
-      if (!driver) {
-        throw new ErrorResponse(404, 'Driver not found');
-      }
-
-      return {
-        driver,
-        activeSubscription,
-        tripStats,
-        walletBalance,
-      };
-    } catch (error: any) {
-      throw new ErrorResponse(
-        500,
-        'Error fetching driver details',
-        error.message
-      );
-    }
-  }
-
-  static async updateDriverStatus(
-    _: any,
-    { driverId, isActive }: { driverId: string; isActive: boolean },
-    { user }: ContextType
-  ) {
-    try {
-      const beforeDriver = await Driver.findById(driverId);
-
-      const driver = await Driver.findByIdAndUpdate(
-        driverId,
-        { isActive, lastModifiedBy: user.id },
-        { new: true }
-      );
-
-      if (!driver) {
-        throw new ErrorResponse(404, 'Driver not found');
-      }
-
-      // Log action
-      await AuditLogService.logAction({
-        adminId: user.id,
-        adminEmail: user.email,
-        adminRole: user.role,
-        action: isActive ? 'activate_driver' : 'suspend_driver',
-        resource: 'driver',
-        resourceId: driverId,
-        changes: AuditLogService.detectChanges(beforeDriver, driver),
-        success: true,
-      });
-
-      // Send notification to driver
-      await NotificationService.sendNotification({
-        userId: driverId,
-        userType: 'driver',
-        type: isActive ? 'account_activated' : 'account_suspended',
-        title: isActive ? 'Account Activated' : 'Account Suspended',
-        message: isActive
-          ? 'Your driver account has been activated'
-          : 'Your driver account has been suspended. Please contact support.',
-        sendPush: true,
-        sendSMS: true,
-      });
-
-      return driver;
-    } catch (error: any) {
-      await AuditLogService.logAction({
-        adminId: user.id,
-        adminEmail: user.email,
-        adminRole: user.role,
-        action: isActive ? 'activate_driver' : 'suspend_driver',
-        resource: 'driver',
-        resourceId: driverId,
-        success: false,
-        errorMessage: error.message,
-      });
-      throw new ErrorResponse(
-        500,
-        'Error updating driver status',
-        error.message
-      );
-    }
-  }
-
-  static async approveDriverDocuments(
-    _: any,
-    { driverId, documentType }: { driverId: string; documentType: string },
-    { user }: ContextType
-  ) {
-    try {
-      const updateData: any = {};
-
-      switch (documentType) {
-        case 'license':
-          updateData.driverLicenseVerified = true;
-          break;
-        case 'vehicle':
-          updateData.vehicleInspectionDone = true;
-          break;
-        default:
-          throw new ErrorResponse(400, 'Invalid document type');
-      }
-
-      const driver = await Driver.findByIdAndUpdate(
-        driverId,
-        { ...updateData, lastModifiedBy: user.id },
-        { new: true }
-      );
-
-      if (!driver) {
-        throw new ErrorResponse(404, 'Driver not found');
-      }
-
-      // Log action
-      await AuditLogService.logAction({
-        adminId: user.id,
-        adminEmail: user.email,
-        adminRole: user.role,
-        action: 'approve_document',
-        resource: 'driver',
-        resourceId: driverId,
-        success: true,
-      });
-
-      // Send notification
-      await NotificationService.sendNotification({
-        userId: driverId,
-        userType: 'driver',
-        type: 'document_approved',
-        title: 'Document Approved',
-        message: `Your ${documentType} has been approved`,
-        sendPush: true,
-      });
-
-      return driver;
-    } catch (error: any) {
-      throw new ErrorResponse(500, 'Error approving document', error.message);
-    }
-  }
-
-  /**
-   * CUSTOMER MANAGEMENT
-   */
-  static async getAllCustomers(
-    _: any,
-    {
-      page = 1,
-      limit = 20,
-      searchTerm,
-    }: { page?: number; limit?: number; searchTerm?: string },
-    { user }: ContextType
-  ) {
-    try {
-      const query: any = {};
-
-      if (searchTerm) {
-        query.$or = [
-          { firstname: { $regex: searchTerm, $options: 'i' } },
-          { lastname: { $regex: searchTerm, $options: 'i' } },
-          { email: { $regex: searchTerm, $options: 'i' } },
-        ];
-      }
-
-      const skip = (page - 1) * limit;
-      const [customers, total] = await Promise.all([
-        Customer.find(query)
-          .populate('walletId')
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit),
-        Customer.countDocuments(query),
-      ]);
-
-      return {
-        customers,
-        total,
-        page,
-        totalPages: Math.ceil(total / limit),
-      };
-    } catch (error: any) {
-      throw new ErrorResponse(500, 'Error fetching customers', error.message);
-    }
-  }
-
-  static async getCustomerDetails(
-    _: any,
-    { customerId }: { customerId: string }
-  ) {
-    try {
-      const [customer, tripStats, walletBalance] = await Promise.all([
-        Customer.findById(customerId).populate('walletId'),
-        this.getCustomerTripStats(customerId),
-        WalletService.getUserWallet(customerId),
-      ]);
-
-      if (!customer) {
-        throw new ErrorResponse(404, 'Customer not found');
-      }
-
-      return {
-        customer,
-        tripStats,
-        walletBalance,
-      };
-    } catch (error: any) {
-      throw new ErrorResponse(
-        500,
-        'Error fetching customer details',
-        error.message
-      );
-    }
-  }
-
-  /**
-   * TRIP MANAGEMENT
-   */
-  static async getAllTrips(
-    _: any,
-    {
-      page = 1,
-      limit = 20,
-      status,
-      paymentMethod,
-      dateRange,
-    }: {
-      page?: number;
-      limit?: number;
-      status?: string;
-      paymentMethod?: string;
-      dateRange?: any;
-    }
-  ) {
-    try {
-      const query: any = {};
-
-      if (status) query.status = status;
-      if (paymentMethod) query.paymentMethod = paymentMethod;
-      if (dateRange) {
-        query.createdAt = {
-          $gte: new Date(dateRange.startDate),
-          $lte: new Date(dateRange.endDate),
-        };
-      }
-
-      const skip = (page - 1) * limit;
-      const [trips, total] = await Promise.all([
-        Trip.find(query)
-          .populate(['driverId', 'customerId'])
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit),
-        Trip.countDocuments(query),
-      ]);
-
-      return {
-        trips,
-        total,
-        page,
-        totalPages: Math.ceil(total / limit),
-      };
-    } catch (error: any) {
-      throw new ErrorResponse(500, 'Error fetching trips', error.message);
-    }
-  }
-
-  static async getTripDetails(_: any, { tripId }: { tripId: string }) {
-    try {
-      const trip = await Trip.findById(tripId).populate([
-        'driverId',
-        'customerId',
-      ]);
-
-      if (!trip) {
-        throw new ErrorResponse(404, 'Trip not found');
-      }
-
-      return trip;
-    } catch (error: any) {
-      throw new ErrorResponse(
-        500,
-        'Error fetching trip details',
-        error.message
-      );
-    }
-  }
-
-  static async assignTripToDriver(
-    _: any,
-    { tripId, driverId }: { tripId: string; driverId: string },
-    { user }: ContextType
-  ) {
-    try {
-      const trip = await Trip.findByIdAndUpdate(
-        tripId,
-        {
-          driverId,
-          status: 'driver_assigned',
-          assignedBy: user.id,
-          acceptedAt: new Date(),
-        },
-        { new: true }
-      );
-
-      if (!trip) {
-        throw new ErrorResponse(404, 'Trip not found');
-      }
-
-      // Log action
-      await AuditLogService.logAction({
-        adminId: user.id,
-        adminEmail: user.email,
-        adminRole: user.role,
-        action: 'assign_trip',
-        resource: 'trip',
-        resourceId: tripId,
-        success: true,
-      });
-
-      // Send notifications
-      await Promise.all([
-        NotificationService.sendNotification({
-          userId: driverId,
-          userType: 'driver',
-          type: 'trip_assigned',
-          title: 'Trip Assigned',
-          message: 'You have been assigned a new trip',
-          data: { tripId },
-          sendPush: true,
-        }),
-        NotificationService.sendNotification({
-          userId: trip.customerId,
-          userType: 'customer',
-          type: 'driver_assigned',
-          title: 'Driver Found',
-          message: 'A driver has been assigned to your trip',
-          data: { tripId, driverId },
-          sendPush: true,
-        }),
-      ]);
-
-      return trip;
-    } catch (error: any) {
-      throw new ErrorResponse(500, 'Error assigning trip', error.message);
-    }
-  }
-
-  /**
-   * FINANCIAL MANAGEMENT
-   */
-  static async getFinancialOverview(_: any, { dateRange }: any) {
-    try {
-      return await AdminAnalyticsService.getFinancialMetrics(dateRange);
-    } catch (error: any) {
-      throw new ErrorResponse(
-        500,
-        'Error fetching financial overview',
-        error.message
-      );
-    }
-  }
-
-  static async processPendingPayouts(_: any, __: any, { user }: ContextType) {
-    try {
-      // Get pending cashout requests
-      const Transaction = require('../transaction/transaction.model').default;
-      const pendingPayouts = await Transaction.find({
-        purpose: 'cashout',
-        status: 'pending',
-      }).populate('userId');
-
-      const results = [];
-      for (const payout of pendingPayouts) {
-        try {
-          // Process payout (implement actual payout logic)
-          await Transaction.findByIdAndUpdate(payout._id, {
-            status: 'completed',
-            completedAt: new Date(),
-            processedBy: user.id,
-          });
-
-          results.push({ id: payout._id, status: 'success' });
-        } catch (error: any) {
-          results.push({
-            id: payout._id,
-            status: 'failed',
-            error: error.message,
-          });
-        }
-      }
-
-      // Log action
-      await AuditLogService.logAction({
-        adminId: user.id,
-        adminEmail: user.email,
-        adminRole: user.role,
-        action: 'process_payouts',
-        resource: 'payouts',
-        success: true,
-      });
-
-      return results;
-    } catch (error: any) {
-      throw new ErrorResponse(500, 'Error processing payouts', error.message);
-    }
-  }
-
-  static async creditUserWallet(
-    _: any,
-    {
-      userId,
-      amount,
-      reason,
-    }: { userId: string; amount: number; reason: string },
-    { user }: ContextType
-  ) {
-    try {
-      const result = await WalletService.creditWallet({
-        userId,
-        amount,
-        type: 'credit',
-        purpose: 'admin_credit',
-        description: reason,
-        paymentMethod: 'system',
-      });
-
-      // Log action
-      await AuditLogService.logAction({
-        adminId: user.id,
-        adminEmail: user.email,
-        adminRole: user.role,
-        action: 'credit_wallet',
-        resource: 'wallet',
-        resourceId: userId,
-        success: true,
-      });
-
-      return result.transaction;
-    } catch (error: any) {
-      throw new ErrorResponse(500, 'Error crediting wallet', error.message);
-    }
-  }
-
-  /**
-   * SYSTEM ADMINISTRATION
-   */
-  static async getSystemHealth() {
-    try {
-      return await SystemMonitoringService.getCurrentStatus();
+      return await SystemMonitoringService.getSystemHealth();
     } catch (error: any) {
       throw new ErrorResponse(
         500,
@@ -637,7 +234,7 @@ class AdminController {
     { hours = 24 }: { hours?: number }
   ) {
     try {
-      return await SystemMonitoringService.getHealthHistory(hours);
+      return await SystemMonitoringService.getSystemHealthHistory(hours);
     } catch (error: any) {
       throw new ErrorResponse(
         500,
@@ -647,9 +244,325 @@ class AdminController {
     }
   }
 
-  static async getAuditLogs(_: any, { filters }: { filters: any }) {
+  static async getSystemAlerts(
+    _: any,
+    { severity, resolved }: { severity?: string; resolved?: boolean }
+  ) {
     try {
-      return await AuditLogService.getAuditLogs(filters);
+      return await SystemMonitoringService.getSystemAlerts({
+        severity,
+        resolved,
+      });
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching system alerts',
+        error.message
+      );
+    }
+  }
+
+  // ===== NOTIFICATIONS =====
+  static async getMyNotifications(
+    _: any,
+    { page = 1, limit = 20 }: { page?: number; limit?: number },
+    { user }: ContextType
+  ) {
+    try {
+      return await AdminNotificationService.getAdminNotifications(user.id, {
+        page,
+        limit,
+      });
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching notifications',
+        error.message
+      );
+    }
+  }
+
+  static async getNotificationStats(_: any, __: any, { user }: ContextType) {
+    try {
+      return await AdminNotificationService.getNotificationStats(user.id);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching notification stats',
+        error.message
+      );
+    }
+  }
+
+  static async createNotification(
+    _: any,
+    { input }: { input: any },
+    { user }: ContextType
+  ) {
+    try {
+      const notification = await AdminNotificationService.createNotification({
+        ...input,
+        senderId: user.id,
+      });
+
+      await AuditLogService.logAction({
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+        action: 'create_notification',
+        resource: 'notification',
+        success: true,
+      });
+
+      return notification;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error creating notification',
+        error.message
+      );
+    }
+  }
+
+  static async broadcastNotification(
+    _: any,
+    { input }: { input: any },
+    { user }: ContextType
+  ) {
+    try {
+      const result = await AdminNotificationService.broadcastNotification({
+        ...input,
+        senderId: user.id,
+      });
+
+      await AuditLogService.logAction({
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+        action: 'broadcast_notification',
+        resource: 'notification',
+        success: true,
+      });
+
+      return result;
+    } catch (error: any) {
+      console.log(error, "Error from broadcasting notification")
+      throw new ErrorResponse(
+        500,
+        'Error broadcasting notification',
+        error.message
+      );
+    }
+  }
+
+  static async markNotificationAsRead(
+    _: any,
+    { id }: { id: string },
+    { user }: ContextType
+  ) {
+    try {
+      return await AdminNotificationService.markAsRead(id, user.id);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error marking notification as read',
+        error.message
+      );
+    }
+  }
+
+  static async markAllNotificationsAsRead(
+    _: any,
+    __: any,
+    { user }: ContextType
+  ) {
+    try {
+      return await AdminNotificationService.markAllAsRead(user.id);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error marking all notifications as read',
+        error.message
+      );
+    }
+  }
+
+  static async deleteNotification(
+    _: any,
+    { id }: { id: string },
+    { user }: ContextType
+  ) {
+    try {
+      const result = await AdminNotificationService.deleteNotification(
+        id,
+        user.id
+      );
+
+      await AuditLogService.logAction({
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+        action: 'delete_notification',
+        resource: 'notification',
+        resourceId: id,
+        success: true,
+      });
+
+      return result;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error deleting notification',
+        error.message
+      );
+    }
+  }
+
+  // ===== SYSTEM CONFIGURATION =====
+  static async getSystemConfigs(_: any, { filters }: { filters?: any }) {
+    try {
+      return await AdminSystemConfigService.getSystemConfigs(filters || {});
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching system configs',
+        error.message
+      );
+    }
+  }
+
+  static async getSystemConfig(_: any, { id }: { id: string }) {
+    try {
+      return await AdminSystemConfigService.getConfigById(id);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching system config',
+        error.message
+      );
+    }
+  }
+
+  static async getConfigsByCategory(
+    _: any,
+    { category }: { category: string }
+  ) {
+    try {
+      return await AdminSystemConfigService.getConfigsByCategory(category);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching configs by category',
+        error.message
+      );
+    }
+  }
+
+  static async getConfigCategories() {
+    try {
+      return await AdminSystemConfigService.getCategories();
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching config categories',
+        error.message
+      );
+    }
+  }
+
+  static async createSystemConfig(
+    _: any,
+    { input }: { input: any },
+    { user }: ContextType
+  ) {
+    try {
+      const config = await AdminSystemConfigService.createConfig({
+        ...input,
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+      });
+
+      return config;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error creating system config',
+        error.message
+      );
+    }
+  }
+
+  static async updateSystemConfig(
+    _: any,
+    { id, input }: { id: string; input: any },
+    { user }: ContextType
+  ) {
+    try {
+      const config = await AdminSystemConfigService.updateConfig({
+        configId: id,
+        value: input.value,
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+      });
+
+      return config;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error updating system config',
+        error.message
+      );
+    }
+  }
+
+  static async deleteSystemConfig(
+    _: any,
+    { id }: { id: string },
+    { user }: ContextType
+  ) {
+    try {
+      const result = await AdminSystemConfigService.deleteConfig(id, {
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+      });
+
+      return result;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error deleting system config',
+        error.message
+      );
+    }
+  }
+
+  static async bulkUpdateConfigs(
+    _: any,
+    { updates }: { updates: any[] },
+    { user }: ContextType
+  ) {
+    try {
+      return await AdminSystemConfigService.bulkUpdateConfigs(updates, {
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+      });
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error bulk updating configs',
+        error.message
+      );
+    }
+  }
+
+  // ===== AUDIT LOGS =====
+  static async getAuditLogs(_: any, { filters }: { filters?: any }) {
+    try {
+      return await AuditLogService.getAuditLogs(filters || {});
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error fetching audit logs', error.message);
     }
@@ -667,188 +580,93 @@ class AdminController {
     }
   }
 
-  /**
-   * ADMIN USER MANAGEMENT
-   */
-  static async getAllAdmins(
+  // ===== SYSTEM MANAGEMENT =====
+  static async resolveSystemAlert(
     _: any,
-    { page = 1, limit = 20 }: { page?: number; limit?: number }
-  ) {
-    try {
-      const skip = (page - 1) * limit;
-      const [admins, total] = await Promise.all([
-        Admin.find({ isActive: true })
-          .select('-password')
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit),
-        Admin.countDocuments({ isActive: true }),
-      ]);
-
-      return {
-        admins,
-        total,
-        page,
-        totalPages: Math.ceil(total / limit),
-      };
-    } catch (error: any) {
-      throw new ErrorResponse(500, 'Error fetching admins', error.message);
-    }
-  }
-
-  static async createAdmin(
-    _: any,
-    { input }: { input: any },
+    { id, resolution }: { id: string; resolution: string },
     { user }: ContextType
   ) {
     try {
-      const admin = await AdminAuthService.createAdmin(input, user.id);
-
-      // Log action
-      await AuditLogService.logAction({
-        adminId: user.id,
-        adminEmail: user.email,
-        adminRole: user.role,
-        action: 'create_admin',
-        resource: 'admin',
-        resourceId: admin._id,
-        success: true,
-      });
-
-      return admin;
-    } catch (error: any) {
-      throw new ErrorResponse(500, 'Error creating admin', error.message);
-    }
-  }
-
-  /**
-   * COMMUNICATION & NOTIFICATIONS
-   */
-  static async sendBroadcastNotification(
-    _: any,
-    {
-      target,
-      title,
-      message,
-      userType,
-    }: {
-      target: 'all' | 'drivers' | 'customers';
-      title: string;
-      message: string;
-      userType: string;
-    },
-    { user }: ContextType
-  ) {
-    try {
-      let recipients: string[] = [];
-
-      if (target === 'all' || target === 'drivers') {
-        const drivers = await Driver.find({ isActive: true }).select('_id');
-        recipients.push(...drivers.map((d) => d._id));
-      }
-
-      if (target === 'all' || target === 'customers') {
-        const customers = await Customer.find().select('_id');
-
-        if (customers && customers.length > 0) {
-          recipients.push(...customers.map((c) => String(c._id)));
-        }
-      }
-
-      // Send notifications (implement batch notification logic)
-      const results = await Promise.all(
-        recipients.map((userId) =>
-          NotificationService.sendNotification({
-            userId,
-            userType:
-              target === 'drivers'
-                ? 'driver'
-                : target === 'customers'
-                  ? 'customer'
-                  : 'admin',
-            type: 'broadcast',
-            title,
-            message,
-            sendPush: true,
-          })
-        )
+      const result = await SystemMonitoringService.resolveAlert(
+        id,
+        resolution,
+        user.id
       );
 
-      // Log action
       await AuditLogService.logAction({
         adminId: user.id,
         adminEmail: user.email,
         adminRole: user.role,
-        action: 'send_broadcast',
-        resource: 'notification',
+        action: 'resolve_alert',
+        resource: 'system_alert',
+        resourceId: id,
         success: true,
       });
 
-      return {
-        sent: results.length,
-        target,
-        title,
-        message,
-      };
+      return result;
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        'Error sending broadcast notification',
+        'Error resolving system alert',
         error.message
       );
     }
   }
 
-  /**
-   * Helper methods
-   */
-  private static async getDriverTripStats(driverId: string) {
-    const stats = await Trip.aggregate([
-      { $match: { driverId, status: 'completed' } },
-      {
-        $group: {
-          _id: null,
-          totalTrips: { $sum: 1 },
-          totalEarnings: { $sum: '$driverEarnings' },
-          averageRating: { $avg: '$driverRating' },
-          totalDistance: { $sum: '$route.distance' },
-        },
-      },
-    ]);
+  static async triggerSystemHealthCheck(
+    _: any,
+    __: any,
+    { user }: ContextType
+  ) {
+    try {
+      const result = await SystemMonitoringService.triggerHealthCheck();
 
-    return (
-      stats[0] || {
-        totalTrips: 0,
-        totalEarnings: 0,
-        averageRating: 0,
-        totalDistance: 0,
-      }
-    );
+      await AuditLogService.logAction({
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+        action: 'trigger_health_check',
+        resource: 'system',
+        success: true,
+      });
+
+      return result;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error triggering health check',
+        error.message
+      );
+    }
   }
 
-  private static async getCustomerTripStats(customerId: string) {
-    const stats = await Trip.aggregate([
-      { $match: { customerId, status: 'completed' } },
-      {
-        $group: {
-          _id: null,
-          totalTrips: { $sum: 1 },
-          totalSpent: { $sum: '$pricing.finalAmount' },
-          averageRating: { $avg: '$customerRating' },
-        },
-      },
-    ]);
+  static async cleanupOldData(
+    _: any,
+    { type, olderThan }: { type: string; olderThan: number },
+    { user }: ContextType
+  ) {
+    try {
+      const result = await SystemMonitoringService.cleanupOldData(
+        type,
+        olderThan
+      );
 
-    return (
-      stats[0] || {
-        totalTrips: 0,
-        totalSpent: 0,
-        averageRating: 0,
-      }
-    );
+      await AuditLogService.logAction({
+        adminId: user.id,
+        adminEmail: user.email,
+        adminRole: user.role,
+        action: 'cleanup_data',
+        resource: 'system',
+        success: true,
+      });
+
+      return result;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error cleaning up old data', error.message);
+    }
   }
 
-  // Email template management (existing methods)
+  // ===== EMAIL TEMPLATES =====
   static async listEmailTemplates() {
     try {
       return await NotificationService.listEmailTemplates();

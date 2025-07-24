@@ -1,0 +1,37 @@
+# src/features/driver/driver.subs.gql
+
+# ===== DRIVER SUBSCRIPTION TYPES =====
+
+type DriverStatusChangedPayload {
+  driverId: ID!
+  driver: DriverPartial!
+  status: DriverOnlineStatus!
+  isOnline: Boolean!
+  isAvailable: Boolean!
+  currentLocation: DriverLocationInfo
+  updatedAt: DateTime!
+}
+
+type DriverEarningsUpdatePayload {
+  driverId: ID!
+  earnings: DriverEarnings!
+  lastTripEarnings: Float
+  totalEarningsToday: Float!
+  tripCount: Int!
+  updatedAt: DateTime!
+}
+
+enum DriverOnlineStatus {
+  ONLINE
+  OFFLINE
+  BUSY
+}
+
+# ===== DRIVER SUBSCRIPTIONS =====
+extend type Subscription {
+  # Driver status changes (online/offline/busy) - for the driver themselves or admins
+  driverStatusChanged(driverId: ID): DriverStatusChangedPayload!
+
+  # Driver earnings updates - only the driver themselves can subscribe
+  driverEarningsUpdate: DriverEarningsUpdatePayload!
+}

@@ -48,7 +48,7 @@ const driverResolvers = {
           // Allow driver to subscribe to their own status OR admins to monitor all drivers
           const user = context.user;
           const isOwnStatus = statusUpdate.driverId === variables.driverId;
-          const isAdmin = user && ['super_admin', 'admin'].includes(user.role);
+          const isAdmin = user && ['SUPER_ADMIN', 'admin'].includes(user.role);
 
           return isOwnStatus || isAdmin;
         }

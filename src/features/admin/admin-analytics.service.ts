@@ -1,11 +1,9 @@
+// src/features/admin/admin-analytics.service.ts
 import mongoose from 'mongoose';
 import { ErrorResponse } from '../../utils/responses';
-import Trip from '../trip/trip.model';
 import Driver from '../driver/driver.model';
 import Customer from '../customer/customer.model';
-import { DriverSubscription } from '../subscription/subscription.model';
-import Transaction from '../transaction/transaction.model';
-
+import Trip from '../trip/trip.model';
 
 interface DateRange {
   startDate: Date;
@@ -13,47 +11,41 @@ interface DateRange {
 }
 
 interface DashboardMetrics {
-  realTime: RealTimeMetrics;
-  financial: FinancialMetrics;
-  operational: OperationalMetrics;
-  growth: GrowthMetrics;
-}
-
-interface RealTimeMetrics {
-  activeTrips: number;
-  onlineDrivers: number;
-  availableDrivers: number;
-  pendingRequests: number;
-  completedTripsToday: number;
-  revenueToday: number;
-}
-
-interface FinancialMetrics {
-  totalRevenue: number;
-  subscriptionRevenue: number;
-  commissionRevenue: number;
-  pendingPayouts: number;
-  totalPayouts: number;
-  averageTransactionValue: number;
-  paymentSuccessRate: number;
-}
-
-interface OperationalMetrics {
-  totalDrivers: number;
-  activeDrivers: number;
-  totalCustomers: number;
-  activeCustomers: number;
-  tripCompletionRate: number;
-  averageResponseTime: number;
-  customerSatisfactionScore: number;
-}
-
-interface GrowthMetrics {
-  newDriversThisMonth: number;
-  newCustomersThisMonth: number;
-  driverRetentionRate: number;
-  customerRetentionRate: number;
-  monthOverMonthGrowth: number;
+  overview: {
+    totalDrivers: number;
+    activeDrivers: number;
+    totalCustomers: number;
+    activeCustomers: number;
+    totalTrips: number;
+    completedTrips: number;
+    totalRevenue: number;
+    platformCommission: number;
+  };
+  todayStats: {
+    tripsToday: number;
+    revenueToday: number;
+    newDriversToday: number;
+    newCustomersToday: number;
+    activeDriversToday: number;
+  };
+  trends: {
+    tripsGrowth: number;
+    revenueGrowth: number;
+    driversGrowth: number;
+    customersGrowth: number;
+  };
+  tripsByStatus: {
+    pending: number;
+    active: number;
+    completed: number;
+    cancelled: number;
+  };
+  recentActivity: Array<{
+    type: string;
+    description: string;
+    timestamp: Date;
+    amount?: number;
+  }>;
 }
 
 class AdminAnalyticsService {
@@ -64,14 +56,69 @@ class AdminAnalyticsService {
     dateRange?: DateRange
   ): Promise<DashboardMetrics> {
     try {
-      const [realTime, financial, operational, growth] = await Promise.all([
-        this.getRealTimeMetrics(),
-        this.getFinancialMetrics(dateRange),
-        this.getOperationalMetrics(dateRange),
-        this.getGrowthMetrics(dateRange),
+      const today = new Date();
+      const startOfToday = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+      const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+
+      // Calculate date ranges for trends
+      const thirtyDaysAgo = new Date(
+        today.getTime() - 30 * 24 * 60 * 60 * 1000
+      );
+      const sixtyDaysAgo = new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+      // Get overview metrics
+      const [
+        totalDrivers,
+        activeDrivers,
+        totalCustomers,
+        activeCustomers,
+        totalTrips,
+        completedTrips,
+        revenueData,
+        commissionData,
+      ] = await Promise.all([
+        Driver.countDocuments({}),
+        Driver.countDocuments({ isActive: true }),
+        Customer.countDocuments({}),
+        Customer.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }), // Active in last 30 days
+        Trip.countDocuments({}),
+        Trip.countDocuments({ status: 'completed' }),
+        this.calculateTotalRevenue(),
+        this.calculatePlatformCommission(),
       ]);
 
-      return { realTime, financial, operational, growth };
+      // Get today's stats
+      const todayStats = await this.getTodayStats(startOfToday, endOfToday);
+
+      // Get growth trends
+      const trends = await this.getGrowthTrends(thirtyDaysAgo, sixtyDaysAgo);
+
+      // Get trips by status
+      const tripsByStatus = await this.getTripsByStatus();
+
+      // Get recent activity
+      const recentActivity = await this.getRecentActivity();
+
+      return {
+        overview: {
+          totalDrivers,
+          activeDrivers,
+          totalCustomers,
+          activeCustomers,
+          totalTrips,
+          completedTrips,
+          totalRevenue: revenueData.total,
+          platformCommission: commissionData.total,
+        },
+        todayStats,
+        trends,
+        tripsByStatus,
+        recentActivity,
+      };
     } catch (error: any) {
       throw new ErrorResponse(
         500,
@@ -82,677 +129,567 @@ class AdminAnalyticsService {
   }
 
   /**
-   * Real-time operational metrics
-   */
-  static async getRealTimeMetrics(): Promise<RealTimeMetrics> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const [
-      activeTrips,
-      onlineDrivers,
-      availableDrivers,
-      pendingRequests,
-      completedTripsToday,
-      revenueToday,
-    ] = await Promise.all([
-      Trip.countDocuments({
-        status: { $in: ['driver_assigned', 'driver_arrived', 'in_progress'] },
-      }),
-      Driver.countDocuments({ isOnline: true }),
-      Driver.countDocuments({ isOnline: true, isAvailable: true }),
-      Trip.countDocuments({ status: 'searching' }),
-      Trip.countDocuments({
-        status: 'completed',
-        completedAt: { $gte: today },
-      }),
-      this.getTodayRevenue(),
-    ]);
-
-    return {
-      activeTrips,
-      onlineDrivers,
-      availableDrivers,
-      pendingRequests,
-      completedTripsToday,
-      revenueToday,
-    };
-  }
-
-  /**
-   * Financial performance metrics
-   */
-  static async getFinancialMetrics(
-    dateRange?: DateRange
-  ): Promise<FinancialMetrics> {
-    const range = dateRange || this.getDefaultDateRange();
-
-    const [
-      subscriptionRevenue,
-      commissionRevenue,
-      totalPayouts,
-      pendingPayouts,
-      transactionStats,
-      paymentStats,
-    ] = await Promise.all([
-      this.getSubscriptionRevenue(range),
-      this.getCommissionRevenue(range),
-      this.getTotalPayouts(range),
-      this.getPendingPayouts(),
-      this.getTransactionStats(range),
-      this.getPaymentSuccessRate(range),
-    ]);
-
-    const totalRevenue = subscriptionRevenue + commissionRevenue;
-
-    return {
-      totalRevenue,
-      subscriptionRevenue,
-      commissionRevenue,
-      pendingPayouts,
-      totalPayouts,
-      averageTransactionValue: transactionStats.averageValue,
-      paymentSuccessRate: paymentStats.successRate,
-    };
-  }
-
-  /**
-   * Operational performance metrics
-   */
-  static async getOperationalMetrics(
-    dateRange?: DateRange
-  ): Promise<OperationalMetrics> {
-    const range = dateRange || this.getDefaultDateRange();
-
-    const [
-      totalDrivers,
-      activeDrivers,
-      totalCustomers,
-      activeCustomers,
-      tripStats,
-      customerSatisfaction,
-    ] = await Promise.all([
-      Driver.countDocuments(),
-      this.getActiveDriversCount(range),
-      Customer.countDocuments(),
-      this.getActiveCustomersCount(range),
-      this.getTripCompletionStats(range),
-      this.getCustomerSatisfactionScore(range),
-    ]);
-
-    return {
-      totalDrivers,
-      activeDrivers,
-      totalCustomers,
-      activeCustomers,
-      tripCompletionRate: tripStats.completionRate,
-      averageResponseTime: tripStats.averageResponseTime,
-      customerSatisfactionScore: customerSatisfaction,
-    };
-  }
-
-  /**
-   * Growth and retention metrics
-   */
-  static async getGrowthMetrics(dateRange?: DateRange): Promise<GrowthMetrics> {
-    const range = dateRange || this.getDefaultDateRange();
-    const previousRange = this.getPreviousDateRange(range);
-
-    const [
-      newDriversThisMonth,
-      newCustomersThisMonth,
-      driverRetentionRate,
-      customerRetentionRate,
-      monthOverMonthGrowth,
-    ] = await Promise.all([
-      Driver.countDocuments({
-        createdAt: { $gte: range.startDate, $lte: range.endDate },
-      }),
-      Customer.countDocuments({
-        createdAt: { $gte: range.startDate, $lte: range.endDate },
-      }),
-      this.getDriverRetentionRate(range),
-      this.getCustomerRetentionRate(range),
-      this.getMonthOverMonthGrowth(range, previousRange),
-    ]);
-
-    return {
-      newDriversThisMonth,
-      newCustomersThisMonth,
-      driverRetentionRate,
-      customerRetentionRate,
-      monthOverMonthGrowth,
-    };
-  }
-
-  /**
-   * Advanced analytics queries
+   * Get revenue analytics
    */
   static async getRevenueAnalytics(
     period: 'daily' | 'weekly' | 'monthly' = 'daily',
     days: number = 30
   ) {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - days);
+    try {
+      const endDate = new Date();
+      const startDate = new Date(
+        endDate.getTime() - days * 24 * 60 * 60 * 1000
+      );
 
-    let groupBy: any;
-    switch (period) {
-      case 'daily':
-        groupBy = {
-          year: { $year: '$createdAt' },
-          month: { $month: '$createdAt' },
-          day: { $dayOfMonth: '$createdAt' },
-        };
-        break;
-      case 'weekly':
-        groupBy = {
-          year: { $year: '$createdAt' },
-          week: { $week: '$createdAt' },
-        };
-        break;
-      case 'monthly':
-        groupBy = {
-          year: { $year: '$createdAt' },
-          month: { $month: '$createdAt' },
-        };
-        break;
-    }
+      let groupByFormat: string;
+      let dateIncrement: number;
 
-    const [subscriptionRevenue, commissionRevenue] = await Promise.all([
-      DriverSubscription.aggregate([
+      switch (period) {
+        case 'weekly':
+          groupByFormat = '%Y-%U'; // Year-Week
+          dateIncrement = 7 * 24 * 60 * 60 * 1000;
+          break;
+        case 'monthly':
+          groupByFormat = '%Y-%m'; // Year-Month
+          dateIncrement = 30 * 24 * 60 * 60 * 1000;
+          break;
+        default:
+          groupByFormat = '%Y-%m-%d'; // Year-Month-Day
+          dateIncrement = 24 * 60 * 60 * 1000;
+      }
+
+      const revenueData = await Trip.aggregate([
         {
           $match: {
-            createdAt: { $gte: startDate, $lte: endDate },
-            status: 'active',
-          },
-        },
-        {
-          $lookup: {
-            from: 'subscriptionplans',
-            localField: 'planId',
-            foreignField: '_id',
-            as: 'plan',
-          },
-        },
-        { $unwind: '$plan' },
-        {
-          $group: {
-            _id: groupBy,
-            revenue: { $sum: '$plan.price' },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } },
-      ]),
-      Trip.aggregate([
-        {
-          $match: {
-            completedAt: { $gte: startDate, $lte: endDate },
             status: 'completed',
-            paymentModel: 'COMMISSION',
+            createdAt: { $gte: startDate, $lte: endDate },
           },
         },
         {
           $group: {
-            _id: groupBy,
-            revenue: { $sum: '$platformCommission' },
-            count: { $sum: 1 },
+            _id: {
+              $dateToString: {
+                format: groupByFormat,
+                date: '$createdAt',
+              },
+            },
+            totalRevenue: { $sum: '$pricing.finalAmount' },
+            platformCommission: { $sum: '$platformCommission' },
+            driverEarnings: { $sum: '$driverEarnings' },
+            tripCount: { $sum: 1 },
+            averageAmount: { $avg: '$pricing.finalAmount' },
           },
         },
-        { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } },
-      ]),
-    ]);
+        { $sort: { _id: 1 } },
+      ]);
 
-    return { subscriptionRevenue, commissionRevenue };
+      // Fill missing dates with zero values
+      const filledData = this.fillMissingDates(
+        revenueData,
+        startDate,
+        endDate,
+        dateIncrement,
+        groupByFormat
+      );
+
+      // Calculate totals and growth
+      const totals = revenueData.reduce(
+        (acc, item) => ({
+          revenue: acc.revenue + item.totalRevenue,
+          commission: acc.commission + item.platformCommission,
+          trips: acc.trips + item.tripCount,
+        }),
+        { revenue: 0, commission: 0, trips: 0 }
+      );
+
+      // Calculate growth rate (comparing first half vs second half of period)
+      const midPoint = Math.floor(filledData.length / 2);
+      const firstHalf = filledData.slice(0, midPoint);
+      const secondHalf = filledData.slice(midPoint);
+
+      const firstHalfRevenue = firstHalf.reduce(
+        (sum, item) => sum + item.totalRevenue,
+        0
+      );
+      const secondHalfRevenue = secondHalf.reduce(
+        (sum, item) => sum + item.totalRevenue,
+        0
+      );
+
+      const growthRate =
+        firstHalfRevenue > 0
+          ? ((secondHalfRevenue - firstHalfRevenue) / firstHalfRevenue) * 100
+          : 0;
+
+      return {
+        period,
+        days,
+        data: filledData,
+        totals,
+        growthRate: Math.round(growthRate * 100) / 100,
+        averageDaily: totals.revenue / days,
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching revenue analytics',
+        error.message
+      );
+    }
   }
 
   /**
-   * Driver performance analytics
+   * Get driver performance analytics
    */
   static async getDriverPerformanceAnalytics(
     driverId?: string,
     dateRange?: DateRange
   ) {
-    const range = dateRange || this.getDefaultDateRange();
-    const matchCondition: any = {
-      completedAt: { $gte: range.startDate, $lte: range.endDate },
-      status: 'completed',
-    };
+    try {
+      const query: any = { status: 'completed' };
 
-    if (driverId) {
-      matchCondition.driverId = driverId;
-    }
+      if (driverId) query.driverId = driverId;
+      if (dateRange) {
+        query.createdAt = {
+          $gte: dateRange.startDate,
+          $lte: dateRange.endDate,
+        };
+      }
 
-    const driverStats = await Trip.aggregate([
-      { $match: matchCondition },
-      {
-        $group: {
-          _id: '$driverId',
-          totalTrips: { $sum: 1 },
-          totalEarnings: { $sum: '$driverEarnings' },
-          averageRating: { $avg: '$driverRating' },
-          totalDistance: { $sum: '$route.distance' },
-          totalDuration: { $sum: '$route.duration' },
-        },
-      },
-      {
-        $lookup: {
-          from: 'drivers',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'driver',
-        },
-      },
-      { $unwind: '$driver' },
-      {
-        $project: {
-          driverId: '$_id',
-          driverName: {
-            $concat: ['$driver.firstname', ' ', '$driver.lastname'],
-          },
-          paymentModel: '$driver.paymentModel',
-          totalTrips: 1,
-          totalEarnings: 1,
-          averageRating: 1,
-          totalDistance: 1,
-          totalDuration: 1,
-          earningsPerTrip: { $divide: ['$totalEarnings', '$totalTrips'] },
-          averageDistance: { $divide: ['$totalDistance', '$totalTrips'] },
-        },
-      },
-      { $sort: { totalEarnings: -1 } },
-    ]);
-
-    return driverStats;
-  }
-
-  /**
-   * Geographic analytics
-   */
-  static async getGeographicAnalytics(dateRange?: DateRange) {
-    const range = dateRange || this.getDefaultDateRange();
-
-    const locationStats = await Trip.aggregate([
-      {
-        $match: {
-          completedAt: { $gte: range.startDate, $lte: range.endDate },
-          status: 'completed',
-        },
-      },
-      {
-        $group: {
-          _id: {
-            pickupArea: '$pickup.estateId',
-            destinationArea: '$destination.estateId',
-          },
-          tripCount: { $sum: 1 },
-          totalRevenue: { $sum: '$pricing.finalAmount' },
-          averageFare: { $avg: '$pricing.finalAmount' },
-          averageDistance: { $avg: '$route.distance' },
-        },
-      },
-      { $sort: { tripCount: -1 } },
-    ]);
-
-    return locationStats;
-  }
-
-  /**
-   * Payment model analytics
-   */
-  static async getPaymentModelAnalytics(dateRange?: DateRange) {
-    const range = dateRange || this.getDefaultDateRange();
-
-    const [tripAnalytics, subscriptionAnalytics] = await Promise.all([
-      Trip.aggregate([
-        {
-          $match: {
-            completedAt: { $gte: range.startDate, $lte: range.endDate },
-            status: 'completed',
-          },
-        },
+      const performanceData = await Trip.aggregate([
+        { $match: query },
         {
           $group: {
-            _id: '$paymentModel',
-            tripCount: { $sum: 1 },
+            _id: '$driverId',
+            totalTrips: { $sum: 1 },
+            totalEarnings: { $sum: '$driverEarnings' },
             totalRevenue: { $sum: '$pricing.finalAmount' },
-            platformEarnings: { $sum: '$platformCommission' },
-            driverEarnings: { $sum: '$driverEarnings' },
-            averageFare: { $avg: '$pricing.finalAmount' },
+            averageRating: { $avg: '$driverRating' },
+            totalDistance: { $sum: '$route.distance' },
+            totalDuration: { $sum: '$route.duration' },
+            averageTripAmount: { $avg: '$pricing.finalAmount' },
           },
         },
-      ]),
-      DriverSubscription.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: range.startDate, $lte: range.endDate },
-          },
-        },
-        {
-          $group: {
-            _id: '$status',
-            count: { $sum: 1 },
-          },
-        },
-      ]),
-    ]);
+        { $sort: { totalEarnings: -1 } },
+        { $limit: driverId ? 1 : 50 }, // If specific driver, limit to 1, else top 50
+      ]);
 
-    return { tripAnalytics, subscriptionAnalytics };
+      // Populate driver details
+      const driverIds = performanceData.map((item) => item._id);
+      const drivers = await Driver.find({ _id: { $in: driverIds } })
+        .select('firstname lastname email phone profilePhoto isActive')
+        .lean();
+
+      const driverMap = drivers.reduce((map, driver) => {
+        map[driver._id.toString()] = driver;
+        return map;
+      }, {} as any);
+
+      const enrichedData = performanceData.map((item) => ({
+        ...item,
+        driver: driverMap[item._id.toString()],
+        efficiencyScore: this.calculateEfficiencyScore(item),
+      }));
+
+      return {
+        drivers: enrichedData,
+        total: enrichedData.length,
+        summary: this.calculatePerformanceSummary(enrichedData),
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching driver performance analytics',
+        error.message
+      );
+    }
   }
 
   /**
-   * Helper methods
+   * Get customer analytics
    */
-  private static async getTodayRevenue(): Promise<number> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  static async getCustomerAnalytics(dateRange?: DateRange) {
+    try {
+      const query: any = {};
 
-    const [commissionRevenue, subscriptionRevenue] = await Promise.all([
+      if (dateRange) {
+        query.createdAt = {
+          $gte: dateRange.startDate,
+          $lte: dateRange.endDate,
+        };
+      }
+
+      const [
+        customerSegments,
+        spendingAnalytics,
+        retentionMetrics,
+        geographicDistribution,
+      ] = await Promise.all([
+        this.getCustomerSegments(query),
+        this.getCustomerSpendingAnalytics(query),
+        this.getCustomerRetentionMetrics(query),
+        this.getCustomerGeographicDistribution(query),
+      ]);
+
+      return {
+        segments: customerSegments,
+        spending: spendingAnalytics,
+        retention: retentionMetrics,
+        geographic: geographicDistribution,
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching customer analytics',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Get trip analytics
+   */
+  static async getTripAnalytics(dateRange?: DateRange) {
+    try {
+      const query: any = {};
+
+      if (dateRange) {
+        query.createdAt = {
+          $gte: dateRange.startDate,
+          $lte: dateRange.endDate,
+        };
+      }
+
+      const [
+        tripsByHour,
+        tripsByDay,
+        popularRoutes,
+        cancellationAnalysis,
+        averageMetrics,
+      ] = await Promise.all([
+        this.getTripsByHour(query),
+        this.getTripsByDayOfWeek(query),
+        this.getPopularRoutes(query),
+        this.getCancellationAnalysis(query),
+        this.getAverageTripMetrics(query),
+      ]);
+
+      return {
+        hourlyDistribution: tripsByHour,
+        dailyDistribution: tripsByDay,
+        popularRoutes,
+        cancellations: cancellationAnalysis,
+        averages: averageMetrics,
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching trip analytics',
+        error.message
+      );
+    }
+  }
+
+  // Helper methods
+  private static async getTodayStats(startOfToday: Date, endOfToday: Date) {
+    const [
+      tripsToday,
+      revenueToday,
+      newDriversToday,
+      newCustomersToday,
+      activeDriversToday,
+    ] = await Promise.all([
+      Trip.countDocuments({
+        createdAt: { $gte: startOfToday, $lt: endOfToday },
+      }),
       Trip.aggregate([
         {
           $match: {
-            completedAt: { $gte: today },
             status: 'completed',
-            paymentModel: 'COMMISSION',
+            createdAt: { $gte: startOfToday, $lt: endOfToday },
           },
         },
-        { $group: { _id: null, total: { $sum: '$platformCommission' } } },
-      ]),
-      DriverSubscription.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: today },
-            status: 'active',
-          },
-        },
-        {
-          $lookup: {
-            from: 'subscriptionplans',
-            localField: 'planId',
-            foreignField: '_id',
-            as: 'plan',
-          },
-        },
-        { $unwind: '$plan' },
-        { $group: { _id: null, total: { $sum: '$plan.price' } } },
-      ]),
+        { $group: { _id: null, total: { $sum: '$pricing.finalAmount' } } },
+      ]).then((result) => result[0]?.total || 0),
+      Driver.countDocuments({
+        createdAt: { $gte: startOfToday, $lt: endOfToday },
+      }),
+      Customer.countDocuments({
+        createdAt: { $gte: startOfToday, $lt: endOfToday },
+      }),
+      Trip.distinct('driverId', {
+        createdAt: { $gte: startOfToday, $lt: endOfToday },
+      }).then((drivers) => drivers.length),
     ]);
-
-    const commission = commissionRevenue[0]?.total || 0;
-    const subscription = subscriptionRevenue[0]?.total || 0;
-
-    return commission + subscription;
-  }
-
-  private static async getSubscriptionRevenue(
-    range: DateRange
-  ): Promise<number> {
-    const result = await DriverSubscription.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: range.startDate, $lte: range.endDate },
-          status: 'active',
-        },
-      },
-      {
-        $lookup: {
-          from: 'subscriptionplans',
-          localField: 'planId',
-          foreignField: '_id',
-          as: 'plan',
-        },
-      },
-      { $unwind: '$plan' },
-      { $group: { _id: null, total: { $sum: '$plan.price' } } },
-    ]);
-
-    return result[0]?.total || 0;
-  }
-
-  private static async getCommissionRevenue(range: DateRange): Promise<number> {
-    const result = await Trip.aggregate([
-      {
-        $match: {
-          completedAt: { $gte: range.startDate, $lte: range.endDate },
-          status: 'completed',
-          paymentModel: 'COMMISSION',
-        },
-      },
-      { $group: { _id: null, total: { $sum: '$platformCommission' } } },
-    ]);
-
-    return result[0]?.total || 0;
-  }
-
-  private static getDefaultDateRange(): DateRange {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setMonth(endDate.getMonth() - 1);
-    return { startDate, endDate };
-  }
-
-  private static getPreviousDateRange(currentRange: DateRange): DateRange {
-    const duration =
-      currentRange.endDate.getTime() - currentRange.startDate.getTime();
-    const startDate = new Date(currentRange.startDate.getTime() - duration);
-    const endDate = new Date(currentRange.endDate.getTime() - duration);
-    return { startDate, endDate };
-  }
-
-  private static async getTotalPayouts(range: DateRange): Promise<number> {
-    const result = await Transaction.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: range.startDate, $lte: range.endDate },
-          purpose: 'cashout',
-          status: 'completed',
-        },
-      },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]);
-
-    return result[0]?.total || 0;
-  }
-
-  private static async getPendingPayouts(): Promise<number> {
-    const result = await Transaction.aggregate([
-      {
-        $match: {
-          purpose: 'cashout',
-          status: 'pending',
-        },
-      },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]);
-
-    return result[0]?.total || 0;
-  }
-
-  private static async getTransactionStats(range: DateRange) {
-    const result = await Transaction.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: range.startDate, $lte: range.endDate },
-          status: 'completed',
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          averageValue: { $avg: '$amount' },
-          totalTransactions: { $sum: 1 },
-        },
-      },
-    ]);
-
-    return result[0] || { averageValue: 0, totalTransactions: 0 };
-  }
-
-  private static async getPaymentSuccessRate(range: DateRange) {
-    const result = await Transaction.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: range.startDate, $lte: range.endDate },
-        },
-      },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    const total = result.reduce((sum, item) => sum + item.count, 0);
-    const successful =
-      result.find((item) => item._id === 'completed')?.count || 0;
-
-    return { successRate: total > 0 ? (successful / total) * 100 : 0 };
-  }
-
-  private static async getActiveDriversCount(
-    range: DateRange
-  ): Promise<number> {
-    return await Trip.distinct('driverId', {
-      completedAt: { $gte: range.startDate, $lte: range.endDate },
-      status: 'completed',
-    }).then((drivers) => drivers.length);
-  }
-
-  private static async getActiveCustomersCount(
-    range: DateRange
-  ): Promise<number> {
-    return await Trip.distinct('customerId', {
-      completedAt: { $gte: range.startDate, $lte: range.endDate },
-      status: 'completed',
-    }).then((customers) => customers.length);
-  }
-
-  private static async getTripCompletionStats(range: DateRange) {
-    const result = await Trip.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: range.startDate, $lte: range.endDate },
-        },
-      },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-          averageResponseTime: {
-            $avg: {
-              $subtract: ['$acceptedAt', '$requestedAt'],
-            },
-          },
-        },
-      },
-    ]);
-
-    const total = result.reduce((sum, item) => sum + item.count, 0);
-    const completed =
-      result.find((item) => item._id === 'completed')?.count || 0;
-    const avgResponseTime =
-      result.find((item) => item._id === 'completed')?.averageResponseTime || 0;
 
     return {
-      completionRate: total > 0 ? (completed / total) * 100 : 0,
-      averageResponseTime: avgResponseTime / 1000, // Convert to seconds
+      tripsToday,
+      revenueToday,
+      newDriversToday,
+      newCustomersToday,
+      activeDriversToday,
     };
   }
 
-  private static async getCustomerSatisfactionScore(
-    range: DateRange
-  ): Promise<number> {
-    const result = await Trip.aggregate([
-      {
-        $match: {
-          completedAt: { $gte: range.startDate, $lte: range.endDate },
-          status: 'completed',
-          customerRating: { $exists: true },
-        },
-      },
+  private static async getGrowthTrends(
+    thirtyDaysAgo: Date,
+    sixtyDaysAgo: Date
+  ) {
+    const [currentPeriod, previousPeriod] = await Promise.all([
+      // Last 30 days
+      Promise.all([
+        Trip.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+        Trip.aggregate([
+          {
+            $match: { status: 'completed', createdAt: { $gte: thirtyDaysAgo } },
+          },
+          { $group: { _id: null, total: { $sum: '$pricing.finalAmount' } } },
+        ]).then((result) => result[0]?.total || 0),
+        Driver.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+        Customer.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+      ]),
+      // Previous 30 days (30-60 days ago)
+      Promise.all([
+        Trip.countDocuments({
+          createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
+        }),
+        Trip.aggregate([
+          {
+            $match: {
+              status: 'completed',
+              createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
+            },
+          },
+          { $group: { _id: null, total: { $sum: '$pricing.finalAmount' } } },
+        ]).then((result) => result[0]?.total || 0),
+        Driver.countDocuments({
+          createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
+        }),
+        Customer.countDocuments({
+          createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
+        }),
+      ]),
+    ]);
+
+    const calculateGrowth = (current: number, previous: number) =>
+      previous > 0 ? ((current - previous) / previous) * 100 : 0;
+
+    return {
+      tripsGrowth:
+        Math.round(calculateGrowth(currentPeriod[0], previousPeriod[0]) * 100) /
+        100,
+      revenueGrowth:
+        Math.round(calculateGrowth(currentPeriod[1], previousPeriod[1]) * 100) /
+        100,
+      driversGrowth:
+        Math.round(calculateGrowth(currentPeriod[2], previousPeriod[2]) * 100) /
+        100,
+      customersGrowth:
+        Math.round(calculateGrowth(currentPeriod[3], previousPeriod[3]) * 100) /
+        100,
+    };
+  }
+
+  private static async getTripsByStatus() {
+    const statuses = await Trip.aggregate([
       {
         $group: {
-          _id: null,
-          averageRating: { $avg: '$customerRating' },
+          _id: '$status',
+          count: { $sum: 1 },
         },
       },
     ]);
 
-    return result[0]?.averageRating || 0;
+    return statuses.reduce(
+      (acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      },
+      {
+        pending: 0,
+        active: 0,
+        completed: 0,
+        cancelled: 0,
+      }
+    );
   }
 
-  private static async getDriverRetentionRate(
-    range: DateRange
-  ): Promise<number> {
-    // Simplified retention calculation - drivers who completed trips in both periods
-    const previousRange = this.getPreviousDateRange(range);
+  private static async getRecentActivity() {
+    const recentTrips = await Trip.find({})
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate('driverId', 'firstname lastname')
+      .populate('customerId', 'firstname lastname')
+      .lean();
 
-    const [currentDrivers, previousDrivers] = await Promise.all([
-      Trip.distinct('driverId', {
-        completedAt: { $gte: range.startDate, $lte: range.endDate },
-        status: 'completed',
-      }),
-      Trip.distinct('driverId', {
-        completedAt: {
-          $gte: previousRange.startDate,
-          $lte: previousRange.endDate,
-        },
-        status: 'completed',
-      }),
+    return recentTrips.map((trip) => ({
+      type: 'trip',
+      description: `Trip from ${trip.route?.pickup?.address || 'Unknown'} to ${trip.route?.destination?.address || 'Unknown'}`,
+      timestamp: trip.createdAt,
+      amount: trip.pricing?.finalAmount,
+    }));
+  }
+
+  private static async calculateTotalRevenue() {
+    const result = await Trip.aggregate([
+      { $match: { status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$pricing.finalAmount' } } },
     ]);
+    return { total: result[0]?.total || 0 };
+  }
 
-    const retainedDrivers = currentDrivers.filter((id) =>
-      previousDrivers.includes(id)
+  private static async calculatePlatformCommission() {
+    const result = await Trip.aggregate([
+      { $match: { status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$platformCommission' } } },
+    ]);
+    return { total: result[0]?.total || 0 };
+  }
+
+  private static fillMissingDates(
+    data: any[],
+    startDate: Date,
+    endDate: Date,
+    increment: number,
+    format: string
+  ) {
+    const filledData = [];
+    const dataMap = new Map(data.map((item) => [item._id, item]));
+
+    for (
+      let date = new Date(startDate);
+      date <= endDate;
+      date = new Date(date.getTime() + increment)
+    ) {
+      const key = this.formatDate(date, format);
+      const existingData = dataMap.get(key);
+
+      filledData.push(
+        existingData || {
+          _id: key,
+          totalRevenue: 0,
+          platformCommission: 0,
+          driverEarnings: 0,
+          tripCount: 0,
+          averageAmount: 0,
+        }
+      );
+    }
+
+    return filledData;
+  }
+
+  private static formatDate(date: Date, format: string): string {
+    switch (format) {
+      case '%Y-%m-%d':
+        return date.toISOString().split('T')[0];
+      case '%Y-%U':
+        const week = this.getWeekNumber(date);
+        return `${date.getFullYear()}-${week}`;
+      case '%Y-%m':
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      default:
+        return date.toISOString().split('T')[0];
+    }
+  }
+
+  private static getWeekNumber(date: Date): string {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear =
+      (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+    return String(
+      Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7)
+    ).padStart(2, '0');
+  }
+
+  private static calculateEfficiencyScore(driverData: any): number {
+    // Simple efficiency score based on trips per day, earnings, and rating
+    const tripsPerDay = driverData.totalTrips / 30; // Assuming 30-day period
+    const earningsPerTrip = driverData.totalEarnings / driverData.totalTrips;
+    const rating = driverData.averageRating || 0;
+
+    // Weighted score (0-100)
+    return Math.min(
+      100,
+      Math.round(tripsPerDay * 10 + earningsPerTrip / 100 + rating * 20)
+    );
+  }
+
+  private static calculatePerformanceSummary(driverData: any[]) {
+    if (driverData.length === 0) {
+      return {
+        totalEarnings: 0,
+        averageRating: 0,
+        totalTrips: 0,
+        topPerformer: null,
+      };
+    }
+
+    const totalEarnings = driverData.reduce(
+      (sum, driver) => sum + driver.totalEarnings,
+      0
+    );
+    const averageRating =
+      driverData.reduce((sum, driver) => sum + (driver.averageRating || 0), 0) /
+      driverData.length;
+    const totalTrips = driverData.reduce(
+      (sum, driver) => sum + driver.totalTrips,
+      0
     );
 
-    return previousDrivers.length > 0
-      ? (retainedDrivers.length / previousDrivers.length) * 100
-      : 0;
+    return {
+      totalEarnings,
+      averageRating: Math.round(averageRating * 100) / 100,
+      totalTrips,
+      topPerformer: driverData[0], // Already sorted by earnings
+    };
   }
 
-  private static async getCustomerRetentionRate(
-    range: DateRange
-  ): Promise<number> {
-    // Similar logic for customers
-    const previousRange = this.getPreviousDateRange(range);
-
-    const [currentCustomers, previousCustomers] = await Promise.all([
-      Trip.distinct('customerId', {
-        completedAt: { $gte: range.startDate, $lte: range.endDate },
-        status: 'completed',
-      }),
-      Trip.distinct('customerId', {
-        completedAt: {
-          $gte: previousRange.startDate,
-          $lte: previousRange.endDate,
-        },
-        status: 'completed',
-      }),
-    ]);
-
-    const retainedCustomers = currentCustomers.filter((id) =>
-      previousCustomers.includes(id)
-    );
-
-    return previousCustomers.length > 0
-      ? (retainedCustomers.length / previousCustomers.length) * 100
-      : 0;
+  // Placeholder methods for customer analytics
+  private static async getCustomerSegments(query: any) {
+    // Implementation for customer segments
+    return [];
   }
 
-  private static async getMonthOverMonthGrowth(
-    currentRange: DateRange,
-    previousRange: DateRange
-  ): Promise<number> {
-    const [currentRevenue, previousRevenue] = await Promise.all([
-      this.getTodayRevenue(), // Simplified - should use range
-      0, // Placeholder for previous period revenue
-    ]);
+  private static async getCustomerSpendingAnalytics(query: any) {
+    // Implementation for spending analytics
+    return {};
+  }
 
-    return previousRevenue > 0
-      ? ((currentRevenue - previousRevenue) / previousRevenue) * 100
-      : 0;
+  private static async getCustomerRetentionMetrics(query: any) {
+    // Implementation for retention metrics
+    return {};
+  }
+
+  private static async getCustomerGeographicDistribution(query: any) {
+    // Implementation for geographic distribution
+    return {};
+  }
+
+  // Placeholder methods for trip analytics
+  private static async getTripsByHour(query: any) {
+    // Implementation for trips by hour
+    return [];
+  }
+
+  private static async getTripsByDayOfWeek(query: any) {
+    // Implementation for trips by day
+    return [];
+  }
+
+  private static async getPopularRoutes(query: any) {
+    // Implementation for popular routes
+    return [];
+  }
+
+  private static async getCancellationAnalysis(query: any) {
+    // Implementation for cancellation analysis
+    return {};
+  }
+
+  private static async getAverageTripMetrics(query: any) {
+    // Implementation for average metrics
+    return {};
   }
 }
 

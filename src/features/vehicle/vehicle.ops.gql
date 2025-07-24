@@ -49,7 +49,7 @@ input VehicleInput {
   plateNumber: String!
 }
 
-type Query {
+extend type Query {
   """
   Retrieves a single vehicle by its ID.
   """
@@ -61,7 +61,7 @@ type Query {
   listVehicles: [Vehicle!]!
 }
 
-type Mutation {
+extend type Mutation {
   """
   Creates a new vehicle.
   """

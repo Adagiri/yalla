@@ -1,3 +1,4 @@
+# src/features/general/general.types.gql
 # Scalars
 scalar Date
 scalar Time
@@ -7,7 +8,7 @@ scalar Any
 scalar Number
 scalar AnyObject
 scalar Odd
-
+scalar JSON # Added for admin system
 # Enums
 enum AuthChannel {
   SMS
@@ -19,6 +20,7 @@ enum UploadUrl {
   PROFILE_PHOTO
   PRODUCT
   DRIVER_LISCENCE
+  ADMIN_PROFILE # Added for admin profile photos
 }
 
 enum PaymentPurpose {
@@ -43,6 +45,7 @@ enum PaymentStatus {
   OUTSTANDING # No payment has been received yet (previously "pending").
   PARTIALLY_PAID # Only part of the invoice amount has been paid.
 }
+
 enum DeviceType {
   ANDROID
   IOS
@@ -84,6 +87,7 @@ type PaginatedPayload {
   hasPreviousPage: Boolean!
 }
 
+# Updated to support admin authentication
 union AuthEntity = Driver | Customer | Admin
 
 union AccountEntity = Driver | Customer | Admin
@@ -107,6 +111,7 @@ input RegisterManagerInput {
   authChannel: AuthChannel!
 }
 
+# Enhanced to support admin login
 input LoginInput {
   email: String
   phone: PhoneInput
@@ -141,9 +146,11 @@ input ResetPasswordInput {
   accountType: AccountType!
 }
 
+# Enhanced AuthPayload that can return different entity types
 type AuthPayload {
   entity: AuthEntity
   token: String
+  expiresAt: DateTime # Added for token expiration
 }
 
 # Phone Type
@@ -161,6 +168,17 @@ type PaymentMetadata {
   payerId: ID!
   payerCategory: UserCategory
   baseAmounts: [Float!]!
+}
+
+# Enhanced image upload to support admin profile photos
+type ImageUploadUrlResponse {
+  uploadUrl: String!
+  url: String!
+}
+
+input ImageUploadUrlInput {
+  purpose: UploadUrl!
+  contentType: String!
 }
 
 # Inputs
@@ -195,14 +213,17 @@ input PaginationInput {
   page: Int! # Page number (1-based index)
   limit: Int! # Number of items per page
 }
-type ImageUploadUrlResponse {
-  uploadUrl: String!
-  url: String!
+
+# Common error type for better error handling
+type ErrorDetails {
+  code: String!
+  message: String!
+  field: String
 }
 
-input ImageUploadUrlInput {
-  purpose: UploadUrl!
-  contentType: String!
+# Common success response
+type OperationResult {
+  success: Boolean!
+  message: String
+  errors: [ErrorDetails!]
 }
-
-

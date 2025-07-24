@@ -33,12 +33,16 @@ export const generateRandomNumbers = (length: number): string => {
   return code;
 };
 
-export function filterNullAndUndefined<T>(obj: Partial<T>): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(
-      ([_, value]) => value !== null && value !== undefined
-    )
-  ) as Partial<T>;
+export function filterNullAndUndefined(obj: any): any {
+  const filtered: any = {};
+
+  Object.keys(obj).forEach((key) => {
+    if (obj[key] !== null && obj[key] !== undefined) {
+      filtered[key] = obj[key];
+    }
+  });
+
+  return filtered;
 }
 
 export const createWebhookHash = (secretKey: string, payload: any) => {
@@ -113,7 +117,6 @@ export function decrypt(data: string): string {
   return decrypted.toString('utf8');
 }
 
-
 /**
  * Formats a number with thousand separators and two decimal places.
  *
@@ -121,13 +124,25 @@ export function decrypt(data: string): string {
  * @param locale - The locale to use for formatting (default is 'en-US').
  * @returns The formatted number string.
  */
-export function formatNumber(
-  amount: number,
-  locale: string = 'en-US'
-): string {
+export function formatNumber(amount: number, locale: string = 'en-US'): string {
   return new Intl.NumberFormat(locale, {
     style: 'decimal',
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
   }).format(amount);
+}
+
+
+
+export function generateRandomCode(length: number = 6): string {
+  return Math.random().toString(36).substr(2, length).toUpperCase();
+}
+
+export function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+export function sanitizeString(str: string): string {
+  return str.replace(/[<>\"']/g, '');
 }

@@ -24,6 +24,10 @@ export const generateAuthToken = (payload: any): string => {
   return jwt.sign(payload, ENV.JWT_SECRET_KEY, { expiresIn: expiresIn });
 };
 
+export const generateAdminAuthToken = (payload: any): string => {
+  return jwt.sign(payload, ENV.JWT_SECRET_KEY, { expiresIn: '1d' });
+};
+
 export const generateVerificationCode = (
   bytes: number,
   expiryInMins: number

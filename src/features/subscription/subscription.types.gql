@@ -183,12 +183,3 @@ extend type Mutation {
     reason: String
   ): DriverSubscription!
 }
-
-# Subscriptions
-extend type Subscription {
-  # Subscription status updates for driver
-  subscriptionUpdated(driverId: ID!): DriverSubscription!
-
-  # Real-time subscription statistics for admin
-  subscriptionStatsUpdated: SubscriptionStats!
-}
