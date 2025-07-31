@@ -1,6 +1,5 @@
 import { AccountLevel, AuthChannel } from '../../constants/general';
 
-// Trip-related types
 export interface CreateTripInput {
   customerId: string;
   pickup: {
@@ -13,6 +12,23 @@ export interface CreateTripInput {
   };
   paymentMethod: 'cash' | 'card' | 'wallet';
   priceOffered?: number;
+}
+
+export interface TripFilter {
+  ids?: string[];
+  customerId?: string;
+  driverId?: string;
+  status?:
+    | 'searching'
+    | 'driver_assigned'
+    | 'driver_arrived'
+    | 'in_progress'
+    | 'completed'
+    | 'cancelled';
+  paymentMethod?: 'cash' | 'card' | 'wallet';
+  dateFrom?: Date;
+  dateTo?: Date;
+  // Removed tripType and estateId filters
 }
 
 export interface UpdateDriverLocationInput {
@@ -38,24 +54,6 @@ export interface RateTripInput {
 export interface CancelTripInput {
   tripId: string;
   reason?: string;
-}
-
-export interface TripFilter {
-  ids?: string[];
-  customerId?: string;
-  driverId?: string;
-  status?:
-    | 'searching'
-    | 'driver_assigned'
-    | 'driver_arrived'
-    | 'in_progress'
-    | 'completed'
-    | 'cancelled';
-  paymentMethod?: 'cash' | 'card' | 'wallet';
-  tripType?: 'within_estate' | 'outside_estate';
-  dateFrom?: Date;
-  dateTo?: Date;
-  estateId?: string;
 }
 
 export interface TripSort {

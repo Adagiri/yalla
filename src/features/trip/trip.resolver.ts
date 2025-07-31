@@ -25,28 +25,17 @@ const tripResolvers = {
       TripController.getActiveTrip
     ),
 
-    // Get nearby trips for driver
-    getNearbyTrips: combineResolvers(
-      protectEntities(['DRIVER']),
-      TripController.getNearbyTrips
-    ),
-
     // Get driver earnings
     getDriverEarnings: combineResolvers(
       protectEntities(['DRIVER']),
       TripController.getDriverEarnings
     ),
 
-    // Find nearby drivers (for customers)
-    findNearbyDrivers: combineResolvers(
-      protectEntities(['CUSTOMER', 'ADMIN']),
-      TripController.findNearbyDrivers
-    ),
 
-    // Calculate trip pricing estimate
-    calculateTripPricing: combineResolvers(
-      protectEntities(['CUSTOMER', 'ADMIN']),
-      TripController.calculateTripPricing
+
+    getTripEstimate: combineResolvers(
+      protectEntities(['CUSTOMER', 'ADMIN']), // Only customers and admins can get estimates
+      TripController.getTripEstimate
     ),
 
     // List all trips (Admin only)
@@ -70,9 +59,9 @@ const tripResolvers = {
     ),
 
     // Update driver location during trip
-    updateDriverLocation: combineResolvers(
+    updateDriverLocationForTrip: combineResolvers(
       protectEntities(['DRIVER']),
-      TripController.updateDriverLocation
+      TripController.updateDriverLocationForTrip
     ),
 
     // Mark driver as arrived at pickup
@@ -120,6 +109,28 @@ const tripResolvers = {
         (payload, variables, context) => {
           // Only send to the targeted driver
           return payload.newTripRequest.targetDriverId === variables.driverId;
+        }
+      ),
+    },
+
+    // New trip lifecycle subscription
+    tripLifecycleUpdate: {
+      subscribe: withFilter(
+        () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.TRIP_LIFECYCLE_UPDATE),
+        (payload, variables, context) => {
+          const user = context.user;
+          const update = payload.tripLifecycleUpdate;
+
+          // Allow subscription if:
+          // 1. Admin can see all trips
+          // 2. Customer can see their own trips
+          // 3. Driver can see trips assigned to them
+          if (user.role === 'ADMIN') return true;
+
+          if (variables.tripId !== update.tripId) return false;
+
+          // For customers and drivers, check if they're involved in the trip
+          return true; // Additional authorization logic can be added here
         }
       ),
     },

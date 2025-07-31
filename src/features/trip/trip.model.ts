@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { PaymentModel, PaymentModelEnum } from '../../constants/payment-models';
 
 export interface TripDocument extends Document {
+  _id: string;
   id: string;
   tripNumber: string;
 
@@ -54,6 +55,7 @@ export interface TripDocument extends Document {
   // Status
   status:
     | 'searching'
+    | 'drivers_found'
     | 'driver_assigned'
     | 'driver_arrived'
     | 'in_progress'
@@ -199,6 +201,7 @@ const TripSchema = new Schema<TripDocument>(
       type: String,
       enum: [
         'searching',
+        'drivers_found',
         'driver_assigned',
         'driver_arrived',
         'in_progress',

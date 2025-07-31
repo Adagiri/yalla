@@ -12,6 +12,8 @@ import Transaction from '../transaction/transaction.model';
 import Customer from '../customer/customer.model';
 import PaymentModelService from '../payment-model/payment-model.services';
 import { SubscriptionService } from '../../services/subscription.service';
+import { queueService } from '../../services/redis-queue.service';
+import { cacheService } from '../../services/redis-cache.service';
 
 interface CreateTripInput {
   customerId: string;
@@ -69,93 +71,25 @@ class TripService {
     }
   }
 
-  /**
-   * Calculate trip pricing based on distance and time
-   */
-  static calculatePricing(
-    distance: number,
-    duration: number,
-    surgeMultiplier: number = 1
-  ) {
-    const baseFare = 500; // Base fare in Naira
-    const perKmRate = 120; // Rate per kilometer
-    const perMinuteRate = 50; // Rate per minute
-
-    const distanceCharge = Math.round(distance * perKmRate);
-    const timeCharge = Math.round((duration / 60) * perMinuteRate);
-    const subtotal = baseFare + distanceCharge + timeCharge;
-    const surgeFee = Math.round(subtotal * surgeMultiplier - subtotal);
-    const total = subtotal + surgeFee;
-
-    return {
-      baseFare,
-      distanceCharge,
-      timeCharge,
-      surgeFee,
-      subtotal,
-      total,
-      breakdown: {
-        baseFare,
-        distanceCharge,
-        timeCharge,
-        surgeFee,
-        discount: 0,
-      },
-    };
-  }
-
-  /**
-   * Create a new trip request
-   */
   static async createTrip(input: CreateTripInput) {
     const session = await mongoose.startSession();
 
     try {
       session.startTransaction();
 
-      // Calculate route
+      // Validate customer
+      const customer = await Customer.findById(input.customerId);
+      if (!customer) {
+        throw new ErrorResponse(404, 'Customer not found');
+      }
+
+      // Get route information
       const route = await AmazonLocationService.calculateRoute(
         input.pickup.coordinates,
         input.destination.coordinates
       );
 
-      const customer = await Customer.findById(input.customerId);
-
-      // Check if pickup/destination are within any estate
-      const [pickupLocation, destinationLocation] = await Promise.all([
-        Location.findOne({
-          locationType: 'estate',
-          boundary: {
-            $geoIntersects: {
-              $geometry: {
-                type: 'Point',
-                coordinates: input.pickup.coordinates,
-              },
-            },
-          },
-        }),
-        Location.findOne({
-          locationType: 'estate',
-          boundary: {
-            $geoIntersects: {
-              $geometry: {
-                type: 'Point',
-                coordinates: input.destination.coordinates,
-              },
-            },
-          },
-        }),
-      ]);
-
-      // Determine trip type
-      const tripType =
-        pickupLocation &&
-        destinationLocation &&
-        pickupLocation._id === destinationLocation._id
-          ? 'within_estate'
-          : 'outside_estate';
-
-      // Calculate pricing (with potential surge)
+      // Calculate base pricing
       const surgeMultiplier = await this.calculateSurgeMultiplier(
         input.pickup.coordinates
       );
@@ -164,10 +98,6 @@ class TripService {
         route.duration,
         surgeMultiplier
       );
-
-      console.log('pricing: ', pricing);
-      console.log('pickup location: ', pickupLocation);
-      console.log('destination location: ', destinationLocation);
 
       // Apply customer's offered price if higher
       if (input.priceOffered && input.priceOffered > pricing.total) {
@@ -183,7 +113,6 @@ class TripService {
             type: 'Point',
             coordinates: input.pickup.coordinates,
           },
-          estateId: pickupLocation?._id,
         },
         destination: {
           address: input.destination.address,
@@ -191,7 +120,6 @@ class TripService {
             type: 'Point',
             coordinates: input.destination.coordinates,
           },
-          estateId: destinationLocation?._id,
         },
         route: {
           distance: route.distance,
@@ -205,32 +133,49 @@ class TripService {
           breakdown: pricing.breakdown,
         },
         paymentMethod: input.paymentMethod,
-        tripType,
         estimatedArrival: new Date(Date.now() + route.duration * 1000),
+        status: 'searching',
       });
 
       await trip.save({ session });
 
-      // Find nearby available drivers
-      const nearbyDrivers = await this.findNearbyDrivers(
-        input.pickup.coordinates,
-        tripType === 'within_estate' ? 2000 : 5000 // Search radius in meters
+      // Cache trip request for background processing
+      await cacheService.cacheTripRequest(trip._id.toString(), {
+        tripId: trip._id.toString(),
+        customerId: input.customerId,
+        pickup: input.pickup,
+        destination: input.destination,
+        pricing: trip.pricing,
+        paymentMethod: input.paymentMethod,
+        requestedAt: new Date(),
+        searchRadius: 5, // Start with 5km radius
+        attempts: 0,
+      });
+
+      // Add background job to find drivers
+      await queueService.addJob(
+        'FIND_DRIVERS',
+        {
+          tripId: trip._id.toString(),
+        },
+        {
+          priority: 10, // High priority
+          maxAttempts: 5,
+        }
       );
 
-      const driverIds = nearbyDrivers.map((d) => d._id);
-
-      // Publish to subscriptions
-      await SubscriptionService.publishNewTripRequest(driverIds, {
-        id: trip._id,
-        pickup: trip.pickup,
-        destination: trip.destination,
-        customer: customer,
-        pricing: trip.pricing,
-        estimatedArrival: trip.estimatedArrival,
+      // Publish trip lifecycle update
+      await this.publishTripLifecycleUpdate(trip._id.toString(), {
+        status: 'searching',
+        message: 'Searching for nearby drivers...',
+        trip: trip.toObject(),
       });
 
       await session.commitTransaction();
 
+      console.log(
+        `🚗 Trip created: ${trip.tripNumber} - Background search started`
+      );
       return trip;
     } catch (error: any) {
       await session.abortTransaction();
@@ -241,44 +186,186 @@ class TripService {
   }
 
   /**
-   * Find nearby available drivers
+   * Process driver search in background
    */
-  static async findNearbyDrivers(
-    location: [number, number],
-    radiusInMeters: number
-  ) {
+  static async processDriverSearch(tripId: string) {
     try {
-      // Validate location
-      if (!Array.isArray(location) || location.length !== 2) {
-        throw new Error(
-          'Invalid location format. Expected [longitude, latitude]'
-        );
+      console.log(`🔍 Processing driver search for trip: ${tripId}`);
+
+      const [tripRequest, trip] = await Promise.all([
+        cacheService.getTripRequest(tripId),
+        Trip.findById(tripId),
+      ]);
+
+      if (!tripRequest || !trip) {
+        console.log(`❌ Trip request not found: ${tripId}`);
+        return;
       }
 
-      // Use $geoWithin with $centerSphere instead of $near
-      return await Driver.find({
-        isOnline: true,
-        isAvailable: true,
-        currentLocation: {
-          $geoWithin: {
-            $centerSphere: [
-              location, // [longitude, latitude]
-              radiusInMeters / 6378100, // Convert meters to radians (Earth radius in meters)
-            ],
-          },
+      if (trip.status !== 'searching') {
+        console.log(`❌ Trip not in searching state: ${tripId}`);
+        return;
+      }
+
+      // Find nearby drivers
+      const nearbyDrivers = await cacheService.findNearbyDrivers(
+        tripRequest.pickup.coordinates,
+        tripRequest.searchRadius
+      );
+
+      console.log(`👥 Found ${nearbyDrivers.length} nearby drivers`);
+
+      if (nearbyDrivers.length === 0) {
+        await this.handleNoDriversFound(tripId, tripRequest);
+        return;
+      }
+
+      // Broadcast to available drivers
+      await this.broadcastTripToDrivers(tripId, nearbyDrivers, tripRequest);
+
+      // Set timeout for driver acceptance
+      await queueService.addJob(
+        'CHECK_TRIP_ACCEPTANCE',
+        {
+          tripId,
         },
-      })
-        .limit(20)
-        .select('id firstname lastname phone currentLocation vehicleId stats')
-        .lean(); // Use lean() for better performance
+        {
+          delay: 30000, // 30 seconds
+          maxAttempts: 1,
+        }
+      );
     } catch (error: any) {
-      console.error('Error finding nearby drivers:', error);
-      throw new Error(`Failed to find nearby drivers: ${error.message}`);
+      console.error(`❌ Error processing driver search for ${tripId}:`, error);
+      await this.handleTripSearchError(tripId, error.message);
     }
   }
 
   /**
-   * Driver accepts trip
+   * Handle no drivers found scenario
+   */
+  static async handleNoDriversFound(tripId: string, tripRequest: any) {
+    try {
+      tripRequest.attempts++;
+      tripRequest.searchRadius = Math.min(tripRequest.searchRadius + 2, 15); // Expand radius, max 15km
+
+      if (tripRequest.attempts >= 3) {
+        // Cancel trip after 3 attempts
+        await Trip.findByIdAndUpdate(tripId, {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          cancelledBy: 'system',
+          cancellationReason: 'No drivers available',
+        });
+
+        await this.publishTripLifecycleUpdate(tripId, {
+          status: 'cancelled',
+          message: 'No drivers available in your area',
+          reason: 'No drivers found after multiple attempts',
+        });
+
+        await cacheService.removeTripRequest(tripId);
+      } else {
+        // Retry with expanded radius
+        await cacheService.cacheTripRequest(tripId, tripRequest);
+
+        await queueService.addJob(
+          'FIND_DRIVERS',
+          {
+            tripId,
+          },
+          {
+            priority: 8,
+            delay: 10000, // Wait 10 seconds before retry
+          }
+        );
+
+        await this.publishTripLifecycleUpdate(tripId, {
+          status: 'searching',
+          message: `Expanding search area... Attempt ${tripRequest.attempts}/3`,
+          searchRadius: tripRequest.searchRadius,
+        });
+      }
+    } catch (error: any) {
+      console.error(`Error handling no drivers found for ${tripId}:`, error);
+    }
+  }
+
+  /**
+   * Broadcast trip to nearby drivers
+   */
+  static async broadcastTripToDrivers(
+    tripId: string,
+    driverIds: string[],
+    tripRequest: any
+  ) {
+    try {
+      // Get customer details
+      const customer = await Customer.findById(tripRequest.customerId)
+        .select('firstname lastname phone profilePhoto')
+        .lean();
+
+      const broadcastData = {
+        tripId,
+        pickup: tripRequest.pickup,
+        destination: tripRequest.destination,
+        pricing: tripRequest.pricing,
+        paymentMethod: tripRequest.paymentMethod,
+        customer: customer
+          ? {
+              name: `${customer.firstname} ${customer.lastname}`,
+              phone: customer.phone,
+              photo: customer.profilePhoto,
+            }
+          : null,
+        requestedAt: tripRequest.requestedAt,
+      };
+
+      // Publish to each driver's subscription
+      for (const driverId of driverIds) {
+        await SubscriptionService.publishNewTripRequest(
+          [driverId],
+          broadcastData
+        );
+      }
+
+      // Update trip lifecycle
+      await this.publishTripLifecycleUpdate(tripId, {
+        status: 'searching',
+        message: `Trip broadcast to ${driverIds.length} nearby drivers`,
+        driversNotified: driverIds.length,
+      });
+
+      console.log(`📢 Trip ${tripId} broadcast to ${driverIds.length} drivers`);
+    } catch (error: any) {
+      console.error(`Error broadcasting trip ${tripId}:`, error);
+    }
+  }
+
+  /**
+   * Check if trip was accepted within timeout
+   */
+  static async checkTripAcceptance(tripId: string) {
+    try {
+      const trip = await Trip.findById(tripId);
+
+      if (!trip || trip.status !== 'searching') {
+        return; // Trip was already accepted or cancelled
+      }
+
+      const tripRequest = await cacheService.getTripRequest(tripId);
+      if (!tripRequest) {
+        return;
+      }
+
+      // Trip wasn't accepted, expand search or cancel
+      await this.handleNoDriversFound(tripId, tripRequest);
+    } catch (error: any) {
+      console.error(`Error checking trip acceptance for ${tripId}:`, error);
+    }
+  }
+
+  /**
+   * Driver accepts trip - background processing
    */
   static async acceptTrip(tripId: string, driverId: string) {
     const session = await mongoose.startSession();
@@ -298,7 +385,9 @@ class TripService {
         throw new ErrorResponse(400, 'Trip is no longer available');
       }
 
-      if (!driver.isAvailable) {
+      // Check if driver is available in cache
+      const driverLocation = await cacheService.getDriverLocation(driverId);
+      if (!driverLocation || !driverLocation.isAvailable) {
         throw new ErrorResponse(400, 'Driver is not available');
       }
 
@@ -309,43 +398,178 @@ class TripService {
 
       // Calculate ETA to pickup
       const routeToPickup = await AmazonLocationService.calculateRoute(
-        driver.currentLocation!.coordinates,
+        driverLocation.coordinates,
         trip.pickup.location.coordinates
       );
 
       trip.estimatedArrival = new Date(
         Date.now() + routeToPickup.duration * 1000
       );
-
       await trip.save({ session });
 
-      // Update driver availability
+      // Update driver availability in cache
+      await cacheService.updateDriverLocation(driverId, {
+        ...driverLocation,
+        isAvailable: false,
+      });
+
+      // Update driver in database
       driver.isAvailable = false;
       driver.currentTripId = tripId;
       await driver.save({ session });
 
-      // Publish trip accepted event
-      await SubscriptionService.publishTripAccepted(tripId, trip.customerId, {
-        id: driver._id,
-        name: `${driver.firstname} ${driver.lastname}`,
-        phone: driver.phone,
-        photo: driver.profilePhoto,
-        rating: driver.stats.averageRating,
-        vehicle: driver.vehicle,
+      // Cache active trip state
+      await cacheService.cacheActiveTripState(tripId, {
+        tripId,
+        driverId,
+        customerId: trip.customerId,
+        status: 'driver_assigned',
+        estimatedArrival: trip.estimatedArrival,
       });
 
-      // Publish status change
-      await SubscriptionService.publishTripStatusChanged(trip);
+      // Clean up trip request cache
+      await cacheService.removeTripRequest(tripId);
+
+      // Publish updates
+      await this.publishTripLifecycleUpdate(tripId, {
+        status: 'driver_assigned',
+        message: 'Driver assigned and on the way',
+        driver: {
+          id: driver._id,
+          name: `${driver.firstname} ${driver.lastname}`,
+          phone: driver.phone,
+          photo: driver.profilePhoto,
+          rating: driver.stats?.averageRating || 0,
+          vehicle: driver.vehicle,
+        },
+        estimatedArrival: trip.estimatedArrival,
+      });
 
       await session.commitTransaction();
 
+      console.log(`✅ Trip ${tripId} accepted by driver ${driverId}`);
       return trip;
     } catch (error: any) {
       await session.abortTransaction();
-      throw new ErrorResponse(500, 'Error accepting trip', error.message);
+      throw error;
     } finally {
       session.endSession();
     }
+  }
+
+  /**
+   * Publish trip lifecycle updates
+   */
+  static async publishTripLifecycleUpdate(tripId: string, data: any) {
+    try {
+      await SubscriptionService.publishTripLifecycleUpdate({
+        tripId,
+        timestamp: new Date(),
+        ...data,
+      });
+    } catch (error: any) {
+      console.error(
+        `Error publishing trip lifecycle update for ${tripId}:`,
+        error
+      );
+    }
+  }
+
+  /**
+   * Handle trip search error
+   */
+  static async handleTripSearchError(tripId: string, error: string) {
+    try {
+      await Trip.findByIdAndUpdate(tripId, {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+        cancelledBy: 'system',
+        cancellationReason: 'System error during driver search',
+      });
+
+      await this.publishTripLifecycleUpdate(tripId, {
+        status: 'cancelled',
+        message: 'Trip cancelled due to system error',
+        error,
+      });
+
+      await cacheService.removeTripRequest(tripId);
+    } catch (err: any) {
+      console.error(`Error handling trip search error for ${tripId}:`, err);
+    }
+  }
+
+  /**
+   * Calculate surge multiplier based on demand
+   */
+  static async calculateSurgeMultiplier(
+    location: [number, number]
+  ): Promise<number> {
+    try {
+      // Get nearby trip requests from last 10 minutes
+      const recentTrips = await Trip.countDocuments({
+        'pickup.location': {
+          $near: {
+            $geometry: { type: 'Point', coordinates: location },
+            $maxDistance: 2000,
+          },
+        },
+        requestedAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) },
+        status: { $nin: ['cancelled', 'completed'] },
+      });
+
+      // Get nearby available drivers
+      const nearbyDrivers = await cacheService.findNearbyDrivers(location, 2);
+      const availableDrivers = nearbyDrivers.length;
+
+      // Calculate surge based on demand/supply ratio
+      if (availableDrivers === 0) return 2.0; // High surge when no drivers
+
+      const demandSupplyRatio = recentTrips / availableDrivers;
+
+      if (demandSupplyRatio > 3) return 2.0;
+      if (demandSupplyRatio > 2) return 1.5;
+      if (demandSupplyRatio > 1) return 1.2;
+
+      return 1.0; // No surge
+    } catch (error) {
+      console.error('Error calculating surge multiplier:', error);
+      return 1.0;
+    }
+  }
+
+  /**
+   * Calculate trip pricing
+   */
+  static calculatePricing(
+    distance: number,
+    duration: number,
+    surgeMultiplier: number
+  ) {
+    const baseFare = 200; // ₦2.00
+    const perKmRate = 150; // ₦1.50 per km
+    const perMinuteRate = 20; // ₦0.20 per minute
+
+    const distanceInKm = distance / 1000;
+    const durationInMinutes = duration / 60;
+
+    const distanceCharge = distanceInKm * perKmRate;
+    const timeCharge = durationInMinutes * perMinuteRate;
+    const subtotal = baseFare + distanceCharge + timeCharge;
+    const surgeFee = subtotal * (surgeMultiplier - 1);
+    const total = subtotal + surgeFee;
+
+    return {
+      subtotal,
+      total,
+      breakdown: {
+        baseFare,
+        distanceCharge: Math.round(distanceCharge),
+        timeCharge: Math.round(timeCharge),
+        surgeFee: Math.round(surgeFee),
+        discount: 0,
+      },
+    };
   }
 
   /**
@@ -904,94 +1128,6 @@ class TripService {
     }
   }
 
-  /**
-   * Get nearby available trips for driver
-   */
-  static async getNearbyTrips(
-    driverLocation: [number, number],
-    radius: number = 5000
-  ) {
-    try {
-      // Use $geoWithin instead of $near
-      const trips = await Trip.find({
-        status: 'searching',
-        'pickup.location': {
-          $geoWithin: {
-            $centerSphere: [
-              driverLocation,
-              radius / 6378100, // Convert meters to radians
-            ],
-          },
-        },
-      })
-        .limit(10)
-        .populate('customerId')
-        .lean();
-
-      return trips;
-    } catch (error: any) {
-      throw new Error(`Error fetching nearby trips: ${error.message}`);
-    }
-  }
-
-  /**
-   * Calculate surge pricing multiplier based on demand
-   */
-  static async calculateSurgeMultiplier(
-    location: [number, number]
-  ): Promise<number> {
-    try {
-      const radius = 5000; // 5km radius
-      const now = new Date();
-      const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
-
-      const [activeTrips, availableDrivers] = await Promise.all([
-        Trip.countDocuments({
-          status: {
-            $in: [
-              'searching',
-              'driver_assigned',
-              'driver_arrived',
-              'in_progress',
-            ],
-          },
-          requestedAt: { $gte: thirtyMinutesAgo },
-          'pickup.location': {
-            $geoWithin: {
-              $centerSphere: [
-                location,
-                radius / 6378100, // Convert to radians
-              ],
-            },
-          },
-        }),
-        Driver.countDocuments({
-          isOnline: true,
-          isAvailable: true,
-          currentLocation: {
-            $geoWithin: {
-              $centerSphere: [
-                location,
-                radius / 6378100, // Convert to radians
-              ],
-            },
-          },
-        }),
-      ]);
-
-      const demandRatio =
-        availableDrivers > 0 ? activeTrips / availableDrivers : 3;
-
-      // Surge pricing logic
-      if (demandRatio >= 3) return 2.0;
-      if (demandRatio >= 2) return 1.5;
-      if (demandRatio >= 1.5) return 1.25;
-      return 1.0;
-    } catch (error: any) {
-      console.error('Error calculating surge multiplier:', error);
-      return 1.0; // Default to no surge on error
-    }
-  }
 
   static async completeTripWithPayment(tripId: string, driverId: string) {
     const session = await mongoose.startSession();
@@ -1303,6 +1439,68 @@ class TripService {
       return receipt;
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error generating receipt', error.message);
+    }
+  }
+
+  /**
+   * Calculate trip estimate with pricing
+   */
+  static async calculateTripEstimate(
+    pickupCoordinates: [number, number],
+    destinationCoordinates: [number, number]
+  ) {
+    try {
+      // Get route information from Amazon Location Service
+      const route = await AmazonLocationService.calculateRoute(
+        pickupCoordinates,
+        destinationCoordinates
+      );
+
+      // Calculate surge multiplier based on pickup location
+      const surgeMultiplier =
+        await this.calculateSurgeMultiplier(pickupCoordinates);
+
+      // Calculate pricing
+      const pricing = this.calculatePricing(
+        route.distance,
+        route.duration,
+        surgeMultiplier
+      );
+
+      // Prepare the estimate response
+      const estimate = {
+        distance: route.distance / 1000, // Convert to kilometers
+        duration: Math.round(route.duration / 60), // Convert to minutes
+        pricing: {
+          baseAmount: pricing.subtotal,
+          surgeMultiplier,
+          finalAmount: pricing.total,
+          currency: 'NGN',
+          breakdown: {
+            baseFare: pricing.breakdown.baseFare,
+            distanceCharge: pricing.breakdown.distanceCharge,
+            timeCharge: pricing.breakdown.timeCharge,
+            surgeFee: pricing.breakdown.surgeFee,
+            discount: pricing.breakdown.discount,
+          },
+        },
+        surgeActive: surgeMultiplier > 1.0,
+        estimatedArrival: route.duration, // Duration in seconds
+        polyline: route.polyline || null,
+      };
+
+      console.log(
+        `💰 Trip estimate calculated: ${pricing.total} NGN (${route.distance / 1000}km, surge: ${surgeMultiplier}x)`
+      );
+
+      return estimate;
+    } catch (error: any) {
+      console.error('Error calculating trip estimate:', error);
+      throw new ErrorResponse(
+        500,
+        'Unable to calculate trip estimate',
+        error.message
+      );
     }
   }
 }

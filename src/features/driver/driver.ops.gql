@@ -119,3 +119,72 @@ extend type Mutation {
   updateDriverProfilePhoto(input: UpdateProfilePhotoInput!): Driver!
   updateDriverLicense(input: UpdateDriverLicenseInput!): Driver!
 }
+
+
+
+
+type DriverLocationResponse {
+  success: Boolean!
+  message: String!
+  timestamp: DateTime!
+}
+
+type DriverStatusResponse {
+  success: Boolean!
+  message: String!
+  timestamp: DateTime!
+}
+
+type DriverLocationInfo {
+  driverId: ID!
+  coordinates: [Float!]!
+  heading: Float
+  speed: Float
+  isOnline: Boolean!
+  isAvailable: Boolean!
+  lastUpdated: DateTime!
+}
+
+type NearbyDriver {
+  id: ID!
+  name: String!
+  coordinates: [Float!]!
+  distance: Float!
+  rating: Float!
+  vehicle: Vehicle
+}
+
+# Add to existing driver inputs
+input UpdateDriverLocationInput {
+  coordinates: [Float!]!
+  heading: Float
+  speed: Float
+}
+
+input UpdateDriverStatusInput {
+  isOnline: Boolean!
+  isAvailable: Boolean
+}
+
+input NearbyDriversInput {
+  coordinates: [Float!]!
+  radius: Float # in kilometers, default 5
+}
+
+# Add to existing driver mutations
+extend type Mutation {
+  # Driver: Update current location
+  updateDriverLocation(input: UpdateDriverLocationInput!): DriverLocationResponse!
+  
+  # Driver: Update online/offline status
+  updateDriverStatus(input: UpdateDriverStatusInput!): DriverStatusResponse!
+}
+
+# Add to existing driver queries  
+extend type Query {
+  # Get driver's current location from cache
+  getDriverLocation(driverId: ID): DriverLocationInfo
+  
+  # Admin: Get nearby drivers
+  getNearbyDrivers(input: NearbyDriversInput!): [NearbyDriver!]!
+}

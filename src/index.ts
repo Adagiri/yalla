@@ -10,6 +10,7 @@ import {
   SubscriptionPlan,
 } from './features/subscription/subscription.model';
 import SubscriptionService from './features/subscription/subscription.service';
+import healthRouter from './routes/health';
 
 const app = express();
 app.use(express.json());
@@ -399,5 +400,6 @@ setInterval(
 
 // Paystack webhook handler
 app.post('/webhook/paystack', handlePaystackWebhook);
+ app.use('/api', healthRouter);
 
 export default app;

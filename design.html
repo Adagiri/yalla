@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            margin: 0;
+            background: #0d1117;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            color: #c9d1d9;
+            padding: 15px;
+            font-size: 10px;
+            line-height: 1.3;
+        }
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 0 15px rgba(56, 139, 253, 0.15);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #21262d;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #58a6ff;
+            margin-bottom: 4px;
+        }
+        .subtitle {
+            font-size: 10px;
+            color: #8b949e;
+        }
+        .section {
+            margin-bottom: 16px;
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px;
+            border-left: 3px solid #f85149;
+        }
+        .terraform { border-left-color: #7c3aed; }
+        .yaml { border-left-color: #fbbf24; }
+        .json { border-left-color: #10b981; }
+        
+        .section-title {
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #f0f6fc;
+        }
+        .terraform .section-title { color: #a855f7; }
+        .yaml .section-title { color: #f59e0b; }
+        .json .section-title { color: #059669; }
+        
+        .code-block {
+            background: #010409;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 6px 0;
+            border: 1px solid #21262d;
+            overflow-x: auto;
+        }
+        .code-line {
+            margin: 2px 0;
+            font-size: 9px;
+        }
+        .keyword { color: #ff7b72; }
+        .string { color: #a5d6ff; }
+        .number { color: #79c0ff; }
+        .comment { color: #8b949e; font-style: italic; }
+        .variable { color: #ffa657; }
+        .resource { color: #7ee787; }
+        .property { color: #79c0ff; }
+        
+        .syntax-tip {
+            background: #0c2d6b;
+            border: 1px solid #1f6feb;
+            border-radius: 4px;
+            padding: 6px;
+            margin: 8px 0;
+            font-size: 8px;
+            color: #cae8ff;
+        }
+        .error-tip {
+            background: #67060c;
+            border: 1px solid #f85149;
+            border-radius: 4px;
+            padding: 6px;
+            margin: 8px 0;
+            font-size: 8px;
+            color: #ffdcd7;
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 8px 0;
+        }
+        .vs-label {
+            text-align: center;
+            font-size: 8px;
+            color: #8b949e;
+            margin: 4px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">📝 INFRASTRUCTURE SYNTAX GUIDE</div>
+            <div class="subtitle">"From YAML hell to HCL heaven"</div>
+        </div>
+        
+        <div class="section terraform">
+            <div class="section-title">🔷 TERRAFORM (HCL)</div>
+            <div class="code-block">
+                <div class="code-line"><span class="keyword">resource</span> <span class="string">"aws_instance"</span> <span class="string">"web"</span> {</div>
+                <div class="code-line">  <span class="property">ami</span>           = <span class="variable">var.ami_id</span></div>
+                <div class="code-line">  <span class="property">instance_type</span> = <span class="string">"t3.micro"</span></div>
+                <div class="code-line">  <span class="property">count</span>         = <span class="number">3</span></div>
+                <div class="code-line">}</div>
+            </div>
+            <div class="syntax-tip">
+                💡 TIP: Always use snake_case for resource names
+            </div>
+        </div>
+
+        <div class="section yaml">
+            <div class="section-title">📄 CLOUDFORMATION (YAML)</div>
+            <div class="code-block">
+                <div class="code-line"><span class="keyword">Resources:</span></div>
+                <div class="code-line">  <span class="resource">WebInstance:</span></div>
+                <div class="code-line">    <span class="keyword">Type:</span> <span class="string">AWS::EC2::Instance</span></div>
+                <div class="code-line">    <span class="keyword">Properties:</span></div>
+                <div class="code-line">      <span class="property">ImageId:</span> <span class="variable">!Ref AmiParameter</span></div>
+                <div class="code-line">      <span class="property">InstanceType:</span> <span class="string">t3.micro</span></div>
+            </div>
+            <div class="error-tip">
+                ⚠️ WATCH: YAML indentation matters! Use spaces, not tabs
+            </div>
+        </div>
+
+        <div class="section json">
+            <div class="section-title">🟢 VARIABLES & OUTPUTS</div>
+            <div class="comparison">
+                <div>
+                    <div class="vs-label">TERRAFORM</div>
+                    <div class="code-block">
+                        <div class="code-line"><span class="keyword">variable</span> <span class="string">"env"</span> {</div>
+                        <div class="code-line">  <span class="property">type</span> = <span class="keyword">string</span></div>
+                        <div class="code-line">  <span class="property">default</span> = <span class="string">"dev"</span></div>
+                        <div class="code-line">}</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="vs-label">CLOUDFORMATION</div>
+                    <div class="code-block">
+                        <div class="code-line"><span class="keyword">Parameters:</span></div>
+                        <div class="code-line">  <span class="property">Environment:</span></div>
+                        <div class="code-line">    <span class="keyword">Type:</span> <span class="string">String</span></div>
+                        <div class="code-line">    <span class="keyword">Default:</span> <span class="string">dev</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🎯 COMMON PATTERNS</div>
+            <div class="code-block">
+                <div class="code-line"><span class="comment"># Tags everywhere!</span></div>
+                <div class="code-line"><span class="property">tags</span> = {</div>
+                <div class="code-line">  <span class="string">Name</span>        = <span class="string">"${var.env}-web"</span></div>
+                <div class="code-line">  <span class="string">Environment</span> = <span class="variable">var.env</span></div>
+                <div class="code-line">  <span class="string">Project</span>     = <span class="string">"awesome-app"</span></div>
+                <div class="code-line">}</div>
+            </div>
+            <div class="code-block">
+                <div class="code-line"><span class="comment"># Count vs for_each</span></div>
+                <div class="code-line"><span class="keyword">for_each</span> = <span class="keyword">toset</span>([<span class="string">"web"</span>, <span class="string">"api"</span>, <span class="string">"db"</span>])</div>
+                <div class="code-line"><span class="property">name</span> = <span class="string">"${each.value}-server"</span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🚨 GOTCHAS TO AVOID</div>
+            <div class="error-tip">
+                ❌ Hard-coding values instead of variables<br>
+                ❌ Missing depends_on for implicit dependencies<br>
+                ❌ Forgetting to escape special chars in strings<br>
+                ❌ Using count with complex objects
+            </div>
+            <div class="syntax-tip">
+                ✅ Use terraform fmt before commits<br>
+                ✅ Always plan before apply<br>
+                ✅ Use data sources for existing resources<br>
+                ✅ Modularize repeated patterns
+            </div>
+        </div>
+    </div>
+</body>
+</html>

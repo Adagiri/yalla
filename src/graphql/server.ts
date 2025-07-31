@@ -11,8 +11,24 @@ import { context } from './context';
 import { formatError } from '../utils/error-handler';
 import { corsConfig } from './cors';
 import { getUserInfo } from '../utils/auth-middleware';
+import { ServiceManager } from '../services/service-manager';
 
 export const startApolloServer = async (app: express.Application) => {
+  await ServiceManager.initialize();
+
+  // Graceful shutdown
+  process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    await ServiceManager.shutdown();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', async () => {
+    console.log('SIGINT received, shutting down gracefully');
+    await ServiceManager.shutdown();
+    process.exit(0);
+  });
+
   const httpServer = http.createServer(app);
 
   // Create WebSocket server for subscriptions

@@ -35,6 +35,25 @@ type DriverLocationUpdatePayload {
   timestamp: DateTime!
 }
 
+type TripLifecycleUpdatePayload {
+  tripId: ID!
+  status: TripStatus!
+  message: String
+  timestamp: DateTime!
+
+  # Optional data based on status
+  trip: Trip
+  driver: DriverPartial
+  customer: CustomerPartial
+  estimatedArrival: DateTime
+  actualArrival: DateTime
+  location: LocationCoordinate
+  searchRadius: Float
+  driversNotified: Int
+  reason: String
+  error: String
+}
+
 extend type Subscription {
   # Driver receives new trip requests
   newTripRequest(driverId: ID!): NewTripRequestPayload!
@@ -47,4 +66,7 @@ extend type Subscription {
 
   # Customer tracks driver location during active trip
   driverLocationUpdate(tripId: ID!): DriverLocationUpdatePayload!
+
+  # Trip lifecycle updates for real-time frontend updates
+  tripLifecycleUpdate(tripId: ID!): TripLifecycleUpdatePayload!
 }

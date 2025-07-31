@@ -7,6 +7,7 @@ import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
 import { ErrorResponse } from '../../utils/responses';
 import Driver from '../driver/driver.model';
 import TripService from './trip.service';
+import { addDriverLocationUpdateJob, addTripUpdateJob } from '../../services/job-processors.service';
 
 interface CreateTripInput {
   customerId: string;
@@ -48,86 +49,6 @@ interface CancelTripInput {
 }
 
 class TripController {
-  // Create a new trip
-  static async createTrip(
-    _: any,
-    { input }: { input: CreateTripInput },
-    { user }: { user: ContextUser }
-  ) {
-    try {
-      // Validate coordinates are numbers
-      const pickupCoords = input.pickup.coordinates;
-      const destCoords = input.destination.coordinates;
-
-      if (
-        pickupCoords.some((coord) => typeof coord !== 'number' || isNaN(coord))
-      ) {
-        throw new ErrorResponse(400, 'Invalid pickup coordinates');
-      }
-
-      if (
-        destCoords.some((coord) => typeof coord !== 'number' || isNaN(coord))
-      ) {
-        throw new ErrorResponse(400, 'Invalid destination coordinates');
-      }
-
-      input.customerId = user.id;
-      return await TripService.createTrip(input);
-    } catch (error: any) {
-      if (error instanceof ErrorResponse) {
-        throw error;
-      }
-      console.error('Trip creation controller error:', error);
-      throw new ErrorResponse(500, 'Failed to create trip', error.message);
-    }
-  }
-  // Driver accepts a trip
-  static async acceptTrip(
-    _: any,
-    { tripId }: { tripId: string },
-    { user }: ContextType
-  ) {
-    if (user.accountType !== 'DRIVER') {
-      throw new ErrorResponse(403, 'Only drivers can accept trips');
-    }
-
-    // Check if driver can accept rides based on their payment model
-    const canAcceptRides = await PaymentModelService.canDriverAcceptRides(
-      user.id
-    );
-    if (!canAcceptRides) {
-      // Get driver details to provide specific message
-      const driver = await Driver.findById(user.id);
-
-      if (driver?.paymentModel === PaymentModel.SUBSCRIPTION) {
-        throw new ErrorResponse(
-          403,
-          'Active subscription required to accept rides. Please subscribe to a plan or contact support.'
-        );
-      } else {
-        throw new ErrorResponse(
-          403,
-          'Your account is not eligible to accept rides. Please contact support.'
-        );
-      }
-    }
-    return await TripService.acceptTrip(tripId, user.id);
-  }
-
-  // Update driver location during trip
-  static async updateDriverLocation(
-    _: any,
-    { input }: { input: UpdateDriverLocationInput },
-    { user }: ContextType
-  ) {
-    return await TripService.updateDriverLocation(
-      input.tripId,
-      user.id,
-      input.location,
-      input.metadata
-    );
-  }
-
   // Start trip with PIN verification
   static async startTrip(
     _: any,
@@ -226,23 +147,7 @@ class TripController {
     return await TripService.getActiveTrip(user.id);
   }
 
-  // Get nearby trips for driver
-  static async getNearbyTrips(
-    _: any,
-    { location, radius }: { location: [number, number]; radius?: number },
-    { user }: ContextType
-  ) {
-    return await TripService.getNearbyTrips(location, radius);
-  }
 
-  // Mark driver as arrived at pickup
-  static async arrivedAtPickup(
-    _: any,
-    { tripId }: { tripId: string },
-    { user }: ContextType
-  ) {
-    return await TripService.arrivedAtPickup(tripId, user.id);
-  }
 
   // Calculate driver earnings
   static async getDriverEarnings(
@@ -262,29 +167,7 @@ class TripController {
     return await TripService.assignTripToDriver(tripId, driverId, user.id);
   }
 
-  // Calculate trip pricing (for estimates)
-  static async calculateTripPricing(
-    _: any,
-    {
-      distance,
-      duration,
-      surgeMultiplier,
-    }: {
-      distance: number;
-      duration: number;
-      surgeMultiplier?: number;
-    }
-  ) {
-    return TripService.calculatePricing(distance, duration, surgeMultiplier);
-  }
 
-  // Find nearby drivers
-  static async findNearbyDrivers(
-    _: any,
-    { location, radius }: { location: [number, number]; radius?: number }
-  ) {
-    return await TripService.findNearbyDrivers(location, radius || 5000);
-  }
 
   // Get all trips (Admin only)
   static async listTrips(
@@ -326,6 +209,88 @@ class TripController {
 
     return result.trips;
   }
+
+  ///////////////////////
+  static async createTrip(
+    _: any,
+    { input }: { input: CreateTripInput },
+    { user }: ContextType
+  ) {
+    // Use the customer ID from the authenticated user
+    const tripInput = {
+      ...input,
+      customerId: user.id,
+    };
+
+    return await TripService.createTrip(tripInput);
+  }
+
+  // Updated driver location - now uses background job
+  static async updateDriverLocationForTrip(
+    _: any,
+    { input }: { input: UpdateDriverLocationInput },
+    { user }: ContextType
+  ) {
+    // Add to background job queue for processing
+    await addDriverLocationUpdateJob(user.id, {
+      coordinates: input.location,
+      heading: input.metadata?.heading,
+      speed: input.metadata?.speed,
+      isOnline: true,
+      isAvailable: true,
+    });
+
+    // Return immediate response
+    return {
+      success: true,
+      message: 'Location update queued for processing',
+    };
+  }
+
+  // Driver accepts trip - now uses background processing
+  static async acceptTrip(
+    _: any,
+    { tripId }: { tripId: string },
+    { user }: ContextType
+  ) {
+    return await TripService.acceptTrip(tripId, user.id);
+  }
+
+  // Mark driver as arrived - uses background job
+  static async arrivedAtPickup(
+    _: any,
+    { tripId }: { tripId: string },
+    { user }: ContextType
+  ) {
+    await addTripUpdateJob(tripId, 'driver_arrived', {
+      message: 'Driver has arrived at pickup location',
+      arrivedAt: new Date(),
+    });
+
+    return {
+      success: true,
+      message: 'Arrival status updated',
+    };
+  }
+
+  static async getTripEstimate(
+    _: any,
+    {
+      input,
+    }: {
+      input: {
+        pickup: { coordinates: [number, number] };
+        destination: { coordinates: [number, number] };
+      };
+    },
+    { user }: ContextType
+  ) {
+    return await TripService.calculateTripEstimate(
+      input.pickup.coordinates,
+      input.destination.coordinates
+    );
+  }
 }
+
 
 export default TripController;

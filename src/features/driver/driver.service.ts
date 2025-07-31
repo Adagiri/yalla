@@ -53,6 +53,16 @@ class DriverService {
     }
   }
 
+  static async getDriversByIds(ids: string[]) {
+    try {
+      const drivers = await Driver.find({_id: ids});
+   
+      return drivers
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error fetching driver', error.message);
+    }
+  }
+
   static async registerDriver(input: RegisterDriverInput) {
     try {
       const { email, phone, password } = input;

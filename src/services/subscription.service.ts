@@ -87,4 +87,19 @@ export class SubscriptionService {
       emergencyAlert: alertData,
     });
   }
+
+  /**
+   * Publish trip lifecycle updates
+   */
+  static async publishTripLifecycleUpdate(data: {
+    tripId: string;
+    status: string;
+    message?: string;
+    timestamp: Date;
+    [key: string]: any;
+  }) {
+    await pubsub.publish(SUBSCRIPTION_EVENTS.TRIP_LIFECYCLE_UPDATE, {
+      tripLifecycleUpdate: data,
+    });
+  }
 }
