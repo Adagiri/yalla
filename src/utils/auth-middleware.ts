@@ -180,6 +180,7 @@ export const protectEntities = (requiredEntities: string[]) => {
         }
       }
     }
+      console.log(user);
 
     // Check Driver
     if (requiredEntities.includes('DRIVER')) {

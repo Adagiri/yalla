@@ -11,10 +11,17 @@ const driverResolvers = {
       protectEntities(['ADMIN']),
       DriverController.listDrivers
     ),
+
     getDriver: combineResolvers(
       protectEntities(['ADMIN']),
       DriverController.getDriver
     ),
+
+    getNearbyDrivers: combineResolvers(
+      protectEntities(['ADMIN', 'DRIVER']),
+      DriverController.getNearbyDrivers
+    ),
+
     loggedInDriver: combineResolvers(
       protectEntities(['DRIVER', 'ADMIN']),
       DriverController.loggedInDriver
@@ -34,6 +41,17 @@ const driverResolvers = {
     updateDriverProfilePhoto: combineResolvers(
       protectEntities(['DRIVER', 'ADMIN']),
       DriverController.updateProfilePhoto
+    ),
+
+    // Update driver location during trip
+    updateDriverLocation: combineResolvers(
+      protectEntities(['DRIVER']),
+      DriverController.updateDriverLocation
+    ),
+
+    updateDriverStatus: combineResolvers(
+      protectEntities(['DRIVER']),
+      DriverController.updateDriverStatus
     ),
   },
 

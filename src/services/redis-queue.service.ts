@@ -68,6 +68,7 @@ export class RedisQueueService {
     await this.redis.zadd('jobs:queue', score, JSON.stringify(job));
 
     console.log(`📋 Job added: ${job.id} (${type})`);
+    console.log(`📋 Job data: (${data})`);
     return job.id;
   }
 
@@ -110,7 +111,8 @@ export class RedisQueueService {
 
         if (!result) continue;
 
-        const jobData = JSON.parse(result[2]);
+        const jobData = JSON.parse(result[1]);
+        console.log(jobData, "job data")
         const job: Job = {
           ...jobData,
           createdAt: new Date(jobData.createdAt),
@@ -131,6 +133,7 @@ export class RedisQueueService {
           continue;
         }
 
+        console.log('job: ', job);
         console.log(`⚡ Processing job: ${job.id} (${job.type})`);
 
         const processor = this.subscribers.get(job.type);

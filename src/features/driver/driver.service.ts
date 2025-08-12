@@ -55,7 +55,7 @@ class DriverService {
 
   static async getDriversByIds(ids: string[]) {
     try {
-      const drivers = await Driver.find({_id: ids});
+      const drivers = await Driver.find({_id: ids})
    
       return drivers
     } catch (error: any) {

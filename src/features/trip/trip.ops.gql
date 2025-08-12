@@ -164,7 +164,7 @@ input CreateTripInput {
   priceOffered: Float # Optional price customer is willing to pay
 }
 
-input UpdateDriverLocationInput {
+input updateDriverLocationForTripInput {
   tripId: ID!
   location: [Float!]!
   metadata: LocationMetadataInput
@@ -214,13 +214,17 @@ input TripEstimateInput {
 
 # ===== RESPONSE TYPES =====
 type TripEstimate {
-  distance: Float! # in kilometers
-  duration: Int! # in minutes
+  "Distance in kilometers"
+  distance: Float!
+  "Duration in minutes"
+  duration: Int!
   pricing: TripPricing!
   surgeActive: Boolean!
   surgeMultiplier: Float!
-  estimatedArrival: Int! # duration in seconds
-  polyline: String # route polyline for map display
+  "Duration in seconds"
+  estimatedArrival: Int!
+  "Route polyline for map display"
+  polyline: String
 }
 
 type DriverEarnings {
@@ -258,6 +262,9 @@ extend type Query {
   # Get trip estimate
   getTripEstimate(input: TripEstimateInput!): TripEstimate!
 
+  # Get a driver's active trip
+  getDriverActiveTrip: Trip
+
   # Get single trip
   getTrip(id: ID!): Trip
 
@@ -291,7 +298,7 @@ extend type Mutation {
 
   # Driver: Update location during trip
   updateDriverLocationForTrip(
-    input: UpdateDriverLocationInput!
+    input: updateDriverLocationForTripInput!
   ): LocationUpdateResponse!
 
   # Driver: Mark as arrived at pickup

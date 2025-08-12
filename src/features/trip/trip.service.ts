@@ -907,8 +907,7 @@ class TripService {
       const trip = await Trip.findOne({
         driverId,
         status: { $in: ['driver_assigned', 'driver_arrived', 'in_progress'] },
-      }).populate('customerId pickup.estate destination.estate');
-
+      }).populate('customerId pickup.estateId destination.estateId');
       return trip;
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error fetching active trip', error.message);
@@ -1127,7 +1126,6 @@ class TripService {
       session.endSession();
     }
   }
-
 
   static async completeTripWithPayment(tripId: string, driverId: string) {
     const session = await mongoose.startSession();
@@ -1485,7 +1483,8 @@ class TripService {
           },
         },
         surgeActive: surgeMultiplier > 1.0,
-        estimatedArrival: route.duration, // Duration in seconds
+        surgeMultiplier: surgeMultiplier,
+        estimatedArrival: Math.floor(route.duration), // Duration in seconds
         polyline: route.polyline || null,
       };
 

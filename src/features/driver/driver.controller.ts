@@ -1,4 +1,7 @@
-import { addDriverLocationUpdateJob, addDriverStatusUpdateJob } from '../../services/job-processors.service';
+import {
+  addDriverLocationUpdateJob,
+  addDriverStatusUpdateJob,
+} from '../../services/job-processors.service';
 import { cacheService } from '../../services/redis-cache.service';
 import { ContextType } from '../../types';
 import { Pagination } from '../../types/list-resources';
@@ -108,7 +111,7 @@ class DriverController {
       heading: input.heading,
       speed: input.speed,
       isOnline: true,
-      isAvailable: true, // This should be determined by driver's current state
+      isAvailable: true,
     });
 
     // Return immediate response
@@ -161,24 +164,32 @@ class DriverController {
   static async getNearbyDrivers(
     _: any,
     {
-      coordinates,
-      radius = 5,
+      input,
     }: {
-      coordinates: [number, number];
-      radius?: number;
+      input: {
+        coordinates: [number, number];
+        radius?: number;
+      };
     },
     { user }: ContextType
   ) {
+
+    const coordinates = input.coordinates;
+    const radius = input.radius
+
     // Get from Redis cache
     const driverIds = await cacheService.findNearbyDrivers(coordinates, radius);
 
+    console.log(driverIds)
     // Get full driver details from database
     const drivers = await DriverService.getDriversByIds(driverIds);
 
-    return drivers.map((driver) => ({
-      ...driver,
-      distance: 0, // Could calculate actual distance if needed
-    }));
+  return drivers
+
+    // return drivers.map((driver) => ({
+    //   ...driver,
+    //   distance: 0, // Could calculate actual distance if needed
+    // }));
   }
 
   /**

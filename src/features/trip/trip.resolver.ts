@@ -20,7 +20,7 @@ const tripResolvers = {
     ),
 
     // Get active trip for driver
-    getActiveTrip: combineResolvers(
+    getDriverActiveTrip: combineResolvers(
       protectEntities(['DRIVER']),
       TripController.getActiveTrip
     ),

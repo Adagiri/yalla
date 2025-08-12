@@ -58,20 +58,20 @@ const paymentModelResolvers = {
   },
 
   // Field resolvers for Driver type
-  Driver: {
-    canAcceptRides: async (driver: any) => {
-      return await PaymentModelService.canDriverAcceptRides(driver._id);
-    },
+  // Driver: {
+  //   canAcceptRides: async (driver: any) => {
+  //     return await PaymentModelService.canDriverAcceptRides(driver._id);
+  //   },
 
-    effectivePaymentModel: async (driver: any) => {
-      try {
-        // Use a default trip amount for calculation
-        return await PaymentModelService.determinePaymentModel(driver._id, 1000); // ₦10
-      } catch {
-        return null;
-      }
-    },
-  },
+  //   effectivePaymentModel: async (driver: any) => {
+  //     try {
+  //       // Use a default trip amount for calculation
+  //       return await PaymentModelService.determinePaymentModel(driver._id, 1000); // ₦10
+  //     } catch {
+  //       return null;
+  //     }
+  //   },
+  // },
 
   // Field resolvers for Trip type
   Trip: {

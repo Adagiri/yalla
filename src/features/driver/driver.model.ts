@@ -381,6 +381,14 @@ driverSchema.index({ 'bankAccounts.accountNumber': 1 });
 driverSchema.index({ 'savedCards.authorizationCode': 1 });
 driverSchema.index({ lastCashoutAt: -1 });
 
+driverSchema.pre(
+  /^find/,
+  function (this: mongoose.Query<any, CustomerModelType>, next) {
+    this.populate('vehicle');
+    next();
+  }
+);
+
 driverSchema.pre<DriverModelType>('save', function (next) {
   if (this.phone && this.phone.fullPhone) {
     const phoneNumber = parsePhoneNumberFromString(this.phone.fullPhone);

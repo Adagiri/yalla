@@ -186,5 +186,5 @@ extend type Query {
   getDriverLocation(driverId: ID): DriverLocationInfo
   
   # Admin: Get nearby drivers
-  getNearbyDrivers(input: NearbyDriversInput!): [NearbyDriver!]!
+  getNearbyDrivers(input: NearbyDriversInput!): [Driver!]!
 }

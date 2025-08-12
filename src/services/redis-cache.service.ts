@@ -97,7 +97,13 @@ export class RedisCacheService {
   async getDriverLocation(driverId: string): Promise<DriverLocation | null> {
     const key = `driver:location:${driverId}`;
     const data = await this.redis.hgetall(key);
-
+    console.log(key, 'key');
+    console.log('data from get driver location: ', data);
+    console.log(
+      'coordinates from get driver location: ',
+      JSON.parse(data.coordinates)
+    );
+    console.log('data from get driver location: ', data.coordinates);
     if (!data || !data.coordinates) return null;
 
     return {
@@ -122,19 +128,18 @@ export class RedisCacheService {
     const geoKey = 'drivers:geo';
 
     // Use GEORADIUS to find drivers within radius
-    const nearbyDrivers = await this.redis.georadius(
+    const nearbyDrivers = (await this.redis.georadius(
       geoKey,
-      coordinates[0], // longitude
-      coordinates[1], // latitude
+      coordinates[0],
+      coordinates[1],
       radiusKm,
       'km',
       'WITHDIST',
       'ASC',
       'COUNT',
       limit
-    );
+    )) as [string, number][];
 
-    // Filter available drivers
     const availableDrivers: string[] = [];
 
     for (const [driverId] of nearbyDrivers) {
