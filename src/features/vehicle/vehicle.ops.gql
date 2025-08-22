@@ -58,7 +58,11 @@ extend type Query {
   """
   Retrieves a list of vehicles.
   """
-  listVehicles: [Vehicle!]!
+  listVehicles(
+    filter: VehicleFilter
+    sort: VehicleSort
+    pagination: PaginationInput
+  ): [Vehicle!]!
 }
 
 extend type Mutation {

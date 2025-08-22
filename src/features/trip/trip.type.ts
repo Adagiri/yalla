@@ -16,8 +16,6 @@ export interface CreateTripInput {
 
 export interface TripFilter {
   ids?: string[];
-  customerId?: string;
-  driverId?: string;
   status?:
     | 'searching'
     | 'driver_assigned'
@@ -26,9 +24,26 @@ export interface TripFilter {
     | 'completed'
     | 'cancelled';
   paymentMethod?: 'cash' | 'card' | 'wallet';
-  dateFrom?: Date;
-  dateTo?: Date;
-  // Removed tripType and estateId filters
+  customerId?: string;
+  driverId?: string;
+  paymentStatus?: string[];
+  requestedAtFrom?: Date;
+  requestedAtTo?: Date;
+  completedAtFrom?: Date;
+  completedAtTo?: Date;
+  minAmount?: number;
+  maxAmount?: number;
+}
+
+export interface TripSort {
+  field:
+    | 'requestedAt'
+    | 'completedAt'
+    | 'finalAmount'
+    | 'status'
+    | 'createdAt'
+    | 'updatedAt';
+  direction: 'ASC' | 'DESC';
 }
 
 export interface UpdateDriverLocationInput {
@@ -54,11 +69,6 @@ export interface RateTripInput {
 export interface CancelTripInput {
   tripId: string;
   reason?: string;
-}
-
-export interface TripSort {
-  field: 'requestedAt' | 'completedAt' | 'finalAmount' | 'distance' | 'status';
-  direction: 'ASC' | 'DESC';
 }
 
 export interface LocationInput {

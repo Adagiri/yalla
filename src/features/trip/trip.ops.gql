@@ -20,16 +20,6 @@ enum PaymentStatus {
   failed
 }
 
-# Removed TripType enum completely since we're removing within_estate feature
-
-enum TripSortField {
-  requestedAt
-  completedAt
-  finalAmount
-  distance
-  status
-}
-
 enum SortDirection {
   ASC
   DESC
@@ -193,19 +183,33 @@ input RateTripInput {
 
 input TripFilterInput {
   ids: [ID!]
+  status: [TripStatus!]
   customerId: ID
   driverId: ID
-  status: TripStatus
-  paymentMethod: PaymentMethod
-  dateFrom: DateTime
-  dateTo: DateTime
-  # Removed tripType and estateId filters
+  paymentMethod: [PaymentMethod!]
+  paymentStatus: [PaymentStatus!]
+  requestedAtFrom: DateTime
+  requestedAtTo: DateTime
+  completedAtFrom: DateTime
+  completedAtTo: DateTime
+  minAmount: Float
+  maxAmount: Float
 }
 
 input TripSortInput {
   field: TripSortField!
-  direction: SortDirection!
+  direction: SortDirection = DESC
 }
+
+enum TripSortField {
+  requestedAt
+  completedAt
+  finalAmount
+  status
+  createdAt
+  updatedAt
+}
+
 
 input TripEstimateInput {
   pickup: CoordinatesInput!

@@ -91,6 +91,41 @@ export class RedisCacheService {
     }
   }
 
+  // Add to RedisCacheService
+  async getMultipleDriverLocations(
+    driverIds: string[]
+  ): Promise<Record<string, DriverLocation | null>> {
+    const pipeline = this.redis.pipeline();
+
+    // Batch all the hgetall commands
+    driverIds.forEach((driverId) => {
+      const key = `driver:location:${driverId}`;
+      pipeline.hgetall(key);
+    });
+
+    const results = await pipeline.exec();
+    const locations: Record<string, DriverLocation | null> = {};
+
+    driverIds.forEach((driverId, index) => {
+      const [err, data] = results![index];
+      if (!err && data && (data as any).coordinates) {
+        locations[driverId] = {
+          driverId,
+          coordinates: JSON.parse((data as any).coordinates),
+          heading: parseFloat((data as any).heading),
+          speed: parseFloat((data as any).speed),
+          isOnline: (data as any).isOnline === 'true',
+          isAvailable: (data as any).isAvailable === 'true',
+          updatedAt: new Date((data as any).updatedAt),
+        };
+      } else {
+        locations[driverId] = null;
+      }
+    });
+
+    return locations;
+  }
+
   /**
    * Get driver location
    */

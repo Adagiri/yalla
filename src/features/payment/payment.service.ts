@@ -1,44 +1,15 @@
 import mongoose from 'mongoose';
-import Trip, { TripDocument } from '../features/trip/trip.model';
-import WalletService from './wallet.service';
-import PaystackService from './paystack.services';
-import { ErrorResponse } from '../utils/responses';
-import Driver from '../features/driver/driver.model';
-import Customer from '../features/customer/customer.model';
+import Trip, { TripDocument } from '../trip/trip.model';
+import WalletService from '../../services/wallet.service';
+import PaystackService from '../../services/paystack.services';
+import { ErrorResponse } from '../../utils/responses';
+import Driver from '../driver/driver.model';
+import Customer from '../customer/customer.model';
+import { Pagination } from '../../types/list-resources';
+import { CardPaymentInput, CashoutInput, PaymentFilter, PaymentSort, ProcessTripPaymentInput, SuccessfulCardPaymentResult } from './payment.types';
+import Transaction from '../transaction/transaction.model';
+import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
 
-interface SuccessfulCardPaymentResult {
-  success: boolean;
-  trip: TripDocument | null;
-  amounts: {
-    total: number;
-    driverEarnings: number;
-    platformCommission: number;
-  };
-}
-
-interface ProcessTripPaymentInput {
-  tripId: string;
-  customerId: string;
-  driverId: string;
-  amount: number; // In Naira
-  paymentMethod: 'cash' | 'card' | 'wallet';
-  paymentToken?: string; // For card payments
-}
-
-interface CardPaymentInput {
-  tripId: string;
-  customerId: string;
-  amount: number;
-  paymentToken?: string;
-  saveCard?: boolean;
-}
-
-interface CashoutInput {
-  driverId: string;
-  amount: number; // In Naira
-  accountNumber: string;
-  bankCode: string;
-}
 
 class PaymentService {
   /**
@@ -298,9 +269,36 @@ class PaymentService {
   }
 
   /**
+   * List payments/transactions with pagination
+   */
+  static async listPayments(
+    pagination?: Pagination,
+    filter?: PaymentFilter,
+    sort?: PaymentSort
+  ) {
+    try {
+      const baseFilter = {}; // No base filter needed
+
+      const data = await listResourcesPagination({
+        model: Transaction,
+        baseFilter,
+        additionalFilter: filter,
+        sortParam: sort,
+        pagination,
+      });
+
+      return data;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error fetching payments', error.message);
+    }
+  }
+
+  /**
    * Process successful card payment from webhook
    */
-  static async processSuccessfulCardPayment(paystackData: any): Promise<SuccessfulCardPaymentResult> {
+  static async processSuccessfulCardPayment(
+    paystackData: any
+  ): Promise<SuccessfulCardPaymentResult> {
     const session = await mongoose.startSession();
 
     try {
@@ -391,7 +389,9 @@ class PaymentService {
   /**
    * Driver cashout to bank account
    */
-  static async driverCashout(input: CashoutInput) {
+  static async driverCashout(input: CashoutInput
+    
+  ) {
     const session = await mongoose.startSession();
 
     try {

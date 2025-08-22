@@ -6,7 +6,7 @@ import Location from '../location/location.model';
 import mongoose from 'mongoose';
 import NotificationService from '../../services/notification.services';
 import TripNotificationService from '../../services/trip-notification.service';
-import PaymentService from '../../services/payment.service';
+import PaymentService from '../payment/payment.service';
 import WalletService from '../../services/wallet.service';
 import Transaction from '../transaction/transaction.model';
 import Customer from '../customer/customer.model';
@@ -14,6 +14,9 @@ import PaymentModelService from '../payment-model/payment-model.services';
 import { SubscriptionService } from '../../services/subscription.service';
 import { queueService } from '../../services/redis-queue.service';
 import { cacheService } from '../../services/redis-cache.service';
+import { TripFilter, TripSort } from './trip.type';
+import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
+import { Pagination } from '../../types/list-resources';
 
 interface CreateTripInput {
   customerId: string;
@@ -30,6 +33,28 @@ interface CreateTripInput {
 }
 
 class TripService {
+  static async listTrips(
+    pagination?: Pagination,
+    filter?: TripFilter,
+    sort?: TripSort
+  ) {
+    try {
+      const baseFilter = {};
+
+      const data = await listResourcesPagination({
+        model: Trip,
+        baseFilter,
+        additionalFilter: filter,
+        sortParam: sort,
+        pagination,
+      });
+
+      return data;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error fetching trips', error.message);
+    }
+  }
+
   /**
    * Get single trip by ID
    */

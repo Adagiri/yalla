@@ -7,6 +7,7 @@ import { ContextType } from '../../types';
 import { Pagination } from '../../types/list-resources';
 import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
 import { AuthPayload, ErrorResponse } from '../../utils/responses';
+import { DriverModelType } from './driver.model';
 import DriverService from './driver.service';
 import {
   RegisterDriverInput,
@@ -32,8 +33,26 @@ class DriverController {
       filter,
       sort
     );
+
     setPagePaginationHeaders(res, paginationResult);
-    return data;
+
+    const driverIds= data.map((d) => d.id) 
+    const locations = await cacheService.getMultipleDriverLocations(driverIds);
+
+    // Merge DB and cache data
+    const drivers = data.map((driver: DriverModelType) => {
+      const location = locations[driver.id];
+      driver  = driver.toObject()
+      return {
+        ...driver,
+        isOnline: location?.isOnline || false,
+        isAvailable: location?.isAvailable || false,
+        currentLocation: location || null,
+      };
+    });
+
+    console.log(drivers)
+    return drivers
   }
 
   static async getDriver(_: any, { id }: { id: string }) {
@@ -173,18 +192,17 @@ class DriverController {
     },
     { user }: ContextType
   ) {
-
     const coordinates = input.coordinates;
-    const radius = input.radius
+    const radius = input.radius;
 
     // Get from Redis cache
     const driverIds = await cacheService.findNearbyDrivers(coordinates, radius);
 
-    console.log(driverIds)
+    console.log(driverIds);
     // Get full driver details from database
     const drivers = await DriverService.getDriversByIds(driverIds);
 
-  return drivers
+    return drivers;
 
     // return drivers.map((driver) => ({
     //   ...driver,

@@ -101,17 +101,57 @@ extend type Trip {
   commissionRate: Float
 }
 
+input PaymentFilter {
+  ids: [ID!]
+  userId: ID
+  userType: [String!]
+  type: [TransactionType!]
+  purpose: [TransactionPurpose!]
+  status: [TransactionStatus!]
+  paymentMethod: [String!]
+  tripId: ID
+  minAmount: Float
+  maxAmount: Float
+  createdAtFrom: DateTime
+  createdAtTo: DateTime
+  completedAtFrom: DateTime
+  completedAtTo: DateTime
+}
+
+input PaymentSort {
+  field: PaymentSortField!
+  direction: SortDirection = DESC
+}
+
+enum PaymentSortField {
+  amount
+  createdAt
+  completedAt
+  status
+  type
+  purpose
+}
+
 # Queries
 extend type Query {
+  listPayments(
+    pagination: PaginationInput
+    filter: PaymentFilter
+    sort: PaymentSort
+  ): [Transaction!]!
+
   # Get payment model statistics (Admin only)
   getPaymentModelStats: PaymentModelStats!
-  
+
   # Check if driver can accept rides
   canDriverAcceptRides(driverId: ID!): Boolean!
-  
+
   # Get driver's effective payment model for a trip amount
-  getDriverPaymentModel(driverId: ID!, tripAmount: Float!): PaymentModelCalculation!
-  
+  getDriverPaymentModel(
+    driverId: ID!
+    tripAmount: Float!
+  ): PaymentModelCalculation!
+
   # Get drivers by payment model
   getDriversByPaymentModel(
     model: PaymentModel!
@@ -123,26 +163,27 @@ extend type Query {
 # Mutations
 extend type Mutation {
   # Admin: Switch driver's payment model
-  switchDriverPaymentModel(input: SwitchPaymentModelInput!): PaymentModelSwitchResult!
-  
+  switchDriverPaymentModel(
+    input: SwitchPaymentModelInput!
+  ): PaymentModelSwitchResult!
+
   # Admin: Update driver's commission settings
   updateDriverCommissionSettings(input: UpdateCommissionSettingsInput!): Driver!
-  
+
   # Admin: Update driver's subscription settings
-  updateDriverSubscriptionSettings(input: UpdateSubscriptionSettingsInput!): Driver!
-  
+  updateDriverSubscriptionSettings(
+    input: UpdateSubscriptionSettingsInput!
+  ): Driver!
+
   # Driver: Request payment model change (creates admin review task)
-  requestPaymentModelChange(
-    newModel: PaymentModel!
-    reason: String!
-  ): Boolean!
+  requestPaymentModelChange(newModel: PaymentModel!, reason: String!): Boolean!
 }
 
 # Subscriptions
 extend type Subscription {
   # Payment model changes for a driver
   paymentModelUpdated(driverId: ID!): Driver!
-  
+
   # Real-time payment model statistics for admin dashboard
   paymentModelStatsUpdated: PaymentModelStats!
 }

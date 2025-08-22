@@ -1,6 +1,9 @@
 import SubscriptionService from './subscription.service';
 import { ErrorResponse } from '../../utils/responses';
 import { ContextType } from '../../types';
+import { DriverSubscriptionFilter, DriverSubscriptionSort, SubscriptionPlanFilter, SubscriptionPlanSort } from './subscription.types';
+import { Pagination } from '../../types/list-resources';
+import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
 
 interface CreateSubscriptionPlanInput {
   name: string;
@@ -25,6 +28,56 @@ interface SubscribeDriverInput {
 }
 
 class SubscriptionController {
+  /**
+   * List subscription plans with pagination (Admin)
+   */
+  static async listSubscriptionPlans(
+    _: any,
+    {
+      pagination,
+      filter,
+      sort,
+    }: {
+      pagination?: Pagination;
+      filter?: SubscriptionPlanFilter;
+      sort?: SubscriptionPlanSort;
+    },
+    { res }: ContextType
+  ) {
+    const { data, paginationResult } =
+      await SubscriptionService.listSubscriptionPlans(pagination, filter, sort);
+
+    setPagePaginationHeaders(res, paginationResult);
+    return data;
+  }
+
+  /**
+   * List driver subscriptions with pagination (Admin)
+   */
+  static async listDriverSubscriptions(
+    _: any,
+    {
+      pagination,
+      filter,
+      sort,
+    }: {
+      pagination?: Pagination;
+      filter?: DriverSubscriptionFilter;
+      sort?: DriverSubscriptionSort;
+    },
+    { res }: ContextType
+  ) {
+    const { data, paginationResult } =
+      await SubscriptionService.listDriverSubscriptions(
+        pagination,
+        filter,
+        sort
+      );
+
+    setPagePaginationHeaders(res, paginationResult);
+    return data;
+  }
+
   /**
    * Get active subscription plans
    */

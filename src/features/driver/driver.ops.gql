@@ -94,12 +94,19 @@ type Driver {
   driverLicenseFront: String
   driverLicenseBack: String
   vehicleInspectionDone: Boolean!
+
+  isOnline: Boolean
+  isAvailable: Boolean
+  currentLocation: LocationCoordinate
+  stats: DriverStats
 }
 
 type DriverPartial {
   id: ID!
   firstname: String!
   lastname: String!
+  phone: Phone
+  email: String
 }
 
 extend type Query {
@@ -119,9 +126,6 @@ extend type Mutation {
   updateDriverProfilePhoto(input: UpdateProfilePhotoInput!): Driver!
   updateDriverLicense(input: UpdateDriverLicenseInput!): Driver!
 }
-
-
-
 
 type DriverLocationResponse {
   success: Boolean!
@@ -154,6 +158,13 @@ type NearbyDriver {
   vehicle: Vehicle
 }
 
+type DriverStats {
+  totalTrips: Int!
+  totalEarnings: Float!
+  averageRating: Float!
+  completionRate: Float!
+}
+
 # Add to existing driver inputs
 input UpdateDriverLocationInput {
   coordinates: [Float!]!
@@ -174,17 +185,19 @@ input NearbyDriversInput {
 # Add to existing driver mutations
 extend type Mutation {
   # Driver: Update current location
-  updateDriverLocation(input: UpdateDriverLocationInput!): DriverLocationResponse!
-  
+  updateDriverLocation(
+    input: UpdateDriverLocationInput!
+  ): DriverLocationResponse!
+
   # Driver: Update online/offline status
   updateDriverStatus(input: UpdateDriverStatusInput!): DriverStatusResponse!
 }
 
-# Add to existing driver queries  
+# Add to existing driver queries
 extend type Query {
   # Get driver's current location from cache
   getDriverLocation(driverId: ID): DriverLocationInfo
-  
+
   # Admin: Get nearby drivers
   getNearbyDrivers(input: NearbyDriversInput!): [Driver!]!
 }

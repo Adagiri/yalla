@@ -50,6 +50,17 @@ const subscriptionResolvers = {
       protectEntities(['ADMIN', 'DRIVER']),
       SubscriptionController.canDriverAcceptRides
     ),
+
+    listSubscriptionPlans: combineResolvers(
+      protectEntities(['ADMIN']),
+      SubscriptionController.listSubscriptionPlans
+    ),
+
+    listDriverSubscriptions: combineResolvers(
+      protectEntities(['ADMIN']),
+      SubscriptionController.listDriverSubscriptions
+    ),
+
   },
 
   Mutation: {

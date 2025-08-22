@@ -79,12 +79,16 @@ type Customer {
   profilePhotoSet: Boolean!
   profilePhoto: String
   personalInfoSet: Boolean!
+
+  totalSpentAllTime: Number!
 }
 
 type CustomerPartial {
   id: ID!
   firstname: String!
   lastname: String!
+  phone: Phone
+  email: String
 }
 
 extend type Query {

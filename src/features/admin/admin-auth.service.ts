@@ -1,10 +1,17 @@
-// src/features/admin/admin-auth.service.ts
+// src/features/admin/admin-auth.service.ts - COMPLETE FILE
 import Admin from './admin.model';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { ErrorResponse } from '../../utils/responses';
 import AuditLogService from './audit-log.service';
-import { generateAdminAuthToken, generateAuthToken } from '../../utils/auth';
+import {
+  generateAdminAuthToken,
+  generateVerificationCode,
+  getEncryptedToken,
+  hashPassword,
+} from '../../utils/auth';
+import NotificationService from '../../services/notification.services';
+import { EmailTemplate } from '../../constants/general';
 
 interface AdminCreateInput {
   firstname: string;
@@ -32,6 +39,13 @@ interface AdminUpdateInput {
   profilePhoto?: string;
 }
 
+interface AdminResetPasswordInput {
+  email: string;
+  code: string;
+  token: string;
+  newPassword: string;
+}
+
 class AdminAuthService {
   /**
    * Admin login
@@ -47,8 +61,6 @@ class AdminAuthService {
       if (!admin) {
         throw new ErrorResponse(401, 'Invalid credentials');
       }
-
-      console.log(admin);
 
       // Check password
       const isPasswordValid = await bcrypt.compare(password, admin.password);
@@ -68,6 +80,7 @@ class AdminAuthService {
         role: admin.role,
         permissions: admin.permissions,
         email: admin.email,
+        accountType: 'ADMIN', // For compatibility
       });
 
       // Log login
@@ -138,7 +151,7 @@ class AdminAuthService {
   }
 
   /**
-   * Get current admin
+   * Get current admin profile
    */
   static async getCurrentAdmin(adminId: string) {
     try {
@@ -246,15 +259,25 @@ class AdminAuthService {
         phone: input.phone,
         permissions: input.permissions || [],
         isActive: true,
-        isEmailVerified: true, // Auto-verify for created admins
+        isEmailVerified: true, // Auto-verify for admin accounts
         createdBy,
       });
 
       await admin.save();
 
+      // Log admin creation
+      await AuditLogService.logAction({
+        adminId: createdBy,
+        adminEmail: '', // Will be filled by audit service
+        adminRole: '', // Will be filled by audit service
+        action: 'create_admin',
+        resource: 'admin',
+        resourceId: admin._id,
+        success: true,
+      });
+
       return admin.toSafeObject();
     } catch (error: any) {
-      console.log(error);
       throw new ErrorResponse(500, 'Error creating admin', error.message);
     }
   }
@@ -274,7 +297,7 @@ class AdminAuthService {
         throw new ErrorResponse(404, 'Admin not found');
       }
 
-      // Check if email is being changed and if it's unique
+      // Check if email is being changed and if it already exists
       if (input.email && input.email.toLowerCase() !== admin.email) {
         const existingAdmin = await Admin.findOne({
           email: input.email.toLowerCase(),
@@ -282,31 +305,61 @@ class AdminAuthService {
         });
 
         if (existingAdmin) {
-          throw new ErrorResponse(400, 'Admin with this email already exists');
+          throw new ErrorResponse(400, 'Email already exists');
         }
       }
 
+      // Store old values for audit
+      const oldValues = {
+        firstname: admin.firstname,
+        lastname: admin.lastname,
+        email: admin.email,
+        role: admin.role,
+        department: admin.department,
+        employeeId: admin.employeeId,
+        phone: admin.phone,
+        permissions: [...admin.permissions],
+        timezone: admin.timezone,
+        language: admin.language,
+        profilePhoto: admin.profilePhoto,
+      };
+
       // Update fields
-      const updateData: any = {};
-      if (input.firstname) updateData.firstname = input.firstname;
-      if (input.lastname) updateData.lastname = input.lastname;
-      if (input.email) updateData.email = input.email.toLowerCase();
-      if (input.role) updateData.role = input.role;
-      if (input.department) updateData.department = input.department;
-      if (input.employeeId) updateData.employeeId = input.employeeId;
-      if (input.phone) updateData.phone = input.phone;
-      if (input.permissions) updateData.permissions = input.permissions;
-      if (input.timezone) updateData.timezone = input.timezone;
-      if (input.language) updateData.language = input.language;
-      if (input.profilePhoto) updateData.profilePhoto = input.profilePhoto;
+      Object.keys(input).forEach((key) => {
+        if (input[key as keyof AdminUpdateInput] !== undefined) {
+          if (key === 'email') {
+            admin[key] = input[key]!.toLowerCase();
+          } else {
+            admin[key as keyof AdminUpdateInput] =
+              input[key as keyof AdminUpdateInput];
+          }
+        }
+      });
 
-      updateData.updatedAt = new Date();
+      admin.updatedAt = new Date();
+      await admin.save();
 
-      const updatedAdmin = await Admin.findByIdAndUpdate(adminId, updateData, {
-        new: true,
-      }).select('-password');
+      // Log admin update
+      const changedFields = Object.keys(input).filter(
+        (key) => input[key as keyof AdminUpdateInput] !== undefined
+      );
 
-      return updatedAdmin!.toSafeObject();
+      await AuditLogService.logAction({
+        adminId: updatedBy,
+        adminEmail: '', // Will be filled by audit service
+        adminRole: '', // Will be filled by audit service
+        action: 'update_admin',
+        resource: 'admin',
+        resourceId: adminId,
+        changes: {
+          before: oldValues,
+          after: input,
+          fieldsChanged: changedFields,
+        },
+        success: true,
+      });
+
+      return admin.toSafeObject();
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error updating admin', error.message);
     }
@@ -330,6 +383,17 @@ class AdminAuthService {
       admin.isActive = true;
       admin.updatedAt = new Date();
       await admin.save();
+
+      // Log activation
+      await AuditLogService.logAction({
+        adminId: activatedBy,
+        adminEmail: '', // Will be filled by audit service
+        adminRole: '', // Will be filled by audit service
+        action: 'activate_admin',
+        resource: 'admin',
+        resourceId: adminId,
+        success: true,
+      });
 
       return admin.toSafeObject();
     } catch (error: any) {
@@ -372,6 +436,17 @@ class AdminAuthService {
       admin.updatedAt = new Date();
       await admin.save();
 
+      // Log deactivation
+      await AuditLogService.logAction({
+        adminId: deactivatedBy,
+        adminEmail: '', // Will be filled by audit service
+        adminRole: '', // Will be filled by audit service
+        action: 'deactivate_admin',
+        resource: 'admin',
+        resourceId: adminId,
+        success: true,
+      });
+
       return admin.toSafeObject();
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error deactivating admin', error.message);
@@ -408,6 +483,17 @@ class AdminAuthService {
       admin.updatedAt = new Date();
       await admin.save();
 
+      // Log deletion
+      await AuditLogService.logAction({
+        adminId: deletedBy,
+        adminEmail: '', // Will be filled by audit service
+        adminRole: '', // Will be filled by audit service
+        action: 'delete_admin',
+        resource: 'admin',
+        resourceId: adminId,
+        success: true,
+      });
+
       return {
         success: true,
         message: 'Admin deleted successfully',
@@ -418,7 +504,7 @@ class AdminAuthService {
   }
 
   /**
-   * Change admin password
+   * Change admin password (when logged in)
    */
   static async changePassword(
     adminId: string,
@@ -426,7 +512,7 @@ class AdminAuthService {
     newPassword: string
   ) {
     try {
-      const admin = await Admin.findById(adminId);
+      const admin = await Admin.findById(adminId).select('+password');
 
       if (!admin) {
         throw new ErrorResponse(404, 'Admin not found');
@@ -454,7 +540,7 @@ class AdminAuthService {
         adminId: admin._id,
         adminEmail: admin.email,
         adminRole: admin.role,
-        action: 'change_password',
+        action: 'password_changed',
         resource: 'auth',
         success: true,
       });
@@ -465,6 +551,170 @@ class AdminAuthService {
       };
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error changing password', error.message);
+    }
+  }
+
+  /**
+   * Request password reset for admin
+   */
+  static async requestPasswordReset(email: string) {
+    try {
+      const admin = await Admin.findOne({
+        email: email.toLowerCase(),
+        isActive: true,
+      });
+
+      if (!admin) {
+        // Don't reveal if email exists, but still respond with success
+        return {
+          success: true,
+          message: 'If the email exists, a reset code has been sent.',
+          token: 'dummy-token', // Return dummy token for non-existent emails
+        };
+      }
+
+      // Generate verification code
+      const { code, encryptedToken, token, tokenExpiry } =
+        generateVerificationCode(32, 10);
+
+      // Store reset code and token in admin record
+      admin.resetPasswordCode = code;
+      if (tokenExpiry) {
+        admin.resetPasswordExpiry = tokenExpiry;
+      }
+
+      admin.resetPasswordToken = encryptedToken;
+      await admin.save();
+
+      // Send reset email
+      await NotificationService.sendEmail({
+        to: admin.email,
+        template: EmailTemplate.RESET_PASSWORD_REQUEST,
+        data: {
+          name: `${admin.firstname} ${admin.lastname}`,
+          c: code[0],
+          o: code[1],
+          d: code[2],
+          e: code[3],
+        },
+      });
+
+      // Log password reset request
+      await AuditLogService.logAction({
+        adminId: admin._id,
+        adminEmail: admin.email,
+        adminRole: admin.role,
+        action: 'password_reset_requested',
+        resource: 'auth',
+        success: true,
+      });
+
+      return {
+        success: true,
+        message: 'Reset code sent to your email',
+        token, // Return token for verification step
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error processing password reset request',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Verify reset code (optional step for better UX)
+   */
+  static async verifyResetCode(email: string, code: string, token: string) {
+    try {
+      const encryptedToken = getEncryptedToken(token);
+
+      const admin = await Admin.findOne({
+        email: email.toLowerCase(),
+        resetPasswordToken: encryptedToken,
+        isActive: true,
+      });
+
+      if (!admin) {
+        throw new ErrorResponse(404, 'Invalid token');
+      }
+
+      if (
+        admin.resetPasswordCode !== code ||
+        !admin.resetPasswordExpiry ||
+        admin.resetPasswordExpiry < new Date()
+      ) {
+        throw new ErrorResponse(400, 'Invalid or expired reset code');
+      }
+
+      return {
+        success: true,
+        message: 'Code verified successfully',
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error verifying code', error.message);
+    }
+  }
+
+  /**
+   * Reset admin password with code
+   */
+  static async resetPassword({
+    email,
+    code,
+    token,
+    newPassword,
+  }: AdminResetPasswordInput) {
+    try {
+      const encryptedToken = getEncryptedToken(token);
+
+      const admin = await Admin.findOne({
+        email: email.toLowerCase(),
+        resetPasswordToken: encryptedToken,
+        isActive: true,
+      });
+
+      if (!admin) {
+        throw new ErrorResponse(404, 'Invalid or expired reset token');
+      }
+
+      // Check if code matches and hasn't expired
+      if (
+        admin.resetPasswordCode !== code ||
+        !admin.resetPasswordExpiry ||
+        admin.resetPasswordExpiry < new Date()
+      ) {
+        throw new ErrorResponse(400, 'Invalid or expired reset code');
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update admin password and clear reset fields
+      admin.password = hashedPassword;
+      admin.resetPasswordCode = undefined;
+      admin.resetPasswordToken = undefined;
+      admin.resetPasswordExpiry = undefined;
+      admin.updatedAt = new Date();
+      await admin.save();
+
+      // Log password reset
+      await AuditLogService.logAction({
+        adminId: admin._id,
+        adminEmail: admin.email,
+        adminRole: admin.role,
+        action: 'password_reset_completed',
+        resource: 'auth',
+        success: true,
+      });
+
+      return {
+        success: true,
+        message: 'Password reset successful',
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error resetting password', error.message);
     }
   }
 
@@ -545,6 +795,100 @@ class AdminAuthService {
       throw new ErrorResponse(
         500,
         'Error fetching admin activity',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Update admin last active time
+   */
+  static async updateLastActive(adminId: string) {
+    try {
+      await Admin.findByIdAndUpdate(adminId, {
+        lastActiveAt: new Date(),
+      });
+    } catch (error: any) {
+      // Don't throw error for this utility function
+      console.error('Error updating last active time:', error);
+    }
+  }
+
+  /**
+   * Check if admin has permission
+   */
+  static async hasPermission(
+    adminId: string,
+    permission: string
+  ): Promise<boolean> {
+    try {
+      const admin = await Admin.findById(adminId).select('role permissions');
+
+      if (!admin) return false;
+
+      // Super admin has all permissions
+      if (admin.role === 'SUPER_ADMIN') return true;
+
+      // Check if admin has the specific permission
+      return admin.permissions.includes(permission);
+    } catch (error: any) {
+      return false;
+    }
+  }
+
+  /**
+   * Get admins by role
+   */
+  static async getAdminsByRole(role: string) {
+    try {
+      const admins = await Admin.find({
+        role,
+        isActive: true,
+      }).select('-password');
+
+      return admins.map((admin) => admin.toSafeObject());
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching admins by role',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Get admin statistics
+   */
+  static async getAdminStats() {
+    try {
+      const stats = await Admin.aggregate([
+        {
+          $group: {
+            _id: '$role',
+            count: { $sum: 1 },
+            active: {
+              $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] },
+            },
+            inactive: {
+              $sum: { $cond: [{ $eq: ['$isActive', false] }, 1, 0] },
+            },
+          },
+        },
+      ]);
+
+      const totalAdmins = await Admin.countDocuments();
+      const activeAdmins = await Admin.countDocuments({ isActive: true });
+
+      return {
+        total: totalAdmins,
+        active: activeAdmins,
+        inactive: totalAdmins - activeAdmins,
+        byRole: stats,
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching admin statistics',
         error.message
       );
     }

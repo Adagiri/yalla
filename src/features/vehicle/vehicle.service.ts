@@ -23,9 +23,7 @@ class VehicleService {
     sort?: VehicleSort
   ) {
     try {
-      const baseFilter = {
-        $or: [{ isEmailVerified: true }, { isPhoneVerified: true }],
-      };
+      const baseFilter = {};
 
       const data = await listResourcesPagination({
         model: Vehicle,

@@ -3,43 +3,38 @@ import { Pagination } from '../../types/list-resources';
 import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
 import { ErrorResponse } from '../../utils/responses';
 import WalletService from '../../services/wallet.service';
-import PaymentService from '../../services/payment.service';
+import PaymentService from './payment.service';
 import PaystackService from '../../services/paystack.services';
+import { CashoutInput, PaymentFilter, PaymentSort, ProcessTripPaymentInput, TopUpWalletInput, TransactionFilter, TransactionSort } from './payment.types';
 
-interface TopUpWalletInput {
-  amount: number;
-  paymentMethod: 'card' | 'bank_transfer';
-  saveCard?: boolean;
-}
-
-interface ProcessTripPaymentInput {
-  tripId: string;
-  paymentMethod: 'cash' | 'card' | 'wallet';
-  paymentToken?: string;
-  saveCard?: boolean;
-}
-
-interface CashoutInput {
-  amount: number;
-  accountNumber: string;
-  bankCode: string;
-}
-
-interface TransactionFilter {
-  type?: 'credit' | 'debit';
-  purpose?: string;
-  status?: string;
-  paymentMethod?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
-}
-
-interface TransactionSort {
-  field: string;
-  direction: 'ASC' | 'DESC';
-}
 
 class PaymentController {
+  /**
+   * List all payments (Admin only)
+   */
+  static async listPayments(
+    _: any,
+    {
+      pagination,
+      filter,
+      sort,
+    }: {
+      pagination?: Pagination;
+      filter?: PaymentFilter;
+      sort?: PaymentSort;
+    },
+    { res }: ContextType
+  ) {
+    const { data, paginationResult } = await PaymentService.listPayments(
+      pagination,
+      filter,
+      sort
+    );
+
+    setPagePaginationHeaders(res, paginationResult);
+    return data;
+  }
+
   // ===== WALLET OPERATIONS =====
 
   /**

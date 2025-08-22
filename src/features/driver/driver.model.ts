@@ -12,7 +12,7 @@ import { VehicleDocument } from '../vehicle/vehicle.model';
 
 export interface DriverModelType extends Document {
   _id: string;
-  id?: string; // UUID
+  id: string; // UUID
   firstname: string;
   vehicle?: VehicleDocument;
   lastname: string;
@@ -62,12 +62,12 @@ export interface DriverModelType extends Document {
   currentTripId?: string;
 
   // Statistics
-  stats: {
-    totalTrips: number;
-    totalEarnings: number;
-    averageRating: number;
-    completionRate: number;
-  };
+stats: {
+  totalTrips: number;
+  totalEarnings: number;
+  averageRating: number;
+  completionRate: number;
+};
 
   // Vehicle info already exists
   vehicleInspectionDone: boolean;
@@ -364,6 +364,11 @@ driverSchema.virtual('vehicle', {
   justOne: true,
 });
 
+driverSchema.virtual('id').get(function (this: DriverModelType) {
+  return this._id;
+});
+
+
 driverSchema.pre(
   /^find/,
   function (this: mongoose.Query<any, DriverModelType>, next) {
@@ -383,7 +388,7 @@ driverSchema.index({ lastCashoutAt: -1 });
 
 driverSchema.pre(
   /^find/,
-  function (this: mongoose.Query<any, CustomerModelType>, next) {
+  function (this: mongoose.Query<any, DriverModelType>, next) {
     this.populate('vehicle');
     next();
   }

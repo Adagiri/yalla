@@ -7,7 +7,11 @@ import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
 import { ErrorResponse } from '../../utils/responses';
 import Driver from '../driver/driver.model';
 import TripService from './trip.service';
-import { addDriverLocationUpdateJob, addTripUpdateJob } from '../../services/job-processors.service';
+import {
+  addDriverLocationUpdateJob,
+  addTripUpdateJob,
+} from '../../services/job-processors.service';
+import { TripFilter, TripSort } from './trip.type';
 
 interface CreateTripInput {
   customerId: string;
@@ -147,8 +151,6 @@ class TripController {
     return await TripService.getActiveTrip(user.id);
   }
 
-
-
   // Calculate driver earnings
   static async getDriverEarnings(
     _: any,
@@ -167,47 +169,25 @@ class TripController {
     return await TripService.assignTripToDriver(tripId, driverId, user.id);
   }
 
-
-
   // Get all trips (Admin only)
   static async listTrips(
     _: any,
     {
       pagination,
       filter,
-    }: {
-      pagination?: Pagination;
-      filter?: any;
-    },
+      sort,
+    }: { pagination?: Pagination; filter?: TripFilter; sort?: TripSort },
     { res }: ContextType
   ) {
-    // This would need to be implemented in TripService for admin listing
-    // For now, return empty implementation
-    const paginationParams = {
-      page: pagination?.page || 1,
-      limit: pagination?.limit || 10,
-    };
 
-    // Placeholder - implement listTrips in TripService
-    const result = {
-      trips: [],
-      total: 0,
-      page: paginationParams.page,
-      totalPages: 0,
-    };
+    const { data, paginationResult } = await TripService.listTrips(
+      pagination,
+      filter,
+      sort
+    );
 
-    if (res) {
-      setPagePaginationHeaders(res, {
-        totalDocs: result.total,
-        docsRetrieved: result.trips.length,
-        hasNextPage: result.page < result.totalPages,
-        hasPreviousPage: result.page > 1,
-        nextPage: result.page < result.totalPages ? result.page + 1 : undefined,
-        previousPage: result.page > 1 ? result.page - 1 : undefined,
-      });
-    }
-
-    return result.trips;
+    setPagePaginationHeaders(res, paginationResult);
+    return data;
   }
 
   ///////////////////////
@@ -291,6 +271,5 @@ class TripController {
     );
   }
 }
-
 
 export default TripController;

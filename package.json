@@ -12,7 +12,8 @@
     "format": "prettier --write 'src/**/*.{ts,js,json,md}'",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "create-admin": "ts-node src/scripts/create-admin.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.11.2",
@@ -30,6 +31,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.0.1",
     "firebase-admin": "^13.4.0",
     "graphql": "^16.9.0",
     "graphql-date-scalars": "^0.2.0",

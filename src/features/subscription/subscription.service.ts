@@ -6,6 +6,9 @@ import Driver from '../driver/driver.model';
 import WalletService from '../../services/wallet.service';
 import PaystackService from '../../services/paystack.services';
 import { ErrorResponse } from '../../utils/responses';
+import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
+import { Pagination } from '../../types/list-resources';
+import { DriverSubscriptionFilter, DriverSubscriptionSort, SubscriptionPlanFilter, SubscriptionPlanSort } from './subscription.types';
 
 interface SubscribeDriverInput {
   driverId: string;
@@ -23,6 +26,64 @@ interface CreateSubscriptionPlanInput {
 }
 
 class SubscriptionService {
+  /**
+   * List subscription plans with pagination
+   */
+  static async listSubscriptionPlans(
+    pagination?: Pagination,
+    filter?: SubscriptionPlanFilter,
+    sort?: SubscriptionPlanSort
+  ) {
+    try {
+      const baseFilter = {}; // No base filter needed
+
+      const data = await listResourcesPagination({
+        model: SubscriptionPlan,
+        baseFilter,
+        additionalFilter: filter,
+        sortParam: sort,
+        pagination,
+      });
+
+      return data;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching subscription plans',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * List driver subscriptions with pagination
+   */
+  static async listDriverSubscriptions(
+    pagination?: Pagination,
+    filter?: DriverSubscriptionFilter,
+    sort?: DriverSubscriptionSort
+  ) {
+    try {
+      const baseFilter = {}; // No base filter needed
+
+      const data = await listResourcesPagination({
+        model: DriverSubscription,
+        baseFilter,
+        additionalFilter: filter,
+        sortParam: sort,
+        pagination,
+      });
+
+      return data;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching driver subscriptions',
+        error.message
+      );
+    }
+  }
+
   /**
    * Subscribe driver to a plan
    */
@@ -148,7 +209,8 @@ class SubscriptionService {
         },
       };
 
-      const paymentLink = await PaystackService.initializeTransaction(paymentData);
+      const paymentLink =
+        await PaystackService.initializeTransaction(paymentData);
 
       subscription.paymentReference = paymentData.reference;
       await subscription.save();

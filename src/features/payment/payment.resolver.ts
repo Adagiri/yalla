@@ -16,6 +16,11 @@ const paymentResolvers = {
       PaymentController.getWallet
     ),
 
+    listPayments: combineResolvers(
+      protectEntities(['ADMIN']),
+      PaymentController.listPayments
+    ),
+
     // Transaction queries
     getMyTransactions: combineResolvers(
       protectEntities(['DRIVER', 'CUSTOMER']),

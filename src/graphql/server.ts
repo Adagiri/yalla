@@ -12,6 +12,15 @@ import { formatError } from '../utils/error-handler';
 import { corsConfig } from './cors';
 import { getUserInfo } from '../utils/auth-middleware';
 import { ServiceManager } from '../services/service-manager';
+import rateLimit from 'express-rate-limit';
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 5, 
+  message: 'Too many login attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 export const startApolloServer = async (app: express.Application) => {
   await ServiceManager.initialize();
@@ -78,7 +87,7 @@ export const startApolloServer = async (app: express.Application) => {
     context,
   }) as unknown as express.RequestHandler;
 
-  app.use('/graphql', cors(corsConfig), express.json(), apolloMiddleware);
+  app.use('/graphql', cors(corsConfig), express.json(), apolloMiddleware, authLimiter);
 
   return httpServer;
 };

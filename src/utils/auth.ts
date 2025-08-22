@@ -24,9 +24,9 @@ export const generateAuthToken = (payload: any): string => {
   return jwt.sign(payload, ENV.JWT_SECRET_KEY, { expiresIn: expiresIn });
 };
 
-export const generateAdminAuthToken = (payload: any): string => {
-  return jwt.sign(payload, ENV.JWT_SECRET_KEY, { expiresIn: '1d' });
-};
+// export const generateAdminAuthToken = (payload: any): string => {
+//   return jwt.sign(payload, ENV.JWT_SECRET_KEY, { expiresIn: '1d' });
+// };
 
 export const generateVerificationCode = (
   bytes: number,
@@ -66,4 +66,18 @@ const generateRandomNumbers = (length: number): string => {
   return Array.from({ length })
     .map(() => Math.floor(Math.random() * 10))
     .join('');
+};
+
+export const generateAdminAuthToken = (payload: any): string => {
+  // Include admin-specific fields
+  const adminPayload = {
+    id: payload.id,
+    email: payload.email,
+    role: payload.role,
+    permissions: payload.permissions,
+    accountType: 'ADMIN',
+    iat: Math.floor(Date.now() / 1000),
+  };
+
+  return jwt.sign(adminPayload, ENV.JWT_SECRET_KEY, { expiresIn: '24h' });
 };

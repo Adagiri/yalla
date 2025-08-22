@@ -108,8 +108,69 @@ enum SubscriptionPaymentMethod {
   PAYSTACK
 }
 
+input SubscriptionPlanFilter {
+  ids: [ID!]
+  name: String
+  type: [SubscriptionPlanType!]
+  isActive: Boolean
+  minPrice: Float
+  maxPrice: Float
+}
+
+input SubscriptionPlanSort {
+  field: SubscriptionPlanSortField!
+  direction: SortDirection = DESC
+}
+
+enum SubscriptionPlanSortField {
+  name
+  type
+  price
+  createdAt
+  updatedAt
+}
+
+input DriverSubscriptionFilter {
+  ids: [ID!]
+  driverId: ID
+  planId: ID
+  status: [SubscriptionStatus!]
+  startDateFrom: DateTime
+  startDateTo: DateTime
+  endDateFrom: DateTime
+  endDateTo: DateTime
+  autoRenew: Boolean
+}
+
+input DriverSubscriptionSort {
+  field: DriverSubscriptionSortField!
+  direction: SortDirection = DESC
+}
+
+enum DriverSubscriptionSortField {
+  startDate
+  endDate
+  status
+  createdAt
+  updatedAt
+}
+
+
 # Queries
 extend type Query {
+
+    listSubscriptionPlans(
+    pagination: PaginationInput
+    filter: SubscriptionPlanFilter
+    sort: SubscriptionPlanSort
+  ): [SubscriptionPlan!]!
+
+  listDriverSubscriptions(
+    pagination: PaginationInput
+    filter: DriverSubscriptionFilter
+    sort: DriverSubscriptionSort
+  ): [DriverSubscription!]!
+
   # Get active subscription plans
   getActiveSubscriptionPlans: [SubscriptionPlan!]!
 
