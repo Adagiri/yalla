@@ -544,13 +544,20 @@ class NotificationService {
         );
       }
 
-      // Send real-time notifications via WebSocket
-      if (global.websocketService) {
+      const g = globalThis as typeof globalThis & {
+        websocketService?: {
+          sendToUser: (id: string, event: string, data: any) => void;
+        };
+      };
+
+      if (g.websocketService) {
         driverIds.forEach((driverId) => {
-          global.websocketService.sendToUser(driverId, 'new_trip_request', {
-            tripId: content.data.tripId,
-            ...content.data,
-          });
+          if (g.websocketService) {
+            g.websocketService.sendToUser(driverId, 'new_trip_request', {
+              tripId: content.data.tripId,
+              ...content.data,
+            });
+          }
         });
       }
 
@@ -666,6 +673,14 @@ class NotificationService {
       console.error(`Error deleting template "${name}":`, error);
       throw new Error(`Failed to delete email template: ${error.message}`);
     }
+  }
+}
+
+declare namespace NodeJS {
+  interface Global {
+    websocketService?: {
+      sendToUser: (id: string, event: string, data: any) => void;
+    };
   }
 }
 
