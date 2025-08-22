@@ -12,6 +12,7 @@ import Trip from '../trip/trip.model';
 import Admin from './admin.model';
 import { ErrorResponse } from '../../utils/responses';
 import { ContextType } from '../../types';
+import { AccountType } from '../../constants/general';
 
 class AdminController {
   // ===== AUTHENTICATION & ADMIN MANAGEMENT =====
@@ -75,6 +76,8 @@ class AdminController {
       email: 'ibrahimridwan477@gmail.com',
       id: '1234567890',
       role: 'SUPER_ADMIN',
+      accountType: AccountType.ADMIN,
+      name: user.name
     };
     try {
       const admin = await AdminAuthService.createAdmin(input, user.id);

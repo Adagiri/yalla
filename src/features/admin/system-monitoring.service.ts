@@ -388,8 +388,11 @@ class SystemMonitoringService {
     try {
       const startTime = Date.now();
 
-      // Test database connection
-      await mongoose.connection.db.admin().ping();
+      if (mongoose?.connection.db) {
+        // Test database connection
+        await mongoose.connection.db.admin().ping();
+      }
+    
 
       const responseTime = Date.now() - startTime;
 

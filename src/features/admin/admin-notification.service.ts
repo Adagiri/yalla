@@ -181,10 +181,10 @@ class AdminNotificationService {
 
       // Publish real-time notification
       pubsub.publish(SUBSCRIPTION_EVENTS.ADMIN_NOTIFICATION, {
-        adminNotificationReceived: notification.toSafeObject(),
+        adminNotificationReceived: notification.toObject(),
       });
 
-      return notification.toSafeObject();
+      return notification.toObject();
     } catch (error: any) {
       throw new ErrorResponse(
         500,
@@ -259,7 +259,7 @@ class AdminNotificationService {
       // Publish real-time notifications
       savedNotifications.forEach((notification) => {
         pubsub.publish(SUBSCRIPTION_EVENTS.ADMIN_NOTIFICATION, {
-          adminNotificationReceived: notification.toSafeObject(),
+          adminNotificationReceived: notification.toObject(),
         });
       });
 
@@ -297,7 +297,7 @@ class AdminNotificationService {
         throw new ErrorResponse(404, 'Notification not found');
       }
 
-      return notification.toSafeObject();
+      return notification.toObject();
     } catch (error: any) {
       throw new ErrorResponse(
         500,
@@ -408,7 +408,7 @@ class AdminNotificationService {
       // Publish real-time notifications
       savedNotifications.forEach((notification) => {
         pubsub.publish(SUBSCRIPTION_EVENTS.ADMIN_NOTIFICATION, {
-          adminNotificationReceived: notification.toSafeObject(),
+          adminNotificationReceived: notification.toObject(),
         });
       });
 

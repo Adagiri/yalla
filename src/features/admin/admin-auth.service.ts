@@ -29,7 +29,7 @@ interface AdminUpdateInput {
   firstname?: string;
   lastname?: string;
   email?: string;
-  role?: string;
+  role?: 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'SUPPORT' | 'ANALYST';
   department?: string;
   employeeId?: string;
   phone?: string;
@@ -325,16 +325,19 @@ class AdminAuthService {
       };
 
       // Update fields
-      Object.keys(input).forEach((key) => {
-        if (input[key as keyof AdminUpdateInput] !== undefined) {
-          if (key === 'email') {
-            admin[key] = input[key]!.toLowerCase();
-          } else {
-            admin[key as keyof AdminUpdateInput] =
-              input[key as keyof AdminUpdateInput];
-          }
-        }
-      });
+      if (input.firstname !== undefined) admin.firstname = input.firstname;
+      if (input.lastname !== undefined) admin.lastname = input.lastname;
+      if (input.email !== undefined) admin.email = input.email.toLowerCase();
+      if (input.role !== undefined) admin.role = input.role;
+      if (input.department !== undefined) admin.department = input.department;
+      if (input.employeeId !== undefined) admin.employeeId = input.employeeId;
+      if (input.phone !== undefined) admin.phone = input.phone;
+      if (input.permissions !== undefined)
+        admin.permissions = input.permissions;
+      if (input.timezone !== undefined) admin.timezone = input.timezone;
+      if (input.language !== undefined) admin.language = input.language;
+      if (input.profilePhoto !== undefined)
+        admin.profilePhoto = input.profilePhoto;
 
       admin.updatedAt = new Date();
       await admin.save();

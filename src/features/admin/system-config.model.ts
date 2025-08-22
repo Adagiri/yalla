@@ -1,8 +1,10 @@
 
 
+import { v4 as uuidv4 } from 'uuid';
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface SystemConfigDocument extends Document {
+  _id: string;
   category: string;
   key: string;
   value: any;
@@ -33,6 +35,7 @@ export interface SystemConfigDocument extends Document {
 
 const systemConfigSchema = new Schema(
   {
+    _id: { type: String, default: uuidv4 },
     category: { type: String, required: true },
     key: { type: String, required: true },
     value: { type: Schema.Types.Mixed, required: true },

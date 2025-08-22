@@ -245,10 +245,12 @@ class TripNotificationService {
       if (global.websocketService) {
         // Send individual notifications
         driverIds.forEach((driverId) => {
-          global.websocketService.sendToUser(driverId, 'new_trip_request', {
-            ...notificationData,
-            timestamp: new Date(),
-          });
+          if (global.websocketService) {
+            global.websocketService.sendToUser(driverId, 'new_trip_request', {
+              ...notificationData,
+              timestamp: new Date(),
+            });
+          }
         });
 
         // Schedule auto-expiry
@@ -273,11 +275,11 @@ class TripNotificationService {
     notificationData: TripNotificationData
   ): Promise<void> {
     try {
-      await NotificationService.sendDriverBroadcast(
-        driverIds,
-        notificationData.tripId,
-        notificationData
-      );
+      // await NotificationService.sendPushNotification(
+      //   driverIds,
+      //   notificationData.tripId,
+      //   notificationData
+      // );
       console.log(`📱 Push notifications sent to ${driverIds.length} drivers`);
     } catch (error) {
       console.error('❌ Error sending push notifications:', error);
@@ -330,11 +332,17 @@ class TripNotificationService {
     setTimeout(() => {
       if (global.websocketService) {
         driverIds.forEach((driverId) => {
-          global.websocketService.sendToUser(driverId, 'trip_request_expired', {
-            tripId,
-            message: 'Trip request has expired',
-            timestamp: new Date(),
-          });
+          if (global.websocketService) {
+            global.websocketService.sendToUser(
+              driverId,
+              'trip_request_expired',
+              {
+                tripId,
+                message: 'Trip request has expired',
+                timestamp: new Date(),
+              }
+            );
+          }
         });
       }
     }, 30000); // 30 seconds
@@ -405,7 +413,7 @@ class TripNotificationService {
   /**
    * Notify customer about trip cancellation
    */
-   static async notifyCustomerTripCancelled(
+  static async notifyCustomerTripCancelled(
     trip: any,
     reason: string
   ): Promise<void> {

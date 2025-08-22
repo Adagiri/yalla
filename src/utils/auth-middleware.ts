@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { ErrorResponse } from './responses';
-import Admin from '../features/admin/admin.model';
+import Admin, { AdminDocument } from '../features/admin/admin.model';
 import Driver from '../features/driver/driver.model';
 import Customer from '../features/customer/customer.model';
 import { skip } from 'graphql-resolvers';
@@ -29,7 +29,7 @@ export const protectAdmin = async (
     throw new ErrorResponse(401, 'Please log in to continue');
   }
 
-  const userRecord = await Admin.findById(user.id);
+  const userRecord: AdminDocument | null = await Admin.findById(user.id);
   if (!userRecord) {
     throw new ErrorResponse(404, 'Admin user does not exist.');
   }
@@ -180,7 +180,7 @@ export const protectEntities = (requiredEntities: string[]) => {
         }
       }
     }
-      console.log(user);
+    console.log(user);
 
     // Check Driver
     if (requiredEntities.includes('DRIVER')) {
@@ -230,15 +230,16 @@ export const requirePermission = (permission: string) => {
       throw new ErrorResponse(403, 'Admin account is deactivated.');
     }
 
-    // Check if user has specific permission
-    const userPermissions = adminRecord.permissions || [];
-    const rolePermissions =
-      ROLE_PERMISSIONS[adminRecord.role as keyof typeof ROLE_PERMISSIONS] || [];
+    const userPermissions: string[] = adminRecord.permissions || [];
+    const rolePermissions: string[] =
+      (ROLE_PERMISSIONS[
+        adminRecord.role as keyof typeof ROLE_PERMISSIONS
+      ] as string[]) || [];
 
     const hasPermission =
       userPermissions.includes(permission) ||
       rolePermissions.includes(permission) ||
-      adminRecord.role === 'SUPER_ADMIN'; // Super admin has all permissions
+      adminRecord.role === 'SUPER_ADMIN';
 
     if (!hasPermission) {
       throw new ErrorResponse(403, `Permission required: ${permission}`);
@@ -278,8 +279,10 @@ export const requireAllPermissions = (permissions: string[]) => {
     }
 
     const userPermissions = adminRecord.permissions || [];
-    const rolePermissions =
-      ROLE_PERMISSIONS[adminRecord.role as keyof typeof ROLE_PERMISSIONS] || [];
+    const rolePermissions: string[] =
+      (ROLE_PERMISSIONS[
+        adminRecord.role as keyof typeof ROLE_PERMISSIONS
+      ] as string[]) || [];
     const allUserPermissions = [...userPermissions, ...rolePermissions];
 
     const hasAllPermissions = permissions.every((permission) =>
@@ -389,20 +392,15 @@ export const requireRole = (roles: string[]) => {
 };
 
 // Helper function to check if user has permission (for use in resolvers)
-export const hasPermission = (user: any, permission: string): boolean => {
-  if (!user) return false;
-
-  // Super admin has all permissions
-  if (user.role === 'SUPER_ADMIN') return true;
-
-  const userPermissions = user.permissions || [];
-  const rolePermissions =
-    ROLE_PERMISSIONS[user.role as keyof typeof ROLE_PERMISSIONS] || [];
-
+export function hasPermission(
+  permission: string,
+  userPermissions: string[],
+  rolePermissions: string[]
+): boolean {
   return (
     userPermissions.includes(permission) || rolePermissions.includes(permission)
   );
-};
+}
 
 // Helper function to check if user has role (for use in resolvers)
 export const hasRole = (user: any, roles: string[]): boolean => {

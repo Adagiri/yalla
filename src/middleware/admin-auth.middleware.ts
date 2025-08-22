@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import Admin from '../features/admin/admin.model';
-import AdminAuthService from '../services/admin-auth.service';
 import { ErrorResponse } from '../utils/responses';
+import AdminAuthService from '../features/admin/admin-auth.service';
 
 export interface AdminRequest extends Request {
   admin?: any;

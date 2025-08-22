@@ -43,7 +43,7 @@ interface DashboardMetrics {
   recentActivity: Array<{
     type: string;
     description: string;
-    timestamp: Date;
+    timestamp?: Date;
     amount?: number;
   }>;
 }
@@ -524,8 +524,8 @@ class AdminAnalyticsService {
 
     return recentTrips.map((trip) => ({
       type: 'trip',
-      description: `Trip from ${trip.route?.pickup?.address || 'Unknown'} to ${trip.route?.destination?.address || 'Unknown'}`,
-      timestamp: trip.createdAt,
+      description: `Trip from ${trip.pickup?.address || 'Unknown'} to ${trip.destination?.address || 'Unknown'}`,
+      timestamp: trip.startedAt,
       amount: trip.pricing?.finalAmount,
     }));
   }

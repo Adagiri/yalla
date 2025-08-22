@@ -198,6 +198,7 @@ class AuditLogService {
           ...log,
           id: log._id,
           timeAgo: this.getTimeAgo(log.timestamp),
+          resourceId: query.resource.id
         })),
         total,
         page,
@@ -398,7 +399,7 @@ class AuditLogService {
           successfulActions: summaryData.successfulActions,
           failedActions: summaryData.failedActions,
           successRate: Math.round(successRate * 100) / 100,
-          uniqueAdmins: summaryData.uniqueAdmins.filter((id) => id !== null)
+          uniqueAdmins: summaryData.uniqueAdmins.filter((id: string) => id !== null)
             .length,
           uniqueResources: summaryData.uniqueResources.length,
           uniqueActions: summaryData.uniqueActions.length,

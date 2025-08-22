@@ -1510,7 +1510,6 @@ class TripService {
         surgeActive: surgeMultiplier > 1.0,
         surgeMultiplier: surgeMultiplier,
         estimatedArrival: Math.floor(route.duration), // Duration in seconds
-        polyline: route.polyline || null,
       };
 
       console.log(
