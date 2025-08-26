@@ -212,11 +212,7 @@ export class RedisCacheService {
   ): Promise<void> {
     const key = `incoming_trips:${driverId}:${tripData.tripId}`;
 
-    await this.redis.setex(
-      key,
-      60, // 1 minute TTL
-      JSON.stringify(tripData)
-    );
+    await this.redis.set(key, JSON.stringify(tripData));
   }
 
   /**
@@ -305,9 +301,10 @@ export class RedisCacheService {
     expiredCount: number;
     removedInvalidCount: number;
   }> {
+    console.log(driverId)
     const pattern = `incoming_trips:${driverId}:*`;
     const keys = await this.redis.keys(pattern);
-
+    console.log('keys: ', keys);
     if (keys.length === 0) {
       return { expiredTripIds: [], expiredCount: 0, removedInvalidCount: 0 };
     }
@@ -327,9 +324,9 @@ export class RedisCacheService {
       if (!err && data) {
         try {
           const tripData: IncomingTripData = JSON.parse(data as string);
-
+          console.log(tripData, 'trip data');
           // Check if expired (1 minute)
-          if (now > tripData.expiresAt) {
+          if (now > new Date(tripData.expiresAt)) {
             expiredCount++;
             expiredTripIds.push(tripData.tripId);
 

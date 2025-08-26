@@ -529,9 +529,8 @@ class TripService {
       // Get nearby trip requests from last 10 minutes
       const recentTrips = await Trip.countDocuments({
         'pickup.location': {
-          $near: {
-            $geometry: { type: 'Point', coordinates: location },
-            $maxDistance: 2000,
+          $geoWithin: {
+            $centerSphere: [location, 2000 / 6378100], // 2000 meters radius
           },
         },
         requestedAt: { $gte: new Date(Date.now() - 10 * 60 * 1000) },
@@ -557,7 +556,6 @@ class TripService {
       return 1.0;
     }
   }
-
   /**
    * Calculate trip pricing
    */
