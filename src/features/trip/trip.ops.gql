@@ -79,7 +79,7 @@ type PathPoint {
   timestamp: DateTime!
 }
 
-type DriverLocationInfo {
+type DriverTripLocationInfo {
   coordinates: [Float!]
   heading: Float
   speed: Float
@@ -118,7 +118,7 @@ type Trip {
   cancelledAt: DateTime
 
   # Real-time info
-  driverLocation: DriverLocationInfo
+  driverLocation: DriverTripLocationInfo
   verificationPin: String!
 
   # Ratings
@@ -144,7 +144,7 @@ input CoordinatesInput {
 
 input LocationInput {
   address: String!
-  coordinates: CoordinatesInput!
+  coordinates: [Float!]!
 }
 
 input CreateTripInput {
@@ -210,7 +210,6 @@ enum TripSortField {
   updatedAt
 }
 
-
 input TripEstimateInput {
   pickup: CoordinatesInput!
   destination: CoordinatesInput!
@@ -261,6 +260,31 @@ type TripActionResponse {
   message: String!
 }
 
+type IncomingTrip {
+  tripId: ID!
+  customerId: ID!
+  customerInfo: CustomerInfo!
+  pickup: TripLocation!
+  destination: TripLocation!
+  pricing: TripPricing!
+  paymentMethod: PaymentMethod!
+  requestedAt: DateTime!
+  expiresAt: DateTime!
+}
+
+type CustomerInfo {
+  name: String!
+  phone: String!
+  photo: String
+}
+
+type DriverQueueStats {
+  incomingTripsCount: Int!
+  isOnline: Boolean!
+  isAvailable: Boolean!
+  lastLocationUpdate: DateTime
+}
+
 # ===== QUERIES & MUTATIONS =====
 extend type Query {
   # Get trip estimate
@@ -291,6 +315,12 @@ extend type Query {
     dateFrom: DateTime
     dateTo: DateTime
   ): DriverEarnings!
+
+  # Get driver's incoming trip requests
+  getIncomingTrips: [IncomingTrip!]!
+
+  # Get driver's queue statistics
+  getDriverQueueStats: DriverQueueStats!
 }
 
 extend type Mutation {

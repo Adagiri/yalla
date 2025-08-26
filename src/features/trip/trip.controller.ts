@@ -11,21 +11,12 @@ import {
   addDriverLocationUpdateJob,
   addTripUpdateJob,
 } from '../../services/job-processors.service';
-import { TripFilter, TripSort } from './trip.type';
+import { CreateTripInput, TripFilter, TripSort } from './trip.type';
+import { BackgroundRunnersService } from '../../services/background-runners.service';
+import { cacheService } from '../../services/redis-cache.service';
+import { AccountType } from '../../constants/general';
 
-interface CreateTripInput {
-  customerId: string;
-  pickup: {
-    address: string;
-    coordinates: [number, number];
-  };
-  destination: {
-    address: string;
-    coordinates: [number, number];
-  };
-  paymentMethod: 'cash' | 'card' | 'wallet';
-  priceOffered?: number;
-}
+
 
 interface UpdateDriverLocationInput {
   tripId: string;
@@ -179,7 +170,6 @@ class TripController {
     }: { pagination?: Pagination; filter?: TripFilter; sort?: TripSort },
     { res }: ContextType
   ) {
-
     const { data, paginationResult } = await TripService.listTrips(
       pagination,
       filter,
@@ -269,6 +259,37 @@ class TripController {
       input.pickup.coordinates,
       input.destination.coordinates
     );
+  }
+
+  /**
+   * Get incoming trips for driver (from Redis)
+   */
+  static async getIncomingTrips(_: any, __: any, { user }: ContextType) {
+    if (user.accountType === AccountType.DRIVER) {
+      throw new ErrorResponse(403, 'Only drivers can access incoming trips');
+    }
+
+    return await BackgroundRunnersService.getIncomingTripsForDriver(user.id);
+  }
+
+  /**
+   * Get driver's queue stats
+   */
+  static async getDriverQueueStats(_: any, __: any, { user }: ContextType) {
+    if (user.accountType === AccountType.DRIVER) {
+      throw new ErrorResponse(403, 'Only drivers can access queue stats');
+    }
+
+    const incomingTrips =
+      await BackgroundRunnersService.getIncomingTripsForDriver(user.id);
+    const driverLocation = await cacheService.getDriverLocation(user.id);
+
+    return {
+      incomingTripsCount: incomingTrips.length,
+      isOnline: driverLocation?.isOnline || false,
+      isAvailable: driverLocation?.isAvailable || false,
+      lastLocationUpdate: driverLocation?.updatedAt || null,
+    };
   }
 }
 

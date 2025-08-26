@@ -69,4 +69,7 @@ extend type Subscription {
 
   # Trip lifecycle updates for real-time frontend updates
   tripLifecycleUpdate(tripId: ID!): TripLifecycleUpdatePayload!
+
+  # Driver gets notified of new incoming trips
+  incomingTripsUpdated(driverId: ID!): [IncomingTrip!]!
 }

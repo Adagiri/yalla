@@ -28,7 +28,6 @@ interface TripNotificationData {
     duration: number;
   };
   paymentMethod: string;
-  tripType: string;
   customerInfo: {
     name: string;
     phone?: string;
@@ -194,7 +193,6 @@ class TripNotificationService {
         duration: trip.route.duration,
       },
       paymentMethod: trip.paymentMethod,
-      tripType: trip.tripType,
       customerInfo: {
         name: customer
           ? `${customer.firstname || ''} ${customer.lastname || ''}`.trim()

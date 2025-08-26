@@ -1,5 +1,6 @@
 import { AccountLevel, AuthChannel } from '../../constants/general';
 
+
 export interface CreateTripInput {
   customerId: string;
   pickup: {
@@ -11,7 +12,7 @@ export interface CreateTripInput {
     coordinates: [number, number];
   };
   paymentMethod: 'cash' | 'card' | 'wallet';
-  priceOffered?: number;
+  priceOffered?: number; // Customer can offer higher price
 }
 
 export interface TripFilter {

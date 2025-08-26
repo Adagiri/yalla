@@ -93,7 +93,6 @@ export interface TripDocument extends Document {
   customerReview?: string;
 
   // Metadata
-  tripType: 'within_estate' | 'outside_estate';
   estimatedArrival?: Date;
   actualPath?: Array<{
     type: 'Point';
@@ -245,11 +244,7 @@ const TripSchema = new Schema<TripDocument>(
     driverReview: { type: String },
     customerReview: { type: String },
 
-    tripType: {
-      type: String,
-      enum: ['within_estate', 'outside_estate'],
-      required: true,
-    },
+
 
     estimatedArrival: { type: Date },
 

@@ -14,23 +14,11 @@ import PaymentModelService from '../payment-model/payment-model.services';
 import { SubscriptionService } from '../../services/subscription.service';
 import { queueService } from '../../services/redis-queue.service';
 import { cacheService } from '../../services/redis-cache.service';
-import { TripFilter, TripSort } from './trip.type';
+import { CreateTripInput, TripFilter, TripSort } from './trip.type';
 import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
 import { Pagination } from '../../types/list-resources';
+import { BackgroundRunnersService } from '../../services/background-runners.service';
 
-interface CreateTripInput {
-  customerId: string;
-  pickup: {
-    address: string;
-    coordinates: [number, number];
-  };
-  destination: {
-    address: string;
-    coordinates: [number, number];
-  };
-  paymentMethod: 'cash' | 'card' | 'wallet';
-  priceOffered?: number; // Customer can offer higher price
-}
 
 class TripService {
   static async listTrips(
@@ -96,25 +84,20 @@ class TripService {
     }
   }
 
+  // src/features/trip/trip.service.ts - Modified createTrip method
+
   static async createTrip(input: CreateTripInput) {
     const session = await mongoose.startSession();
 
     try {
       session.startTransaction();
 
-      // Validate customer
-      const customer = await Customer.findById(input.customerId);
-      if (!customer) {
-        throw new ErrorResponse(404, 'Customer not found');
-      }
-
-      // Get route information
+      // Calculate route and pricing (existing logic)
       const route = await AmazonLocationService.calculateRoute(
         input.pickup.coordinates,
         input.destination.coordinates
       );
-
-      // Calculate base pricing
+      console.log('route: ', route);
       const surgeMultiplier = await this.calculateSurgeMultiplier(
         input.pickup.coordinates
       );
@@ -124,12 +107,11 @@ class TripService {
         surgeMultiplier
       );
 
-      // Apply customer's offered price if higher
       if (input.priceOffered && input.priceOffered > pricing.total) {
         pricing.total = input.priceOffered;
       }
 
-      // Create trip
+      // Create trip with status "searching"
       const trip = new Trip({
         customerId: input.customerId,
         pickup: {
@@ -159,47 +141,21 @@ class TripService {
         },
         paymentMethod: input.paymentMethod,
         estimatedArrival: new Date(Date.now() + route.duration * 1000),
-        status: 'searching',
+        status: 'searching', // Just set status, no immediate processing
       });
 
       await trip.save({ session });
+      await session.commitTransaction();
 
-      // Cache trip request for background processing
-      await cacheService.cacheTripRequest(trip._id.toString(), {
-        tripId: trip._id.toString(),
-        customerId: input.customerId,
-        pickup: input.pickup,
-        destination: input.destination,
-        pricing: trip.pricing,
-        paymentMethod: input.paymentMethod,
-        requestedAt: new Date(),
-        searchRadius: 5, // Start with 5km radius
-        attempts: 0,
-      });
-
-      // Add background job to find drivers
-      await queueService.addJob(
-        'FIND_DRIVERS',
-        {
-          tripId: trip._id.toString(),
-        },
-        {
-          priority: 10, // High priority
-          maxAttempts: 5,
-        }
-      );
-
-      // Publish trip lifecycle update
+      // Only publish trip lifecycle update - no background job triggering
       await this.publishTripLifecycleUpdate(trip._id.toString(), {
         status: 'searching',
-        message: 'Searching for nearby drivers...',
+        message: 'Trip created, waiting for driver search...',
         trip: trip.toObject(),
       });
 
-      await session.commitTransaction();
-
       console.log(
-        `🚗 Trip created: ${trip.tripNumber} - Background search started`
+        `🚗 Trip created: ${trip.tripNumber} - Will be processed by background runner`
       );
       return trip;
     } catch (error: any) {
@@ -389,94 +345,133 @@ class TripService {
     }
   }
 
-  /**
-   * Driver accepts trip - background processing
-   */
   static async acceptTrip(tripId: string, driverId: string) {
     const session = await mongoose.startSession();
 
     try {
       session.startTransaction();
 
-      const [trip, driver] = await Promise.all([
-        Trip.findById(tripId),
-        Driver.findById(driverId).populate('vehicle'),
-      ]);
+      // 1. Check if driver has this trip in their incoming trips
+      const incomingTrips =
+        await BackgroundRunnersService.getIncomingTripsForDriver(driverId);
+      const incomingTrip = incomingTrips.find((t) => t.tripId === tripId);
 
-      if (!trip) throw new ErrorResponse(404, 'Trip not found');
-      if (!driver) throw new ErrorResponse(404, 'Driver not found');
-
-      if (trip.status !== 'searching') {
-        throw new ErrorResponse(400, 'Trip is no longer available');
+      if (!incomingTrip) {
+        throw new ErrorResponse(
+          404,
+          'Trip not found in your incoming requests'
+        );
       }
 
-      // Check if driver is available in cache
-      const driverLocation = await cacheService.getDriverLocation(driverId);
-      if (!driverLocation || !driverLocation.isAvailable) {
-        throw new ErrorResponse(400, 'Driver is not available');
+      // 2. Check if trip is still available for acceptance
+      const trip = await Trip.findById(tripId);
+      if (!trip) {
+        throw new ErrorResponse(404, 'Trip not found');
       }
 
-      // Update trip
-      trip.driverId = driverId;
-      trip.status = 'driver_assigned';
-      trip.acceptedAt = new Date();
+      if (trip.status !== 'drivers_found') {
+        // Remove from driver's incoming trips since it's no longer available
+        await BackgroundRunnersService.removeIncomingTripForDriver(
+          driverId,
+          tripId
+        );
+        throw new ErrorResponse(409, 'Trip no longer available for acceptance');
+      }
 
-      // Calculate ETA to pickup
-      const routeToPickup = await AmazonLocationService.calculateRoute(
-        driverLocation.coordinates,
-        trip.pickup.location.coordinates
-      );
+      // 3. Check driver availability
+      const driver = await Driver.findById(driverId).populate('vehicle');
+      if (!driver) {
+        throw new ErrorResponse(404, 'Driver not found');
+      }
 
-      trip.estimatedArrival = new Date(
-        Date.now() + routeToPickup.duration * 1000
-      );
-      await trip.save({ session });
+      if (!driver.isAvailable || !driver.isOnline) {
+        throw new ErrorResponse(400, 'Driver not available');
+      }
 
-      // Update driver availability in cache
-      await cacheService.updateDriverLocation(driverId, {
-        ...driverLocation,
-        isAvailable: false,
-      });
-
-      // Update driver in database
-      driver.isAvailable = false;
-      driver.currentTripId = tripId;
-      await driver.save({ session });
-
-      // Cache active trip state
-      await cacheService.cacheActiveTripState(tripId, {
+      // 4. Accept the trip
+      const updatedTrip = await Trip.findByIdAndUpdate(
         tripId,
+        {
+          $set: {
+            driverId: driverId,
+            status: 'driver_assigned',
+            acceptedAt: new Date(),
+          },
+        },
+        { new: true, session }
+      );
+
+      // 5. Update driver availability
+      await Driver.findByIdAndUpdate(
         driverId,
-        customerId: trip.customerId,
-        status: 'driver_assigned',
-        estimatedArrival: trip.estimatedArrival,
-      });
+        {
+          $set: {
+            isAvailable: false,
+            currentTripId: tripId,
+          },
+        },
+        { session }
+      );
 
-      // Clean up trip request cache
-      await cacheService.removeTripRequest(tripId);
+      // 6. Remove incoming trip from ALL drivers' Redis queues
+      await BackgroundRunnersService.clearIncomingTripForAllDrivers(tripId);
 
-      // Publish updates
-      await this.publishTripLifecycleUpdate(tripId, {
-        status: 'driver_assigned',
-        message: 'Driver assigned and on the way',
-        driver: {
+      await session.commitTransaction();
+
+      // 7. Publish updates
+      await Promise.all([
+        // Notify customer that driver accepted
+        SubscriptionService.publishTripAccepted(tripId, trip.customerId, {
           id: driver._id,
           name: `${driver.firstname} ${driver.lastname}`,
           phone: driver.phone,
           photo: driver.profilePhoto,
-          rating: driver.stats?.averageRating || 0,
           vehicle: driver.vehicle,
-        },
-        estimatedArrival: trip.estimatedArrival,
-      });
+          rating: driver.stats.averageRating,
+        }),
 
-      await session.commitTransaction();
+        // Update trip lifecycle
+        SubscriptionService.publishTripLifecycleUpdate({
+          tripId: tripId,
+          status: 'driver_assigned',
+          message: `Driver ${driver.firstname} ${driver.lastname} accepted the trip`,
+          driver: {
+            id: driver._id,
+            name: `${driver.firstname} ${driver.lastname}`,
+            phone: driver.phone,
+          },
+          timestamp: new Date(),
+        }),
 
-      console.log(`✅ Trip ${tripId} accepted by driver ${driverId}`);
-      return trip;
+        // Update trip status for real-time tracking
+        SubscriptionService.publishTripStatusChanged({
+          _id: tripId,
+          status: 'driver_assigned',
+          driverId: driverId,
+          customerId: trip.customerId,
+          driver: driver,
+          acceptedAt: new Date(),
+        }),
+      ]);
+
+      console.log(
+        `✅ Trip ${trip.tripNumber} accepted by driver ${driver.firstname} ${driver.lastname}`
+      );
+
+      return {
+        success: true,
+        message: 'Trip accepted successfully',
+        trip: updatedTrip,
+        driver: driver,
+      };
     } catch (error: any) {
       await session.abortTransaction();
-      throw error;
+
+      if (error instanceof ErrorResponse) {
+        throw error;
+      }
+
+      throw new ErrorResponse(500, 'Error accepting trip', error.message);
     } finally {
       session.endSession();
     }

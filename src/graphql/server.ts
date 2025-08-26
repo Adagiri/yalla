@@ -13,10 +13,11 @@ import { corsConfig } from './cors';
 import { getUserInfo } from '../utils/auth-middleware';
 import { ServiceManager } from '../services/service-manager';
 import rateLimit from 'express-rate-limit';
+import { BackgroundRunnersService } from '../services/background-runners.service';
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 5, 
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   message: 'Too many login attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -24,16 +25,18 @@ const authLimiter = rateLimit({
 
 export const startApolloServer = async (app: express.Application) => {
   await ServiceManager.initialize();
-
+  await BackgroundRunnersService.start();
   // Graceful shutdown
   process.on('SIGTERM', async () => {
     console.log('SIGTERM received, shutting down gracefully');
+    BackgroundRunnersService.stop();
     await ServiceManager.shutdown();
     process.exit(0);
   });
 
   process.on('SIGINT', async () => {
     console.log('SIGINT received, shutting down gracefully');
+    BackgroundRunnersService.stop();
     await ServiceManager.shutdown();
     process.exit(0);
   });
@@ -87,7 +90,13 @@ export const startApolloServer = async (app: express.Application) => {
     context,
   }) as unknown as express.RequestHandler;
 
-  app.use('/graphql', cors(corsConfig), express.json(), apolloMiddleware, authLimiter);
+  app.use(
+    '/graphql',
+    cors(corsConfig),
+    express.json(),
+    apolloMiddleware,
+    authLimiter
+  );
 
   return httpServer;
 };

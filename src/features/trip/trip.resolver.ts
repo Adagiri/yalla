@@ -31,8 +31,6 @@ const tripResolvers = {
       TripController.getDriverEarnings
     ),
 
-
-
     getTripEstimate: combineResolvers(
       protectEntities(['CUSTOMER', 'ADMIN']), // Only customers and admins can get estimates
       TripController.getTripEstimate
@@ -42,6 +40,18 @@ const tripResolvers = {
     listTrips: combineResolvers(
       protectEntities(['ADMIN']),
       TripController.listTrips
+    ),
+
+    // Get driver's incoming trips
+    getIncomingTrips: combineResolvers(
+      protectEntities(['DRIVER']),
+      TripController.getIncomingTrips
+    ),
+
+    // Get driver's queue stats
+    getDriverQueueStats: combineResolvers(
+      protectEntities(['DRIVER']),
+      TripController.getDriverQueueStats
     ),
   },
 
@@ -170,6 +180,16 @@ const tripResolvers = {
         (payload, variables, context) => {
           // Only for the specific trip
           return payload.driverLocationUpdate.tripId === variables.tripId;
+        }
+      ),
+    },
+
+    incomingTripsUpdated: {
+      subscribe: withFilter(
+        () => pubsub.asyncIterator('INCOMING_TRIPS_UPDATED'),
+        (payload, variables, context) => {
+          // Only send to the specific driver
+          return payload.incomingTripsUpdated.driverId === variables.driverId;
         }
       ),
     },

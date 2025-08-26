@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { ENV } from '../config/env';
+import { IncomingTripData } from '../types/trip';
 
 export interface DriverLocation {
   driverId: string;
@@ -195,6 +196,218 @@ export class RedisCacheService {
     const geoKey = 'drivers:geo';
 
     await Promise.all([this.redis.del(key), this.redis.zrem(geoKey, driverId)]);
+  }
+  /**
+   * =================
+   * INCOMING TRIPS MANAGEMENT
+   * =================
+   */
+
+  /**
+   * Create incoming trip in Redis for driver
+   */
+  async createIncomingTripInRedis(
+    driverId: string,
+    tripData: IncomingTripData
+  ): Promise<void> {
+    const key = `incoming_trips:${driverId}:${tripData.tripId}`;
+
+    await this.redis.setex(
+      key,
+      60, // 1 minute TTL
+      JSON.stringify(tripData)
+    );
+  }
+
+  /**
+   * Get all incoming trips for a driver
+   */
+  async getIncomingTripsForDriver(
+    driverId: string
+  ): Promise<IncomingTripData[]> {
+    const pattern = `incoming_trips:${driverId}:*`;
+    const keys = await this.redis.keys(pattern);
+
+    if (keys.length === 0) return [];
+
+    const pipeline = this.redis.pipeline();
+    keys.forEach((key) => pipeline.get(key));
+
+    const results = await pipeline.exec();
+    const trips: IncomingTripData[] = [];
+
+    results?.forEach(([err, data]) => {
+      if (!err && data) {
+        try {
+          trips.push(JSON.parse(data as string));
+        } catch (e) {
+          // Skip invalid data
+        }
+      }
+    });
+
+    return trips;
+  }
+
+  /**
+   * Remove specific incoming trip for driver
+   */
+  async removeIncomingTripForDriver(
+    driverId: string,
+    tripId: string
+  ): Promise<void> {
+    const key = `incoming_trips:${driverId}:${tripId}`;
+    await this.redis.del(key);
+  }
+
+  /**
+   * Clear incoming trip from all drivers' Redis queues
+   */
+  async clearIncomingTripForAllDrivers(tripId: string): Promise<void> {
+    try {
+      // Get all driver IDs from location cache
+      const driverIds = await this.getAllCachedDriverIds();
+
+      // Remove incoming trip from each driver's queue
+      const pipeline = this.redis.pipeline();
+      driverIds.forEach((driverId) => {
+        const incomingTripKey = `incoming_trips:${driverId}:${tripId}`;
+        pipeline.del(incomingTripKey);
+      });
+
+      await pipeline.exec();
+      console.log(
+        `🗑️ Cleared incoming trip ${tripId} from ${driverIds.length} drivers`
+      );
+    } catch (error: any) {
+      console.error(
+        `❌ Failed to clear incoming trip ${tripId}:`,
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Get all cached driver IDs
+   */
+  async getAllCachedDriverIds(): Promise<string[]> {
+    const pattern = `driver:location:*`;
+    const keys = await this.redis.keys(pattern);
+
+    return keys.map((key) => key.split(':')[2]); // Extract driver ID from key
+  }
+
+  /**
+   * Cleanup expired incoming trips for specific driver (Redis operations only)
+   */
+  async cleanupExpiredIncomingTripsForDriver(driverId: string): Promise<{
+    expiredTripIds: string[];
+    expiredCount: number;
+    removedInvalidCount: number;
+  }> {
+    const pattern = `incoming_trips:${driverId}:*`;
+    const keys = await this.redis.keys(pattern);
+
+    if (keys.length === 0) {
+      return { expiredTripIds: [], expiredCount: 0, removedInvalidCount: 0 };
+    }
+
+    let expiredCount = 0;
+    let removedInvalidCount = 0;
+    const expiredTripIds: string[] = [];
+
+    // Check each incoming trip
+    const pipeline = this.redis.pipeline();
+    keys.forEach((key) => pipeline.get(key));
+
+    const results = await pipeline.exec();
+    const now = new Date();
+
+    results?.forEach(([err, data], index) => {
+      if (!err && data) {
+        try {
+          const tripData: IncomingTripData = JSON.parse(data as string);
+
+          // Check if expired (1 minute)
+          if (now > tripData.expiresAt) {
+            expiredCount++;
+            expiredTripIds.push(tripData.tripId);
+
+            // Remove expired trip from Redis
+            this.redis.del(keys[index]);
+          }
+        } catch (e) {
+          // Remove invalid data
+          this.redis.del(keys[index]);
+          removedInvalidCount++;
+        }
+      }
+    });
+
+    return {
+      expiredTripIds,
+      expiredCount,
+      removedInvalidCount,
+    };
+  }
+
+  /**
+   * Get incoming trips statistics
+   */
+  async getIncomingTripsStats(): Promise<{
+    totalCount: number;
+    tripsByDriver: Record<string, number>;
+  }> {
+    const pattern = 'incoming_trips:*';
+    const keys = await this.redis.keys(pattern);
+
+    // Group incoming trips by driver
+    const tripsByDriver: Record<string, number> = {};
+    keys.forEach((key) => {
+      const parts = key.split(':');
+      const driverId = parts[1];
+      tripsByDriver[driverId] = (tripsByDriver[driverId] || 0) + 1;
+    });
+
+    return {
+      totalCount: keys.length,
+      tripsByDriver,
+    };
+  }
+
+  /**
+   * Get detailed Redis inspection for incoming trips
+   */
+  async getIncomingTripsInspection(): Promise<{
+    totalIncomingTrips: number;
+    totalOnlineDrivers: number;
+    tripsByDriver: Record<string, number>;
+    sampleIncomingTrips: string[];
+    timestamp: Date;
+  }> {
+    // Get all incoming trips
+    const incomingTripsPattern = 'incoming_trips:*';
+    const incomingKeys = await this.redis.keys(incomingTripsPattern);
+
+    // Get all driver locations
+    const driverLocationPattern = 'driver:location:*';
+    const driverLocationKeys = await this.redis.keys(driverLocationPattern);
+
+    // Group incoming trips by driver
+    const tripsByDriver: Record<string, number> = {};
+    incomingKeys.forEach((key) => {
+      const parts = key.split(':');
+      const driverId = parts[1];
+      tripsByDriver[driverId] = (tripsByDriver[driverId] || 0) + 1;
+    });
+
+    return {
+      totalIncomingTrips: incomingKeys.length,
+      totalOnlineDrivers: driverLocationKeys.length,
+      tripsByDriver,
+      sampleIncomingTrips: incomingKeys.slice(0, 10), // First 10 keys for debugging
+      timestamp: new Date(),
+    };
   }
 
   // =================
