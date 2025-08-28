@@ -11,9 +11,9 @@ import { context } from './context';
 import { formatError } from '../utils/error-handler';
 import { corsConfig } from './cors';
 import { getUserInfo } from '../utils/auth-middleware';
-import { ServiceManager } from '../services/service-manager';
+// import { ServiceManager } from '../services/service-manager';
 import rateLimit from 'express-rate-limit';
-import { BackgroundRunnersService } from '../services/background-runners.service';
+// import { BackgroundRunnersService } from '../services/background-runners.service';
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -24,22 +24,22 @@ const authLimiter = rateLimit({
 });
 
 export const startApolloServer = async (app: express.Application) => {
-  await ServiceManager.initialize();
-  await BackgroundRunnersService.start();
+  // await ServiceManager.initialize();
+  // await BackgroundRunnersService.start();
   // Graceful shutdown
-  process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, shutting down gracefully');
-    BackgroundRunnersService.stop();
-    await ServiceManager.shutdown();
-    process.exit(0);
-  });
+  // process.on('SIGTERM', async () => {
+  //   console.log('SIGTERM received, shutting down gracefully');
+  //   BackgroundRunnersService.stop();
+  //   await ServiceManager.shutdown();
+  //   process.exit(0);
+  // });
 
-  process.on('SIGINT', async () => {
-    console.log('SIGINT received, shutting down gracefully');
-    BackgroundRunnersService.stop();
-    await ServiceManager.shutdown();
-    process.exit(0);
-  });
+  // process.on('SIGINT', async () => {
+  //   console.log('SIGINT received, shutting down gracefully');
+  //   BackgroundRunnersService.stop();
+  //   await ServiceManager.shutdown();
+  //   process.exit(0);
+  // });
 
   const httpServer = http.createServer(app);
 
