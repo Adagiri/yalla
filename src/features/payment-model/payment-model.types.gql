@@ -82,16 +82,7 @@ input UpdateSubscriptionSettingsInput {
   allowFallbackToCommission: Boolean
 }
 
-# Updated Driver type to include payment model fields
-extend type Driver {
-  paymentModel: PaymentModel!
-  paymentModelHistory: [PaymentModelHistory!]!
-  commissionSettings: CommissionSettings!
-  subscriptionSettings: SubscriptionSettings!
-  earningsBreakdown: EarningsBreakdown!
-  canAcceptRides: Boolean!
-  effectivePaymentModel: PaymentModelCalculation
-}
+
 
 # Updated Trip type to include payment model information
 extend type Trip {

@@ -95,6 +95,14 @@ type Driver {
   driverLicenseBack: String
   vehicleInspectionDone: Boolean!
 
+  paymentModel: PaymentModel!
+  paymentModelHistory: [PaymentModelHistory!]
+  commissionSettings: CommissionSettings
+  subscriptionSettings: SubscriptionSettings
+  earningsBreakdown: EarningsBreakdown
+  canAcceptRides: Boolean
+  effectivePaymentModel: PaymentModelCalculation
+
   isOnline: Boolean
   isAvailable: Boolean
   currentLocation: LocationCoordinate

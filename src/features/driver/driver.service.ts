@@ -55,9 +55,9 @@ class DriverService {
 
   static async getDriversByIds(ids: string[]) {
     try {
-      const drivers = await Driver.find({_id: ids})
-   
-      return drivers
+      const drivers = await Driver.find({ _id: ids });
+
+      return drivers;
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error fetching driver', error.message);
     }
@@ -100,13 +100,13 @@ class DriverService {
 
       // Create the driver record
       const driver = await Driver.create(driverData);
-
       // Send phone verification SMS
       await NotificationService.sendSMS({
         to: phone.fullPhone,
         message: verificationTemplate(code),
       });
 
+      const entity = await Driver.findById(driver._id);
       return { token, entity: driver };
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error registering driver', error.message);

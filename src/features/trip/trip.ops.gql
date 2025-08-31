@@ -36,14 +36,13 @@ enum TimelineEventType {
 }
 
 type LocationCoordinate {
-  coordinates: [Float!]!
+  coordinates: [Float!]
 }
 
 # ===== BASIC TYPES =====
 type TripLocation {
   address: String!
   location: LocationCoordinate!
-  # Removed estate field since we're removing within_estate feature
 }
 
 type RouteInfo {
