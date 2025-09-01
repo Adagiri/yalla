@@ -4,6 +4,7 @@ import { protectEntities } from '../../utils/auth-middleware';
 import { pubsub } from '../../graphql/pubsub';
 import { withFilter } from 'graphql-subscriptions';
 import { SUBSCRIPTION_EVENTS } from '../../graphql/subscription-events';
+import { createDateResolver } from '../../utils/date-resolver';
 
 const tripResolvers = {
   Query: {
@@ -193,6 +194,16 @@ const tripResolvers = {
         }
       ),
     },
+  },
+
+  TripLifecycleUpdatePayload: {
+    timestamp: createDateResolver('timestamp'),
+    estimatedArrival: createDateResolver('estimatedArrival'),
+    actualArrival: createDateResolver('actualArrival'),
+  },
+
+  TripAcceptedPayload: {
+    acceptedAt: createDateResolver('acceptedAt'),
   },
 };
 

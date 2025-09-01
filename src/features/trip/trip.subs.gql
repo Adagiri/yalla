@@ -41,17 +41,21 @@ type TripLifecycleUpdatePayload {
   message: String
   timestamp: DateTime!
 
-  # Optional data based on status
-  trip: Trip
+  # Optional context data
   driver: DriverPartial
   customer: CustomerPartial
+
+  # Event-specific data
   estimatedArrival: DateTime
   actualArrival: DateTime
   location: LocationCoordinate
   searchRadius: Float
   driversNotified: Int
-  reason: String
+  cancellationReason: String
   error: String
+
+  # Additional metadata
+  metadata: JSON
 }
 
 extend type Subscription {

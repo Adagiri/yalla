@@ -98,8 +98,19 @@ export class SubscriptionService {
     timestamp: Date;
     [key: string]: any;
   }) {
+    console.log(data, 'data --');
+    const payload = {
+      ...data,
+      timestamp:
+        data.timestamp instanceof Date
+          ? data.timestamp
+          : new Date(data.timestamp),
+    };
+
+    console.log(payload, 'payload --');
+
     await pubsub.publish(SUBSCRIPTION_EVENTS.TRIP_LIFECYCLE_UPDATE, {
-      tripLifecycleUpdate: data,
+      tripLifecycleUpdate: payload,
     });
   }
 }

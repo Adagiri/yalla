@@ -27,14 +27,14 @@ export class BackgroundRunnersService {
       this.runDriverSearchRunner().catch((error) =>
         console.error('❌ Driver Search Runner error:', error)
       );
-    }, 10000);
+    },60 * 1000);
 
     // Runner 2: Cleanup expired incoming trips every 10 seconds
     this.runner2Interval = setInterval(() => {
       this.runCleanupRunner().catch((error) =>
         console.error('❌ Cleanup Runner error:', error)
       );
-    }, 10000);
+    }, 60 * 1000);
 
     console.log('✅ Background runners started (10-second intervals)');
   }

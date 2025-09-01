@@ -13,6 +13,8 @@ import { corsConfig } from './cors';
 import { getUserInfo } from '../utils/auth-middleware';
 // import { ServiceManager } from '../services/service-manager';
 import rateLimit from 'express-rate-limit';
+import { ServiceManager } from '../services/service-manager';
+import { BackgroundRunnersService } from '../services/background-runners.service';
 // import { BackgroundRunnersService } from '../services/background-runners.service';
 
 const authLimiter = rateLimit({
@@ -24,27 +26,28 @@ const authLimiter = rateLimit({
 });
 
 export const startApolloServer = async (app: express.Application) => {
-  // await ServiceManager.initialize();
-  // await BackgroundRunnersService.start();
+  await ServiceManager.initialize();
+  await BackgroundRunnersService.start();
   // Graceful shutdown
-  // process.on('SIGTERM', async () => {
-  //   console.log('SIGTERM received, shutting down gracefully');
-  //   BackgroundRunnersService.stop();
-  //   await ServiceManager.shutdown();
-  //   process.exit(0);
-  // });
+  process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    BackgroundRunnersService.stop();
+    await ServiceManager.shutdown();
+    process.exit(0);
+  });
 
-  // process.on('SIGINT', async () => {
-  //   console.log('SIGINT received, shutting down gracefully');
-  //   BackgroundRunnersService.stop();
-  //   await ServiceManager.shutdown();
-  //   process.exit(0);
-  // });
+  process.on('SIGINT', async () => {
+    console.log('SIGINT received, shutting down gracefully');
+    BackgroundRunnersService.stop();
+    await ServiceManager.shutdown();
+    process.exit(0);
+  });
 
   const httpServer = http.createServer(app);
 
   // Create WebSocket server for subscriptions
   const wsServer = new WebSocketServer({
+  
     server: httpServer,
     path: '/graphql',
   });
@@ -53,9 +56,13 @@ export const startApolloServer = async (app: express.Application) => {
   const serverCleanup = useServer(
     {
       schema,
+      
       context: async (ctx: any, msg: any, args: any) => {
         // Get auth token from connection params
-        const token = ctx.connectionParams?.authToken;
+        const token =
+          ctx.connectionParams?.authToken ||
+          ctx.connectionParams?.Authorization?.replace('Bearer ', '') ||
+          ctx.connectionParams?.authorization?.replace('Bearer ', '');
         if (token) {
           const user = getUserInfo(token);
           return { user };
@@ -67,8 +74,10 @@ export const startApolloServer = async (app: express.Application) => {
   );
 
   const server = new ApolloServer({
+    
     schema: schema,
     formatError: formatError,
+    
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       {
