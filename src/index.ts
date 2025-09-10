@@ -11,6 +11,7 @@ import {
 } from './features/subscription/subscription.model';
 import SubscriptionService from './features/subscription/subscription.service';
 import healthRouter from './routes/health';
+import { loadSecrets } from './utils/load-secrets';
 
 const app = express();
 app.use(express.json());
@@ -23,12 +24,13 @@ declare global {
     }
   }
 }
-
-connectDB().then(() => {
-  startApolloServer(app).then((httpServer) => {
-    const PORT = ENV.PORT || 8000;
-    httpServer.listen(PORT, () => {
-      console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
+loadSecrets().then(() => {
+  connectDB().then(() => {
+    startApolloServer(app).then((httpServer) => {
+      const PORT = ENV.PORT || 8000;
+      httpServer.listen(PORT, () => {
+        console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
+      });
     });
   });
 });
@@ -400,6 +402,6 @@ setInterval(
 
 // Paystack webhook handler
 app.post('/webhook/paystack', handlePaystackWebhook);
- app.use('/api', healthRouter);
+app.use('/api', healthRouter);
 
 export default app;

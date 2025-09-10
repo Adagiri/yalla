@@ -8,7 +8,7 @@ import { pubsub } from './pubsub';
 export const context = async ({ req, res }: ExpressContextFunctionArgument) => {
   const token = req.headers.authorization?.split(' ')[1];
   const user = token ? getUserInfo(token) : null;
-  console.log(user)
+  // console.log(user)
   return {
     req,
     res,

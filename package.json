@@ -4,7 +4,7 @@
   "main": "dist/server.js",
   "scripts": {
     "watch": "nodemon index.ts",
-    "start": "NODE_ENV=production node dist/index.js",
+    "start": "APP_NODE_ENV=production node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc && npm run copy:gql",
     "copy:gql": "node scripts/copy-gql.js",
@@ -19,6 +19,7 @@
     "@apollo/server": "^4.11.2",
     "@aws-sdk/client-location": "^3.817.0",
     "@aws-sdk/client-s3": "^3.777.0",
+    "@aws-sdk/client-secrets-manager": "^3.883.0",
     "@aws-sdk/client-ses": "^3.713.0",
     "@aws-sdk/s3-request-presigner": "^3.777.0",
     "@graphql-tools/load-files": "^7.0.0",

@@ -47,7 +47,6 @@ export const startApolloServer = async (app: express.Application) => {
 
   // Create WebSocket server for subscriptions
   const wsServer = new WebSocketServer({
-  
     server: httpServer,
     path: '/graphql',
   });
@@ -56,7 +55,7 @@ export const startApolloServer = async (app: express.Application) => {
   const serverCleanup = useServer(
     {
       schema,
-      
+
       context: async (ctx: any, msg: any, args: any) => {
         // Get auth token from connection params
         const token =
@@ -74,10 +73,9 @@ export const startApolloServer = async (app: express.Application) => {
   );
 
   const server = new ApolloServer({
-    
     schema: schema,
     formatError: formatError,
-    
+
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       {
