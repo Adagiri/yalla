@@ -11,6 +11,7 @@ tasks.md
 handy.js
 dist/
 test.ts
+commands
 todo*
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
