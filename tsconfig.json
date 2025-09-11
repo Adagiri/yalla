@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "moduleResolution": "nodenext",
+    "moduleResolution": "NodeNext",
     "target": "ES2021",
     "module": "NodeNext",
     "rootDir": "./src",

@@ -26,7 +26,7 @@ export class RedisQueueService {
       host: ENV.REDIS_HOST,
       port: parseInt(ENV.REDIS_PORT),
       password: ENV.REDIS_PASSWORD,
-      db: 1, // Use different DB for queue
+      db: 0, // Use different DB for queue
     });
 
     this.redis.on('connect', () => {

@@ -38,7 +38,7 @@ export class RedisCacheService {
       host: ENV.REDIS_HOST,
       port: parseInt(ENV.REDIS_PORT),
       password: ENV.REDIS_PASSWORD,
-      db: 2, // Use different DB for cache
+      db: 0, // Use different DB for cache
     });
 
     this.redis.on('connect', () => {

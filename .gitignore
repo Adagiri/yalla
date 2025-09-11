@@ -13,3 +13,7 @@ dist/
 test.ts
 config/
 todo*
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

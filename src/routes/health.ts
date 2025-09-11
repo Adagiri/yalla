@@ -1,31 +1,14 @@
 import { Router } from 'express';
-import { ServiceManager } from '../services/service-manager';
-import { queueService } from '../services/redis-queue.service';
 
-const healthRouter = Router();
+const router = Router();
 
-healthRouter.get('/health', async (req, res) => {
-  const health = await ServiceManager.healthCheck();
-
-  const statusCode = health.status === 'healthy' ? 200 : 503;
-  res.status(statusCode).json(health);
+router.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.APP_NODE_ENV || 'development',
+  });
 });
 
-healthRouter.get('/health/queue', async (req, res) => {
-  try {
-    const stats = await queueService.getStats();
-    res.json({
-      status: 'healthy',
-      timestamp: new Date(),
-      queue: stats,
-    });
-  } catch (error: any) {
-    res.status(503).json({
-      status: 'unhealthy',
-      timestamp: new Date(),
-      error: error.message,
-    });
-  }
-});
-
-export default healthRouter;
+export default router;
