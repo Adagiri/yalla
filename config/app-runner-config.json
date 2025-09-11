@@ -1,0 +1,55 @@
+{
+  "CodeRepository": {
+    "RepositoryUrl": "https://github.com/Yalla-WorkSpace/yalla-ride",
+    "SourceCodeVersion": {
+      "Type": "BRANCH",
+      "Value": "main"
+    },
+    "CodeConfiguration": {
+      "ConfigurationSource": "API",
+      "CodeConfigurationValues": {
+        "Runtime": "NODEJS_18",
+        "BuildCommand": "npm install",
+        "StartCommand": "npm start",
+        "Port": "3000",
+        "RuntimeEnvironmentVariables": {
+          "MONGO_URI": "mongodb+srv://adagiri:Ridwanullah477@qdb-krowdee.qt3cr.mongodb.net/yalla-ride",
+          "JWT_SECRET_KEY": "1234567890plmnbvcxzaqwertyuio09876lkjhgfdsa12345zxcvbnm",
+          "ENCRYPTION_KEY": "abcdefghijklmnopqrstuvwx1234567890",
+          "INVOICE_WEBHOOK_KEY": "0987654321qwertmlkdidor0294y7reyfq3r7i8f2y7irfgr4bf",
+          "YALLA_APP_HOSTNAME": "app.yalla.ng",
+          "AWS_ACCESS_KEY_ID": "AKIAQX32VCSIE4PFXLVN",
+          "AWS_SECRET_ACCESS_KEY": "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",
+          "AWS_SES_REGION": "us-east-1",
+          "AWS_SES_FROM_EMAIL": "hello@yalla.ng",
+          "AWS_S3_REGION": "us-east-1",
+          "AWS_S3_ASSET_BUCKET": "yalla-images",
+          "AWS_S3_ASSET_HOSTNAME": "https://assets.yalla.ng",
+          "AWS_LOCATION_REGION": "us-east-1",
+          "AWS_LOCATION_MAP_NAME": "YallaMap",
+          "AWS_LOCATION_PLACE_INDEX_NAME": "YallaPlaceIndex",
+          "AWS_LOCATION_ROUTE_CALCULATOR_NAME": "YallaRouteCalculator",
+          "AWS_LOCATION_GEOFENCE_COLLECTION_NAME": "YallaGeofences",
+          "AWS_LOCATION_TRACKER_NAME": "YallaDriverTracker",
+          "REDIS_URL": "redis://localhost:6379",
+          "REDIS_HOST": "localhost",
+          "REDIS_PORT": "6379",
+          "REDIS_PASSWORD": "",
+          "FIREBASE_PROJECT_ID": "112438400847243997582",
+          "FIREBASE_CLIENT_EMAIL": "firebase-adminsdk-2fn5k@yalla-d3bb6.iam.gserviceaccount.com",
+          "ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:4000",
+          "PAYSTACK_BANK_TRANSFER_PAYMENT_METHOD": "bank_transfer",
+          "PAYSTACK_BASE_URL": "https://api.paystack.co",
+          "PAYSTACK_CARD_PAYMENT_METHOD": "card",
+          "PAYSTACK_PUBLIC_KEY": "pk_test_12ea7efac68d34f75e4254d881b554a5412e477d",
+          "PAYSTACK_SECRET_KEY": "sk_test_c39ca5b0575ed9a4c1ee4def77df81791a301cfb",
+          "PAYSTACK_AUTH_CODE_ENCRYPTION_KEY": "ogezitaporpkcatsyap09876543216789054321",
+          "GOOGLE_API_KEY": "AIzaSyAXkb9nF3d9HPzcoPw_mpbok7_p3v0eAEw",
+          "TERMII_BASE_URL": "https://v3.api.termii.com",
+          "TERMII_SENDER_ID": "N-Alert",
+          "TERMII_API_KEY": "TLouKgTqSeoiNjbqpAOKddvlameIDjPjlbKbvwPoZJtVxyIfnQRIZtExECfrDT"
+        }
+      }
+    }
+  }
+}
