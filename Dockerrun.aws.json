@@ -1,0 +1,17 @@
+{
+  "AWSEBDockerrunVersion": 2,
+  "containerDefinitions": [
+    {
+      "name": "app",
+      "image": "051259970704.dkr.ecr.us-east-1.amazonaws.com/simple-docker-service-12eb8e8f5c55:latest",
+      "essential": true,
+      "memory": 512,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8080
+        }
+      ]
+    }
+  ]
+}

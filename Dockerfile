@@ -1,4 +1,11 @@
-FROM node:18-alpine
+FROM public.ecr.aws/amazonlinux/amazonlinux:2023
+
+# Install Node.js 22
+RUN dnf update -y && \
+    dnf install -y curl tar gzip && \
+    curl -fsSL https://rpm.nodesource.com/setup_22.x | bash - && \
+    dnf install -y nodejs && \
+    dnf clean all
 
 WORKDIR /app
 
