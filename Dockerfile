@@ -18,6 +18,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Debug: List files to see what's copied
+RUN ls -la src/config/
+
 # Build the application
 RUN npm run build
 
