@@ -2,12 +2,8 @@
   "name": "propatize",
   "version": "1.0.0",
   "main": "dist/index.js",
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifierResolution": "node"
-  },
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc && npm run copy:gql",
     "copy:gql": "node scripts/copy-gql.js",
     "start": "NODE_ENV=production node dist/index.js",

@@ -1,3 +1,5 @@
+// File location: /home/adagiri/code/yalla-ride/backend/src/index.ts
+
 import express from 'express';
 import { ENV } from './config/env';
 import { connectDB } from './config/db-connection';
@@ -26,11 +28,11 @@ async function startServer() {
     await connectDB();
 
     console.log('📋 Step 3: Starting GraphQL server...');
-    const { startApolloServer } = await import('./graphql/server.js');
+    const { startApolloServer } = await import('./graphql/server');
     const httpServer = await startApolloServer(app);
 
     console.log('📋 Step 4: Setting up application services...');
-    const { setupApp } = await import('./config/app-setup.js');
+    const { setupApp } = await import('./config/app-setup');
     setupApp(app);
 
     const PORT = ENV.PORT || 8000;

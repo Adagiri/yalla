@@ -1,4 +1,4 @@
-import { useServer } from 'graphql-ws/use/ws';
+const { useServer } = require('graphql-ws/use/ws');
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';

@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "node",
     "target": "ES2021",
-    "module": "NodeNext",
+    "module": "commonjs",
     "rootDir": "./src",
     "outDir": "./dist",
     "strict": true,
@@ -13,9 +13,5 @@
     "resolveJsonModule": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"],
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifierResolution": "node"
-  }
+  "exclude": ["node_modules", "dist"]
 }
