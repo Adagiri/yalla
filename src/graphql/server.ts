@@ -11,11 +11,9 @@ import { context } from './context';
 import { formatError } from '../utils/error-handler';
 import { corsConfig } from './cors';
 import { getUserInfo } from '../utils/auth-middleware';
-// import { ServiceManager } from '../services/service-manager';
 import rateLimit from 'express-rate-limit';
 import { ServiceManager } from '../services/service-manager';
 import { BackgroundRunnersService } from '../services/background-runners.service';
-// import { BackgroundRunnersService } from '../services/background-runners.service';
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -28,7 +26,6 @@ const authLimiter = rateLimit({
 export const startApolloServer = async (app: express.Application) => {
   await ServiceManager.initialize();
   await BackgroundRunnersService.start();
-  // Graceful shutdown
   process.on('SIGTERM', async () => {
     console.log('SIGTERM received, shutting down gracefully');
     BackgroundRunnersService.stop();

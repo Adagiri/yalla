@@ -23,8 +23,6 @@ mongoose.plugin(customPlugin);
 
 export const connectDB = async () => {
   try {
-    console.log(11, process.env.MONGO_URI);
-    console.log(22, ENV.MONGO_URI);
     await mongoose.connect(ENV.MONGO_URI);
     console.log('Database connected successfully');
   } catch (error) {

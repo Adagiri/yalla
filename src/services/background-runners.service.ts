@@ -1,9 +1,7 @@
 import Trip from '../features/trip/trip.model';
-import Driver from '../features/driver/driver.model';
 import Customer from '../features/customer/customer.model';
 import { cacheService } from './redis-cache.service';
 import { SubscriptionService } from './subscription.service';
-import { ErrorResponse } from '../utils/responses';
 import { IncomingTripData } from '../types/trip';
 
 export class BackgroundRunnersService {

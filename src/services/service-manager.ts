@@ -1,5 +1,4 @@
 import { queueService } from './redis-queue.service';
-import { cacheService } from './redis-cache.service';
 import { JobProcessors } from './job-processors.service';
 
 export class ServiceManager {
