@@ -9,7 +9,7 @@ RUN dnf update -y && \
 
 WORKDIR /app
 
-# Copy package files
+# Copy package filez
 COPY package*.json ./
 
 # Install all dependencies (including dev for build)
