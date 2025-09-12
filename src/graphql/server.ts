@@ -21,7 +21,7 @@ const authLimiter = rateLimit({
   message: 'Too many login attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-});
+})
 
 export const startApolloServer = async (app: express.Application) => {
   await ServiceManager.initialize();
