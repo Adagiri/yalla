@@ -35,7 +35,7 @@ async function startServer() {
     const { setupApp } = await import('./config/app-setup');
     setupApp(app);
 
-    const PORT = ENV.PORT || 8000;
+    const PORT = 8080;
     httpServer.listen(PORT, () => {
       console.log(`🎉 Server ready at http://localhost:${PORT}/graphql`);
       console.log(

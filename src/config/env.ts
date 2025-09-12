@@ -4,7 +4,7 @@ dotenv.config();
 export const ENV = {
   // Application Settings
   get PORT() {
-    return parseInt(process.env.PORT || '8000');
+    return parseInt(process.env.PORT || '8080');
   },
 
   get MONGO_URI() {
