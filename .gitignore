@@ -12,6 +12,7 @@ handy.js
 dist/
 test.ts
 commands
+deploy
 todo*
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
