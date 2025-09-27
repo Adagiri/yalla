@@ -1,5 +1,3 @@
-// File location: /home/adagiri/code/yalla-ride/backend/src/index.ts
-
 import express from 'express';
 import { ENV } from './config/env';
 import { connectDB } from './config/db-connection';

@@ -134,7 +134,7 @@ input VerifyCodeInput {
 
 input ResetPasswordRequestInput {
   email: String
-  phone: String
+  phone: PhoneInput
   authChannel: AuthChannel!
   accountType: AccountType!
 }

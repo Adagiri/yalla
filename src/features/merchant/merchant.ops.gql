@@ -31,23 +31,6 @@ input MerchantFilter {
   authChannels: [AuthChannel!]
 }
 
-"""
-Input type for phone details.
-"""
-input PhoneInput {
-  countryCode: String!
-  localNumber: String!
-  fullPhone: String!
-}
-
-"""
-Type representing a phone.
-"""
-type Phone {
-  countryCode: String!
-  localNumber: String!
-  fullPhone: String!
-}
 
 """
 Used when registering a new merchant.

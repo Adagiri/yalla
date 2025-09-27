@@ -6,8 +6,6 @@ import {
 export async function loadSecrets(): Promise<void> {
   const environment = process.env.APP_NODE_ENV || 'staging';
   const secretName = `yalla-api/${environment}`;
-  console.log(process.env.APP_AWS_ACCESS_KEY_ID);
-  console.log(secretName);
   console.log(`🔐 Loading secrets for: ${environment}`);
 
   const client = new SecretsManagerClient({
@@ -30,8 +28,6 @@ export async function loadSecrets(): Promise<void> {
 
     Object.entries(secrets).forEach(([key, value]) => {
       process.env[key] = value as string;
-      console.log(key, value)
-      console.log(11111111111111111111, process.env.MONGO_URI);
     });
 
     console.log(

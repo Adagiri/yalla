@@ -10,8 +10,6 @@ const resolversArray = loadFilesSync(
 const schema = makeExecutableSchema({
   typeDefs: typesArray,
   resolvers: resolversArray,
-  
-  
 });
 
 export default schema;
