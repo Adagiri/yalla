@@ -52,7 +52,7 @@ const subscriptionResolvers = {
     ),
 
     listSubscriptionPlans: combineResolvers(
-      protectEntities(['ADMIN']),
+      protectEntities(['ADMIN', 'DRIVER']),
       SubscriptionController.listSubscriptionPlans
     ),
 
@@ -60,7 +60,6 @@ const subscriptionResolvers = {
       protectEntities(['ADMIN']),
       SubscriptionController.listDriverSubscriptions
     ),
-
   },
 
   Mutation: {
