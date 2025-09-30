@@ -149,7 +149,7 @@ type TripsByStatus {
 type RecentActivity {
   type: String!
   description: String!
-  timestamp: DateTime!
+  timestamp: DateTime
   amount: Float
 }
 
