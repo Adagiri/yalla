@@ -37,6 +37,14 @@ const generalResolvers = {
   Query: {
     getBankCodes: GeneralController.getBankCodes,
     getImageUploadUrl: GeneralController.getImageUploadUrl,
+    getFileUploadUrl: combineResolvers(
+      protectEntities(['ADMIN', 'DRIVER', 'CUSTOMER']),
+      GeneralController.getFileUploadUrl
+    ),
+    getFileDownloadUrl: combineResolvers(
+      protectEntities(['ADMIN', 'DRIVER', 'CUSTOMER']),
+      GeneralController.getFileDownloadUrl
+    ),
   },
 
   Mutation: {

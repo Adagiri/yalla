@@ -39,6 +39,7 @@ import {
 import AWSServices from '../../services/aws.services';
 import PaystackService from '../../services/paystack.services';
 import WalletService from '../../services/wallet.service';
+import FileUploadService, { FileAccessLevel, FileCategory } from '../../services/file-upload.service';
 
 class GeneralService {
   /**
@@ -579,6 +580,44 @@ class GeneralService {
       return true;
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error resetting password', error.message);
+    }
+  }
+
+  /**
+   * Get file upload URL with thumbnail support
+   */
+  static async getFileUploadUrl(input: {
+    contentType: string;
+    category: FileCategory;
+    accessLevel: FileAccessLevel;
+    generateThumbnail?: boolean;
+    userId?: string;
+  }) {
+    try {
+      return await FileUploadService.generateUploadUrl(input);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        error.statusCode || 500,
+        error.message || 'Error generating upload URL'
+      );
+    }
+  }
+
+  /**
+   * Get download URL for private files
+   */
+  static async getFileDownloadUrl(key: string) {
+    try {
+      if (!key.startsWith('private/')) {
+        throw new ErrorResponse(400, 'File is publicly accessible');
+      }
+
+      return await FileUploadService.generatePresignedDownloadUrl(key);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        error.statusCode || 500,
+        error.message || 'Error generating download URL'
+      );
     }
   }
 }

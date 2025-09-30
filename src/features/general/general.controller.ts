@@ -1,5 +1,5 @@
 import { ContextType } from '../../types';
-import { AuthPayload } from '../../utils/responses';
+import { AuthPayload, ErrorResponse } from '../../utils/responses';
 import Admin from '../admin/admin.model';
 import Driver from '../driver/driver.model';
 import Customer from '../customer/customer.model';
@@ -103,6 +103,34 @@ class GeneralController {
 
     const updatedEntity = await GeneralService.disableMfa(input);
     return updatedEntity;
+  }
+
+  static async getFileUploadUrl(
+    _: any,
+    { input }: { input: any },
+    context: ContextType
+  ) {
+    const userId = context.user?.id;
+
+    const response = await GeneralService.getFileUploadUrl({
+      ...input,
+      userId,
+    });
+
+    return response;
+  }
+
+  static async getFileDownloadUrl(
+    _: any,
+    { key }: { key: string },
+    context: ContextType
+  ) {
+    if (!context.user) {
+      throw new ErrorResponse(401, 'Authentication required');
+    }
+
+    const url = await GeneralService.getFileDownloadUrl(key);
+    return url;
   }
 }
 

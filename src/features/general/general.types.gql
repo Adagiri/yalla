@@ -227,3 +227,41 @@ type OperationResult {
   message: String
   errors: [ErrorDetails!]
 }
+
+# Add to existing enums
+enum FileAccessLevel {
+  PUBLIC
+  PRIVATE
+}
+
+enum FileCategory {
+  PROFILE_PHOTO
+  DOCUMENTS
+  DRIVER_LICENSE
+  VEHICLE_PHOTOS
+  COMPLAINTS
+  COMMUNICATION
+  PRODUCTS
+}
+
+# New types
+type FileUploadUrlResponse {
+  uploadUrl: String!
+  fileUrl: String!
+  thumbnailUploadUrl: String
+  thumbnailUrl: String
+  key: String!
+  thumbnailKey: String
+}
+
+input FileUploadUrlInput {
+  contentType: String!
+  category: FileCategory!
+  accessLevel: FileAccessLevel!
+  generateThumbnail: Boolean
+}
+
+input ImageUploadUrlInput {
+  purpose: UploadUrl!
+  contentType: String!
+}

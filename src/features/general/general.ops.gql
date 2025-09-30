@@ -13,6 +13,10 @@ type Subscription {
 extend type Query {
   getBankCodes: [BankCode]
   getImageUploadUrl(input: ImageUploadUrlInput!): ImageUploadUrlResponse!
+
+  getFileUploadUrl(input: FileUploadUrlInput!): FileUploadUrlResponse!
+
+  getFileDownloadUrl(key: String!): String!
 }
 
 type BankCode {
