@@ -1,0 +1,83 @@
+type SupportTicket {
+  id: ID!
+  ticketNumber: String!
+  userId: String!
+  userType: String!
+  subject: String!
+  description: String!
+  category: String!
+  priority: String!
+  status: String!
+  assignedTo: String
+  messages: [TicketMessage!]!
+  attachments: [String!]
+  resolvedAt: String
+  closedAt: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+type TicketMessage {
+  senderId: String!
+  senderType: String!
+  message: String!
+  createdAt: String!
+}
+
+type TicketListResponse {
+  tickets: [SupportTicket!]!
+  total: Int!
+  page: Int!
+  totalPages: Int!
+}
+
+type TicketStats {
+  total: Int!
+  open: Int!
+  inProgress: Int!
+  resolved: Int!
+  closed: Int!
+}
+
+input CreateTicketInput {
+  subject: String!
+  description: String!
+  category: String!
+  priority: String
+  attachments: [String!]
+}
+
+input AddMessageInput {
+  ticketId: ID!
+  message: String!
+}
+
+input UpdateTicketInput {
+  ticketId: ID!
+  status: String
+  priority: String
+  assignedTo: String
+}
+
+input TicketFilters {
+  userId: String
+  userType: String
+  status: String
+  category: String
+  assignedTo: String
+  page: Int
+  limit: Int
+}
+
+extend type Query {
+  getMyTickets(page: Int, limit: Int): TicketListResponse!
+  getAllTickets(filters: TicketFilters): TicketListResponse!
+  getTicket(id: ID!): SupportTicket!
+  getTicketStats: TicketStats!
+}
+
+extend type Mutation {
+  createTicket(input: CreateTicketInput!): SupportTicket!
+  addMessage(input: AddMessageInput!): SupportTicket!
+  updateTicket(input: UpdateTicketInput!): SupportTicket!
+}
