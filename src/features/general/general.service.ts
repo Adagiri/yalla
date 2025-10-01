@@ -6,9 +6,10 @@ import {
   verifyPassword,
 } from '../../utils/auth';
 import { ErrorResponse } from '../../utils/responses';
-import { DriverModelType } from '../driver/driver.model';
+import Driver, { DriverModelType } from '../driver/driver.model';
 import {
   AccountType,
+  AccountType_,
   AuthChannel,
   AuthChannelEMAIL,
   AuthChannelSMS,
@@ -39,7 +40,13 @@ import {
 import AWSServices from '../../services/aws.services';
 import PaystackService from '../../services/paystack.services';
 import WalletService from '../../services/wallet.service';
-import FileUploadService, { FileAccessLevel, FileCategory } from '../../services/file-upload.service';
+import FileUploadService, {
+  FileAccessLevel,
+  FileCategory,
+} from '../../services/file-upload.service';
+import FirebaseAuthService from '../../services/firebase-auth.service';
+import Customer, { CustomerModelType } from '../customer/customer.model';
+import { Model } from 'mongoose';
 
 class GeneralService {
   /**
@@ -339,7 +346,7 @@ class GeneralService {
         await NotificationService.sendEmail({
           to: entity.email,
           template:
-            entity.accountType !== AccountType.DRIVER
+            entity.accountType !== AccountType_.DRIVER
               ? 'ManagerWelcomeEmailTemplate'
               : 'UserWelcomeEmailTemplate',
           data: {
@@ -583,6 +590,55 @@ class GeneralService {
     }
   }
 
+  static async googleLogin(
+    firebaseToken: string,
+    accountType: AccountType
+  ): Promise<{ token: string; entity: DriverModelType | CustomerModelType }> {
+    try {
+      const model: Model<any> =
+        accountType === AccountType_.DRIVER ? Driver : Customer;
+
+      // Verify Firebase token and get user info
+      const firebaseUser =
+        await FirebaseAuthService.verifyFirebaseToken(firebaseToken);
+
+      // Check if user exists
+      let user = await model.findOne({
+        email: firebaseUser.email.toLowerCase(),
+      });
+
+      if (!user) {
+        // Auto-register new user
+        user = await model.create({
+          email: firebaseUser.email.toLowerCase(),
+          firstname: firebaseUser.firstName,
+          lastname: firebaseUser.lastName,
+          profilePhoto: firebaseUser.profilePhoto,
+          isEmailVerified: true,
+          accountType: accountType,
+          password: await hashPassword(Math.random().toString(36)),
+        });
+      } else {
+        // Update existing user
+        if (firebaseUser.profilePhoto && !user.profilePhoto) {
+          user.profilePhoto = firebaseUser.profilePhoto;
+        }
+        user.isEmailVerified = true;
+        await user.save();
+      }
+
+      // Generate JWT token
+      const token = generateAuthToken({
+        id: user._id,
+        accountType: accountType,
+        email: user.email,
+      });
+
+      return { token, entity: user };
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Google login failed', error.message);
+    }
+  }
   /**
    * Get file upload URL with thumbnail support
    */
@@ -608,7 +664,7 @@ class GeneralService {
    */
   static async getFileDownloadUrl(key: string) {
     try {
-      if (!key.startsWith('private/')) {
+      if (!key.startsWith('PRIVATE/')) {
         throw new ErrorResponse(400, 'File is publicly accessible');
       }
 

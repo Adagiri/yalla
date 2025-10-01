@@ -1,18 +1,18 @@
 import { combineResolvers } from 'graphql-resolvers';
 import GeneralController from './general.controller';
 import { protectEntities } from '../../utils/auth-middleware';
-import { AccountType } from '../../constants/general';
+import { AccountType, AccountType_ } from '../../constants/general';
 
 const generalResolvers = {
   AuthEntity: {
     __resolveType(obj: any) {
-      if (obj.accountType === AccountType.ADMIN) {
+      if (obj.accountType === AccountType_.ADMIN) {
         return 'Admin';
       }
-      if (obj.accountType === AccountType.DRIVER) {
+      if (obj.accountType === AccountType_.DRIVER) {
         return 'Driver';
       }
-      if (obj.accountType === AccountType.CUSTOMER) {
+      if (obj.accountType === AccountType_.CUSTOMER) {
         return 'Customer';
       }
       return null;
@@ -21,13 +21,13 @@ const generalResolvers = {
 
   AccountEntity: {
     __resolveType(obj: any) {
-      if (obj.accountType === AccountType.ADMIN) {
+      if (obj.accountType === AccountType_.ADMIN) {
         return 'Admin';
       }
-      if (obj.accountType === AccountType.DRIVER) {
+      if (obj.accountType === AccountType_.DRIVER) {
         return 'Driver';
       }
-      if (obj.accountType === AccountType.CUSTOMER) {
+      if (obj.accountType === AccountType_.CUSTOMER) {
         return 'Customer';
       }
       return null;
@@ -61,6 +61,8 @@ const generalResolvers = {
       protectEntities(['ADMIN', 'DRIVER', 'CUSTOMER']),
       GeneralController.disableMfa
     ),
+
+    googleLogin: GeneralController.googleLogin,
   },
 };
 

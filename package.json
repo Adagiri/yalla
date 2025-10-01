@@ -37,6 +37,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^8.0.1",
     "firebase-admin": "^13.4.0",
+    "google-auth-library": "^10.4.0",
     "graphql": "^16.9.0",
     "graphql-date-scalars": "^0.2.0",
     "graphql-redis-subscriptions": "^2.7.0",

@@ -35,14 +35,14 @@ export const AuthChannel = {
 
 export type AuthChannel = (typeof AuthChannel)[keyof typeof AuthChannel];
 
-export const AccountType = {
+export const AccountType_ = {
   ADMIN: AccountTypeADMIN,
   DRIVER: AccountTypeDRIVER,
   CUSTOMER: AccountTypeCUSTOMER,
   MERCHANT: AccountTypeMERCHANT,
 } as const;
 
-export type AccountType = (typeof AccountType)[keyof typeof AccountType];
+export type AccountType = (typeof AccountType_)[keyof typeof AccountType_];
 
 export const UserCategory = {
   TENANT: UserCategoryTENANT,
@@ -201,7 +201,7 @@ export type UploadUrlPurpose =
   (typeof UploadUrlPurpose)[keyof typeof UploadUrlPurpose];
 
 export const PaymentStatusEnum: string[] = Object.values(PaymentStatus);
-export const AccountTypeEnum: string[] = Object.values(AccountType);
+export const AccountTypeEnum: string[] = Object.values(AccountType_);
 export const AuthChannelEnum: string[] = Object.values(AuthChannel);
 export const UserCategoryEnum: string[] = Object.values(UserCategory);
 export const ResendCodeScenarioEnum: string[] =

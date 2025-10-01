@@ -4,6 +4,7 @@ import Admin from '../admin/admin.model';
 import Driver from '../driver/driver.model';
 import Customer from '../customer/customer.model';
 import GeneralService from './general.service';
+import { AccountType } from '../../constants/general';
 
 const models: any = {
   admin: Admin,
@@ -103,6 +104,20 @@ class GeneralController {
 
     const updatedEntity = await GeneralService.disableMfa(input);
     return updatedEntity;
+  }
+
+  static async googleLogin(
+    _: any,
+    {
+      firebaseToken,
+      accountType,
+    }: { firebaseToken: string; accountType: AccountType }
+  ) {
+    const response = await GeneralService.googleLogin(
+      firebaseToken,
+      accountType
+    );
+    return new AuthPayload(response.entity, response.token);
   }
 
   static async getFileUploadUrl(

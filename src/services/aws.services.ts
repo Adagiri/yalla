@@ -60,7 +60,7 @@ class AWSServices {
       });
 
       const signedUrl = await getSignedUrl(s3Client, command, {
-        expiresIn: 3600,
+        expiresIn: 36000,
       });
       return signedUrl;
     } catch (error: any) {

@@ -31,6 +31,8 @@ extend type Mutation {
 
   login(input: LoginInput!): AuthPayload!
 
+  googleLogin(firebaseToken: String!, accountType: AccountType!): AuthPayload!
+
   enableMfa(input: EnableMfaInput!): AccountEntity!
 
   disableMfa: AccountEntity!

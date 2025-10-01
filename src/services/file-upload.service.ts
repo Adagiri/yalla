@@ -9,8 +9,8 @@ import { ErrorResponse } from '../utils/responses';
 import { generateRandomString } from '../utils/general';
 
 export enum FileAccessLevel {
-  PUBLIC = 'public',
-  PRIVATE = 'private',
+  PUBLIC = 'PUBLIC',
+  PRIVATE = 'PRIVATE',
 }
 
 export enum FileCategory {
@@ -117,13 +117,20 @@ class FileUploadService {
   private static async generatePresignedUploadUrl(
     key: string,
     contentType: string,
+    accessLevel: FileAccessLevel,
     expiresIn: number = 3600
   ): Promise<string> {
-    const command = new PutObjectCommand({
+    const commandParams: any = {
       Bucket: ENV.AWS_S3_ASSET_BUCKET,
       Key: key,
       ContentType: contentType,
-    });
+    };
+
+    if (accessLevel === FileAccessLevel.PUBLIC) {
+      commandParams.ACL = 'public-read';
+    }
+
+    const command = new PutObjectCommand(commandParams);
 
     return await getSignedUrl(this.s3Client, command, { expiresIn });
   }
@@ -147,7 +154,7 @@ class FileUploadService {
    * Get public URL for a file
    */
   private static getPublicUrl(key: string): string {
-    return `https://${ENV.AWS_S3_ASSET_HOSTNAME}/${key}`;
+    return `${ENV.AWS_S3_ASSET_HOSTNAME}/${key}`;
   }
 
   /**
@@ -156,7 +163,6 @@ class FileUploadService {
   static async generateUploadUrl(
     options: GenerateUploadUrlOptions
   ): Promise<UploadUrlResponse> {
-    console.log(ENV.AWS_SECRET_ACCESS_KEY)
     const { contentType, category, accessLevel, generateThumbnail, userId } =
       options;
 
@@ -166,13 +172,18 @@ class FileUploadService {
     // Generate main file key
     const key = this.generateKey(category, accessLevel, contentType, userId);
 
-    // Generate upload URL
-    const uploadUrl = await this.generatePresignedUploadUrl(key, contentType);
+    // Generate upload URL (now passes accessLevel)
+    const uploadUrl = await this.generatePresignedUploadUrl(
+      key,
+      contentType,
+      accessLevel
+    );
 
     // Generate file access URL
     const fileUrl =
       accessLevel === FileAccessLevel.PUBLIC ? this.getPublicUrl(key) : key; // Store key, generate signed URL on demand for private files
-
+    console.log(fileUrl, 'file url');
+    console.log(accessLevel, 'access level');
     const response: UploadUrlResponse = {
       uploadUrl,
       fileUrl,
@@ -184,7 +195,8 @@ class FileUploadService {
       const thumbnailKey = key.replace(/(\.[^.]+)$/, '-thumb$1');
       const thumbnailUploadUrl = await this.generatePresignedUploadUrl(
         thumbnailKey,
-        contentType
+        contentType,
+        accessLevel
       );
 
       response.thumbnailUploadUrl = thumbnailUploadUrl;

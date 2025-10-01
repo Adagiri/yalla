@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import mongoose, { Schema, Document } from 'mongoose';
-import { AccountType } from '../../constants/general';
+import { AccountType, AccountType_ } from '../../constants/general';
 
 export interface AdminDocument extends Document {
   _id: string;
@@ -53,7 +53,7 @@ const adminSchema = new Schema(
     _id: { type: String, default: uuidv4 },
     firstname: { type: String, required: true, trim: true },
     lastname: { type: String, required: true, trim: true },
-    accountType: { type: String, default: AccountType.ADMIN },
+    accountType: { type: String, default: AccountType_.ADMIN },
 
     email: {
       type: String,

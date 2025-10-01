@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { v4 as uuidv4 } from 'uuid';
-import { AccountType, AuthChannelEnum } from '../../constants/general';
+import { AccountType, AccountType_, AuthChannelEnum } from '../../constants/general';
 import { LocationType, PhoneType } from '../../types/general';
 import {
   PAYMENT_MODEL_CONFIG,
@@ -149,7 +149,7 @@ export interface DriverModelPartialType extends Document {
 const driverSchema = new Schema<DriverModelType>(
   {
     _id: { type: String, default: uuidv4 },
-    accountType: { type: String, default: AccountType.DRIVER },
+    accountType: { type: String, default: AccountType_.DRIVER },
     locationId: { type: String },
     vehicleId: { type: String },
     firstname: { type: String },
