@@ -181,9 +181,7 @@ class FileUploadService {
 
     // Generate file access URL
     const fileUrl =
-      accessLevel === FileAccessLevel.PUBLIC ? this.getPublicUrl(key) : key; // Store key, generate signed URL on demand for private files
-    console.log(fileUrl, 'file url');
-    console.log(accessLevel, 'access level');
+      accessLevel === FileAccessLevel.PUBLIC ? this.getPublicUrl(key) : key;
     const response: UploadUrlResponse = {
       uploadUrl,
       fileUrl,

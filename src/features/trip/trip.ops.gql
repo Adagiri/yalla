@@ -259,16 +259,20 @@ type TripActionResponse {
   message: String!
 }
 
+type IncomingTripLocation {
+  address: String!
+  coordinates: [Float!]
+}
 type IncomingTrip {
   tripId: ID!
   customerId: ID!
   customerInfo: CustomerInfo!
-  pickup: TripLocation!
-  destination: TripLocation!
+  pickup: IncomingTripLocation!
+  destination: IncomingTripLocation!
   pricing: TripPricing!
   paymentMethod: PaymentMethod!
-  requestedAt: DateTime!
-  expiresAt: DateTime!
+  requestedAt: String!
+  expiresAt: String!
 }
 
 type CustomerInfo {
