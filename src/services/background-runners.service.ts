@@ -25,7 +25,7 @@ export class BackgroundRunnersService {
       this.runDriverSearchRunner().catch((error) =>
         console.error('❌ Driver Search Runner error:', error)
       );
-    },60 * 1000);
+    }, 60 * 1000);
 
     // Runner 2: Cleanup expired incoming trips every 10 seconds
     this.runner2Interval = setInterval(() => {
@@ -136,6 +136,16 @@ export class BackgroundRunnersService {
         );
       }
 
+      // ✅ PUBLISH SUBSCRIPTION UPDATE TO ALL AFFECTED DRIVERS (after all Redis operations)
+      for (const driverId of nearbyDrivers) {
+        const updatedTrips =
+          await cacheService.getIncomingTripsForDriver(driverId);
+        await SubscriptionService.publishIncomingTripsUpdate(
+          driverId,
+          updatedTrips
+        );
+      }
+
       // Update trip status to "drivers_found"
       await Trip.findByIdAndUpdate(trip._id, {
         status: 'drivers_found',
@@ -204,6 +214,16 @@ export class BackgroundRunnersService {
       // Part 1: Redis cleanup (pure Redis operations)
       const redisResult =
         await cacheService.cleanupExpiredIncomingTripsForDriver(driverId);
+
+      // ✅ PUBLISH UPDATE AFTER CLEANUP IF ANY TRIPS WERE REMOVED
+      if (redisResult.expiredCount > 0 || redisResult.removedInvalidCount > 0) {
+        const updatedTrips =
+          await cacheService.getIncomingTripsForDriver(driverId);
+        await SubscriptionService.publishIncomingTripsUpdate(
+          driverId,
+          updatedTrips
+        );
+      }
 
       // Part 2: Business logic for expired trips
       const resetTripsCount = await this.handleExpiredTrips(

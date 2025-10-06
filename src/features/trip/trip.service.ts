@@ -19,7 +19,6 @@ import { listResourcesPagination } from '../../helpers/list-resources-pagination
 import { Pagination } from '../../types/list-resources';
 import { BackgroundRunnersService } from '../../services/background-runners.service';
 
-
 class TripService {
   static async listTrips(
     pagination?: Pagination,
@@ -413,8 +412,18 @@ class TripService {
         { session }
       );
 
-      // 6. Remove incoming trip from ALL drivers' Redis queues
       await BackgroundRunnersService.clearIncomingTripForAllDrivers(tripId);
+
+      // PUBLISH UPDATE TO ALL AFFECTED DRIVERS
+      const driverIds = await cacheService.getAllCachedDriverIds();
+      for (const affectedDriverId of driverIds) {
+        const updatedTrips =
+          await cacheService.getIncomingTripsForDriver(affectedDriverId);
+        await SubscriptionService.publishIncomingTripsUpdate(
+          affectedDriverId,
+          updatedTrips
+        );
+      }
 
       await session.commitTransaction();
 

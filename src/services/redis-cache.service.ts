@@ -301,10 +301,11 @@ export class RedisCacheService {
     expiredCount: number;
     removedInvalidCount: number;
   }> {
-    console.log(driverId)
+    console.log(driverId);
     const pattern = `incoming_trips:${driverId}:*`;
     const keys = await this.redis.keys(pattern);
     console.log('keys: ', keys);
+
     if (keys.length === 0) {
       return { expiredTripIds: [], expiredCount: 0, removedInvalidCount: 0 };
     }
@@ -312,11 +313,11 @@ export class RedisCacheService {
     let expiredCount = 0;
     let removedInvalidCount = 0;
     const expiredTripIds: string[] = [];
+    const keysToDelete: string[] = []; // Track keys to delete
 
     // Check each incoming trip
     const pipeline = this.redis.pipeline();
     keys.forEach((key) => pipeline.get(key));
-
     const results = await pipeline.exec();
     const now = new Date();
 
@@ -325,21 +326,27 @@ export class RedisCacheService {
         try {
           const tripData: IncomingTripData = JSON.parse(data as string);
           console.log(tripData, 'trip data');
+
           // Check if expired (1 minute)
           if (now > new Date(tripData.expiresAt)) {
             expiredCount++;
             expiredTripIds.push(tripData.tripId);
-
-            // Remove expired trip from Redis
-            this.redis.del(keys[index]);
+            keysToDelete.push(keys[index]); // Add to deletion list
           }
         } catch (e) {
-          // Remove invalid data
-          this.redis.del(keys[index]);
+          // Mark invalid data for removal
           removedInvalidCount++;
+          keysToDelete.push(keys[index]);
         }
       }
     });
+
+    // Delete all expired/invalid keys in one batch operation
+    if (keysToDelete.length > 0) {
+      const deletePipeline = this.redis.pipeline();
+      keysToDelete.forEach((key) => deletePipeline.del(key));
+      await deletePipeline.exec(); // ✅ PROPERLY AWAIT THE DELETIONS
+    }
 
     return {
       expiredTripIds,
