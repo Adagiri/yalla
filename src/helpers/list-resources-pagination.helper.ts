@@ -1,8 +1,8 @@
-import { Document } from 'mongoose';
+import { Document } from "mongoose";
 import {
   ListPaginationOptions,
   ListPaginationResult,
-} from '../types/list-resources';
+} from "../types/list-resources";
 
 export async function listResourcesPagination<T extends Document>(
   options: ListPaginationOptions<T>
@@ -20,13 +20,13 @@ export async function listResourcesPagination<T extends Document>(
   if (additionalFilter) {
     Object.entries(additionalFilter).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        if (key === 'ids') {
-          filter['id'] = { $in: value };
+        if (key === "ids") {
+          filter["id"] = { $in: value };
         } else {
           filter[key] = { $in: value };
         }
-      } else if (typeof value === 'string') {
-        filter[key] = { $regex: value, $options: 'i' };
+      } else if (typeof value === "string") {
+        filter[key] = { $regex: value, $options: "i" };
       } else {
         filter[key] = value;
       }
@@ -35,8 +35,8 @@ export async function listResourcesPagination<T extends Document>(
 
   const totalDocs = await model.countDocuments(filter);
 
-  const field = sortParam?.field || 'createdAt';
-  const direction = sortParam?.direction === 'ASC' ? 1 : -1;
+  const field = sortParam?.field || "createdAt";
+  const direction = sortParam?.direction === "ASC" ? 1 : -1;
 
   const sortObject: Record<string, 1 | -1> = {
     [field]: direction,

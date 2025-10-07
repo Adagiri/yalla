@@ -1,15 +1,15 @@
-import Location from './location.model';
-import { ErrorResponse } from '../../utils/responses';
-import { filterNullAndUndefined } from '../../utils/general';
+import Location from "./location.model";
+import { ErrorResponse } from "../../utils/responses";
+import { filterNullAndUndefined } from "../../utils/general";
 import {
   CreateLocationInput,
   LocationFilter,
   LocationSort,
   UpdateLocationInput,
-} from './location.types';
-import GoogleServices from '../../services/google.services';
-import { Pagination } from '../../types/list-resources';
-import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
+} from "./location.types";
+import GoogleServices from "../../services/google.services";
+import { Pagination } from "../../types/list-resources";
+import { listResourcesPagination } from "../../helpers/list-resources-pagination.helper";
 
 class LocationService {
   /**
@@ -34,7 +34,7 @@ class LocationService {
 
       return data;
     } catch (error: any) {
-      throw new ErrorResponse(500, 'Error fetching locations', error.message);
+      throw new ErrorResponse(500, "Error fetching locations", error.message);
     }
   }
 
@@ -45,16 +45,49 @@ class LocationService {
     try {
       const location = await Location.findById(id);
       if (!location) {
-        throw new ErrorResponse(404, 'Location not found');
+        throw new ErrorResponse(404, "Location not found");
       }
       return location;
     } catch (error: any) {
-      throw new ErrorResponse(500, 'Error fetching location', error.message);
+      throw new ErrorResponse(500, "Error fetching location", error.message);
     }
   }
 
   /**
    * Create a new location.
+   */
+  // static async createLocation(data: CreateLocationInput) {
+  //   try {
+  //     let locationData: any = { ...data };
+
+  //     // If Google Services are available and name is provided, try to geocode
+  //     if (data.name && !data.location) {
+  //       try {
+  //         const geocodedData = await GoogleServices.geocodeLocation(data.name);
+  //         if (geocodedData) {
+  //           locationData.location = {
+  //             type: "Point",
+  //             coordinates: [geocodedData.lng, geocodedData.lat],
+  //           };
+  //           if (!data.address && geocodedData.address) {
+  //             locationData.address = geocodedData.address;
+  //           }
+  //         }
+  //       } catch (geocodeError) {
+  //         console.warn(
+  //           "Geocoding failed, proceeding without coordinates:",
+  //           geocodeError
+  //         );
+  //       }
+  //     }
+
+  //     return await Location.create(locationData);
+  //   } catch (error: any) {
+  //     throw new ErrorResponse(500, "Error creating location", error.message);
+  //   }
+  // }
+  /**
+   * Create a new location with duplicate checks.
    */
   static async createLocation(data: CreateLocationInput) {
     try {
@@ -66,7 +99,7 @@ class LocationService {
           const geocodedData = await GoogleServices.geocodeLocation(data.name);
           if (geocodedData) {
             locationData.location = {
-              type: 'Point',
+              type: "Point",
               coordinates: [geocodedData.lng, geocodedData.lat],
             };
             if (!data.address && geocodedData.address) {
@@ -75,18 +108,82 @@ class LocationService {
           }
         } catch (geocodeError) {
           console.warn(
-            'Geocoding failed, proceeding without coordinates:',
+            "Geocoding failed, proceeding without coordinates:",
             geocodeError
           );
         }
       }
 
-      return await Location.create(locationData);
+      // Prepare data for Mongoose
+      const mongooseData: any = {
+        name: locationData.name,
+        description: locationData.description,
+        address: locationData.address,
+        location: locationData.location || { type: "Point", coordinates: [] },
+        locationType: locationData.locationType || "GENERAL",
+        isActive: locationData.isActive ?? true,
+      };
+
+      // DUPLICATE CHECK: Check for existing location by name (case-insensitive)
+      const existingByName = await Location.findOne({
+        name: { $regex: `^${mongooseData.name}$`, $options: "i" }, // Case-insensitive match
+      });
+
+      if (existingByName) {
+        throw new ErrorResponse(
+          409,
+          `Location with name "${mongooseData.name}" already exists (ID: ${existingByName._id})`
+        );
+      }
+
+      // Optional: Check for existing by coordinates (if provided, with tolerance)
+      if (mongooseData.location.coordinates.length === 2) {
+        const [lng, lat] = mongooseData.location.coordinates;
+        const existingByCoords = await Location.findOne({
+          "location.coordinates": {
+            $near: {
+              $geometry: { type: "Point", coordinates: [lng, lat] },
+              $maxDistance: 10, // ~10 meters in MongoDB (meters, not degrees)
+            },
+          },
+        });
+
+        if (existingByCoords) {
+          throw new ErrorResponse(
+            409,
+            `Location at coordinates [${lng}, ${lat}] already exists (Name: "${existingByCoords.name}")`
+          );
+        }
+      }
+
+      // No duplicates found—create the location
+      const location = await Location.create(mongooseData);
+
+      // Map to GraphQL format
+      return {
+        id: location.id.toString(),
+        name: location.name,
+        description: location.description,
+        address: location.address,
+        location: location.location.coordinates.length
+          ? location.location
+          : null,
+        locationType: location.locationType,
+        isActive: location.isActive,
+        createdAt: location.createdAt,
+        updatedAt: location.updatedAt,
+      };
     } catch (error: any) {
-      throw new ErrorResponse(500, 'Error creating location', error.message);
+      // Handle Mongoose unique index error (if name has unique: true)
+      if (error.code === 11000 && error.keyPattern?.name) {
+        throw new ErrorResponse(
+          409,
+          `Location with name "${data.name}" already exists`
+        );
+      }
+      throw new ErrorResponse(500, "Error creating location", error.message);
     }
   }
-
   /**
    * Update an existing location by ID.
    */
@@ -101,7 +198,7 @@ class LocationService {
           const geocodedData = await GoogleServices.geocodeLocation(data.name);
           if (geocodedData) {
             updateData.location = {
-              type: 'Point',
+              type: "Point",
               coordinates: [geocodedData.lng, geocodedData.lat],
             };
             if (!data.address && geocodedData.address) {
@@ -109,7 +206,7 @@ class LocationService {
             }
           }
         } catch (geocodeError) {
-          console.warn('Geocoding failed during update:', geocodeError);
+          console.warn("Geocoding failed during update:", geocodeError);
         }
       }
 
@@ -117,11 +214,11 @@ class LocationService {
         new: true,
       });
       if (!updatedLocation) {
-        throw new ErrorResponse(404, 'Location not found');
+        throw new ErrorResponse(404, "Location not found");
       }
       return updatedLocation;
     } catch (error: any) {
-      throw new ErrorResponse(500, 'Error updating location', error.message);
+      throw new ErrorResponse(500, "Error updating location", error.message);
     }
   }
 
@@ -132,11 +229,11 @@ class LocationService {
     try {
       const result = await Location.findByIdAndDelete(id);
       if (!result) {
-        throw new ErrorResponse(404, 'Location not found');
+        throw new ErrorResponse(404, "Location not found");
       }
       return true;
     } catch (error: any) {
-      throw new ErrorResponse(500, 'Error deleting location', error.message);
+      throw new ErrorResponse(500, "Error deleting location", error.message);
     }
   }
 
@@ -154,7 +251,7 @@ class LocationService {
         location: {
           $near: {
             $geometry: {
-              type: 'Point',
+              type: "Point",
               coordinates: [longitude, latitude],
             },
             $maxDistance: maxDistance,
@@ -172,7 +269,7 @@ class LocationService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        'Error finding nearby locations',
+        "Error finding nearby locations",
         error.message
       );
     }
@@ -187,7 +284,7 @@ class LocationService {
         boundary: {
           $geoIntersects: {
             $geometry: {
-              type: 'Point',
+              type: "Point",
               coordinates: [longitude, latitude],
             },
           },
@@ -198,7 +295,7 @@ class LocationService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        'Error finding locations by point',
+        "Error finding locations by point",
         error.message
       );
     }
@@ -211,7 +308,7 @@ class LocationService {
     try {
       const location = await Location.findById(id);
       if (!location) {
-        throw new ErrorResponse(404, 'Location not found');
+        throw new ErrorResponse(404, "Location not found");
       }
 
       location.isActive = !location.isActive;
@@ -221,7 +318,7 @@ class LocationService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        'Error toggling location status',
+        "Error toggling location status",
         error.message
       );
     }

@@ -1,13 +1,13 @@
-import { ContextType } from '../../types';
-import { Pagination } from '../../types/list-resources';
-import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
-import LocationService from './location.service';
+import { ContextType } from "../../types";
+import { Pagination } from "../../types/list-resources";
+import { setPagePaginationHeaders } from "../../utils/pagination-headers.util";
+import LocationService from "./location.service";
 import {
   CreateLocationInput,
   LocationFilter,
   LocationSort,
   UpdateLocationInput,
-} from './location.types';
+} from "./location.types";
 
 class LocationController {
   static async listLocations(
