@@ -3,7 +3,7 @@ import Wallet from '../models/wallet.model';
 import { ErrorResponse } from '../utils/responses';
 import PaystackService from '../services/paystack.services';
 import Transaction from '../features/transaction/transaction.model';
-import { AccountType } from '../constants/general';
+import { AccountType, AccountType_ } from '../constants/general';
 
 interface CreateWalletInput {
   userId: string;
@@ -470,10 +470,10 @@ class WalletService {
     const Customer = mongoose.model('Customer');
 
     const driver = await Driver.findById(userId);
-    if (driver) return AccountType.DRIVER;
+    if (driver) return AccountType_.DRIVER;
 
     const customer = await Customer.findById(userId);
-    if (customer) return AccountType.CUSTOMER;
+    if (customer) return AccountType_.CUSTOMER;
 
     throw new ErrorResponse(404, 'User not found');
   }
