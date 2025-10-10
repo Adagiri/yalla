@@ -13,7 +13,7 @@ class TermiiService {
       sms: message,
       type: 'plain',
       api_key: apiKey,
-      channel: 'generic',
+      channel: 'dnd',
     };
 
     try {
