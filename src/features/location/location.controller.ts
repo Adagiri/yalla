@@ -1,7 +1,7 @@
 import { ContextType } from "../../types";
 import { Pagination } from "../../types/list-resources";
 import { setPagePaginationHeaders } from "../../utils/pagination-headers.util";
-import LocationService from "./location.service";
+import { LocationService } from "./location.service";
 import {
   CreateLocationInput,
   LocationFilter,
@@ -28,8 +28,9 @@ class LocationController {
       filter,
       sort
     );
+    console.log(data, paginationResult, "gotten");
     setPagePaginationHeaders(res, paginationResult);
-    return data;
+    return { data, paginationResult };
   }
 
   static async getLocation(_: any, { id }: { id: string }) {
