@@ -1,8 +1,8 @@
-import { Document } from 'mongoose';
+import { Document } from "mongoose";
 import {
   ListPaginationOptions,
   ListPaginationResult,
-} from '../types/list-resources';
+} from "../types/list-resources";
 
 export async function listResourcesPagination<T extends Document>(
   options: ListPaginationOptions<T>
@@ -18,15 +18,27 @@ export async function listResourcesPagination<T extends Document>(
   const filter: any = { ...baseFilter };
 
   if (additionalFilter) {
+    // Handle search field for full-text search
+    if (additionalFilter.search) {
+      filter.$or = [
+        { name: { $regex: additionalFilter.search, $options: "i" } },
+        { address: { $regex: additionalFilter.search, $options: "i" } },
+        { description: { $regex: additionalFilter.search, $options: "i" } },
+      ];
+      // Remove search to avoid processing it as a direct field
+      delete additionalFilter.search;
+    }
+
+    // Handle other filters
     Object.entries(additionalFilter).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        if (key === 'ids') {
-          filter['id'] = { $in: value };
+        if (key === "ids") {
+          filter["id"] = { $in: value };
         } else {
           filter[key] = { $in: value };
         }
-      } else if (typeof value === 'string') {
-        filter[key] = { $regex: value, $options: 'i' };
+      } else if (typeof value === "string") {
+        filter[key] = { $regex: value, $options: "i" };
       } else {
         filter[key] = value;
       }
@@ -35,8 +47,8 @@ export async function listResourcesPagination<T extends Document>(
 
   const totalDocs = await model.countDocuments(filter);
 
-  const field = sortParam?.field || 'createdAt';
-  const direction = sortParam?.direction === 'ASC' ? 1 : -1;
+  const field = sortParam?.field || "createdAt";
+  const direction = sortParam?.direction === "ASC" ? 1 : -1;
 
   const sortObject: Record<string, 1 | -1> = {
     [field]: direction,
@@ -54,6 +66,7 @@ export async function listResourcesPagination<T extends Document>(
     .skip(skip)
     .limit(limit);
 
+  console.log("reached", docs);
   const docsRetrieved = docs.length;
 
   const hasNextPage = docsRetrieved === limit && totalDocs > page * limit;

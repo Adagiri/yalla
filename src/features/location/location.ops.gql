@@ -16,6 +16,7 @@ input LocationFilter {
   address: String
   locationType: LocationType
   isActive: Boolean
+  search: String
 }
 
 enum LocationType {
@@ -73,6 +74,26 @@ type Location {
 }
 
 """
+Response type for listing locations with pagination metadata.
+"""
+type LocationListResponse {
+  data: [Location!]!
+  paginationResult: PaginationResult!
+}
+
+"""
+Pagination metadata for list responses.
+"""
+type PaginationResult {
+  totalDocs: Int!
+  docsRetrieved: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  nextPage: Int
+  previousPage: Int
+}
+
+"""
 Input type for creating a location.
 """
 input CreateLocationInput {
@@ -105,13 +126,13 @@ extend type Query {
   getLocation(id: ID!): Location!
 
   """
-  Retrieves a list of locations with pagination, filtering and sorting.
+  Retrieves a list of locations with pagination, filtering, and sorting.
   """
   listLocations(
     pagination: PaginationInput
     filter: LocationFilter
     sort: LocationSort
-  ): [Location!]!
+  ): LocationListResponse!
 
   """
   Find locations within a certain distance from a point.
@@ -119,7 +140,7 @@ extend type Query {
   findNearbyLocations(
     longitude: Float!
     latitude: Float!
-    maxDistance: Float! # in meters
+    maxDistance: Float # in meters
     locationType: LocationType
   ): [Location!]!
 

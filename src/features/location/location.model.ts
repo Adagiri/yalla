@@ -1,28 +1,28 @@
 // src/features/location/location.model.ts
-import mongoose, { Schema, Document } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
+import mongoose, { Schema, Document } from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 
 export interface LocationDocument extends Document {
   id: string;
+  _id: string;
   name: string;
   description?: string;
   address?: string;
 
   // MongoDB GeoJSON format
   location: {
-    type: 'Point';
+    type: "Point";
     coordinates: [number, number]; // [longitude, latitude]
   };
 
   // Estate/Area boundaries using GeoJSON Polygon
   boundary?: {
-    type: 'Polygon';
+    type: "Polygon";
     coordinates: number[][][]; // Array of linear rings
   };
 
-  locationType: 'estate' | 'landmark' | 'general';
+  locationType: "estate" | "landmark" | "general";
   isActive: boolean;
-
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,9 +37,9 @@ const LocationSchema = new Schema<LocationDocument>(
     location: {
       type: {
         type: String,
-        enum: ['Point'],
+        enum: ["Point"],
         required: true,
-        default: 'Point',
+        default: "Point",
       },
       coordinates: {
         type: [Number],
@@ -54,7 +54,7 @@ const LocationSchema = new Schema<LocationDocument>(
               coords[1] <= 90
             ); // latitude
           },
-          message: 'Invalid coordinates',
+          message: "Invalid coordinates",
         },
       },
     },
@@ -62,7 +62,7 @@ const LocationSchema = new Schema<LocationDocument>(
     boundary: {
       type: {
         type: String,
-        enum: ['Polygon'],
+        enum: ["Polygon"],
         // default: 'Polygon',
       },
       coordinates: {
@@ -78,15 +78,15 @@ const LocationSchema = new Schema<LocationDocument>(
               ring[0][1] === ring[ring.length - 1][1]
             );
           },
-          message: 'Invalid polygon - must be closed',
+          message: "Invalid polygon - must be closed",
         },
       },
     },
 
     locationType: {
       type: String,
-      enum: ['estate', 'landmark', 'general'],
-      default: 'general',
+      enum: ["estate", "landmark", "general"],
+      default: "general",
     },
 
     isActive: { type: Boolean, default: true },
@@ -99,8 +99,8 @@ const LocationSchema = new Schema<LocationDocument>(
 );
 
 // Create geospatial indexes
-LocationSchema.index({ location: '2dsphere' });
-LocationSchema.index({ boundary: '2dsphere' });
+LocationSchema.index({ location: "2dsphere" });
+LocationSchema.index({ boundary: "2dsphere" });
 
-const Location = mongoose.model<LocationDocument>('Location', LocationSchema);
+const Location = mongoose.model<LocationDocument>("Location", LocationSchema);
 export default Location;
