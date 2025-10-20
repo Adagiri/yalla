@@ -13,6 +13,10 @@ type Subscription {
 extend type Query {
   getBankCodes: [BankCode]
   getImageUploadUrl(input: ImageUploadUrlInput!): ImageUploadUrlResponse!
+
+  getFileUploadUrl(input: FileUploadUrlInput!): FileUploadUrlResponse!
+
+  getFileDownloadUrl(key: String!): String!
 }
 
 type BankCode {
@@ -26,6 +30,8 @@ extend type Mutation {
   verifyCode(input: VerifyCodeInput!): AuthPayload!
 
   login(input: LoginInput!): AuthPayload!
+
+  googleLogin(firebaseToken: String!, accountType: AccountType!): AuthPayload!
 
   enableMfa(input: EnableMfaInput!): AccountEntity!
 

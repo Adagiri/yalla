@@ -1,5 +1,6 @@
 import { queueService } from './redis-queue.service';
 import { JobProcessors } from './job-processors.service';
+import { initializeFirebase } from './firebase-admin.service';
 
 export class ServiceManager {
   private static isInitialized = false;
@@ -7,6 +8,7 @@ export class ServiceManager {
   /**
    * Initialize all services
    */
+
   static async initialize() {
     if (this.isInitialized) {
       console.log('⚠️ Services already initialized');
@@ -15,6 +17,9 @@ export class ServiceManager {
 
     try {
       console.log('🚀 Initializing services...');
+
+      // Initialize Firebase Admin - ADD THIS
+      initializeFirebase();
 
       // Initialize job processors
       JobProcessors.initialize();
@@ -28,7 +33,6 @@ export class ServiceManager {
       this.isInitialized = true;
       console.log('✅ All services initialized successfully');
 
-      // Log service status
       this.logServiceStatus();
     } catch (error) {
       console.error('❌ Failed to initialize services:', error);

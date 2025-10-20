@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { AccountType } from '../constants/general';
 
 export interface UserType {
   id: string;
@@ -17,6 +18,6 @@ export interface ContextType {
     email: string;
     name: string;
     role: string;
-    accountType: string;
+    accountType: AccountType;
   };
 }

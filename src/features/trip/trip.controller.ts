@@ -14,7 +14,7 @@ import {
 import { CreateTripInput, TripFilter, TripSort } from './trip.type';
 import { BackgroundRunnersService } from '../../services/background-runners.service';
 import { cacheService } from '../../services/redis-cache.service';
-import { AccountType } from '../../constants/general';
+import { AccountType, AccountType_ } from '../../constants/general';
 
 
 
@@ -265,7 +265,7 @@ class TripController {
    * Get incoming trips for driver (from Redis)
    */
   static async getIncomingTrips(_: any, __: any, { user }: ContextType) {
-    if (user.accountType === AccountType.DRIVER) {
+    if (user.accountType === AccountType_.DRIVER) {
       throw new ErrorResponse(403, 'Only drivers can access incoming trips');
     }
 
@@ -276,7 +276,7 @@ class TripController {
    * Get driver's queue stats
    */
   static async getDriverQueueStats(_: any, __: any, { user }: ContextType) {
-    if (user.accountType === AccountType.DRIVER) {
+    if (user.accountType === AccountType_.DRIVER) {
       throw new ErrorResponse(403, 'Only drivers can access queue stats');
     }
 

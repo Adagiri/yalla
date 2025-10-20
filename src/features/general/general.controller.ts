@@ -1,9 +1,10 @@
 import { ContextType } from "../../types";
-import { AuthPayload } from "../../utils/responses";
+import { AuthPayload, ErrorResponse } from "../../utils/responses";
 import Admin from "../admin/admin.model";
 import Driver from "../driver/driver.model";
 import Customer from "../customer/customer.model";
 import GeneralService from "./general.service";
+import { AccountType } from "../../constants/general";
 import GeneralSettingService from "./general-setting.service";
 
 import PricingSettingService from "./pricing-setting.service";
@@ -123,6 +124,48 @@ class GeneralController {
 
     const updatedEntity = await GeneralService.disableMfa(input);
     return updatedEntity;
+  }
+
+  static async googleLogin(
+    _: any,
+    {
+      firebaseToken,
+      accountType,
+    }: { firebaseToken: string; accountType: AccountType }
+  ) {
+    const response = await GeneralService.googleLogin(
+      firebaseToken,
+      accountType
+    );
+    return new AuthPayload(response.entity, response.token);
+  }
+
+  static async getFileUploadUrl(
+    _: any,
+    { input }: { input: any },
+    context: ContextType
+  ) {
+    const userId = context.user?.id;
+
+    const response = await GeneralService.getFileUploadUrl({
+      ...input,
+      userId,
+    });
+
+    return response;
+  }
+
+  static async getFileDownloadUrl(
+    _: any,
+    { key }: { key: string },
+    context: ContextType
+  ) {
+    if (!context.user) {
+      throw new ErrorResponse(401, "Authentication required");
+    }
+
+    const url = await GeneralService.getFileDownloadUrl(key);
+    return url;
   }
 
   // === PRICING SETTINGS ===

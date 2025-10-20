@@ -113,4 +113,13 @@ export class SubscriptionService {
       tripLifecycleUpdate: payload,
     });
   }
+
+  static async publishIncomingTripsUpdate(driverId: string, trips: any[]) {
+    await pubsub.publish(SUBSCRIPTION_EVENTS.INCOMING_TRIPS_UPDATED, {
+      incomingTripsUpdated: {
+        driverId,
+        trips,
+      },
+    });
+  }
 }

@@ -4,7 +4,7 @@ import Admin, { AdminDocument } from '../features/admin/admin.model';
 import Driver from '../features/driver/driver.model';
 import Customer from '../features/customer/customer.model';
 import { skip } from 'graphql-resolvers';
-import { AccountType } from '../constants/general';
+import { AccountType_ } from '../constants/general';
 import {
   ADMIN_PERMISSIONS,
   ROLE_PERMISSIONS,
@@ -39,9 +39,9 @@ export const protectAdmin = async (
     throw new ErrorResponse(403, 'Admin account is deactivated.');
   }
 
-  // Support both old AccountType system and new role system
+  // Support both old AccountType_ system and new role system
   const isValidAdmin =
-    userRecord.accountType === AccountType.ADMIN ||
+    userRecord.accountType === AccountType_.ADMIN ||
     ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SUPPORT', 'ANALYST'].includes(
       userRecord.role
     );
@@ -103,7 +103,7 @@ export const protectDriver = async (
     throw new ErrorResponse(404, 'User does not exist.');
   }
 
-  if (userRecord.accountType !== AccountType.DRIVER) {
+  if (userRecord.accountType !== AccountType_.DRIVER) {
     throw new ErrorResponse(403, 'Not authorized as a driver.');
   }
 
@@ -125,7 +125,7 @@ export const protectCustomer = async (
     throw new ErrorResponse(404, 'User does not exist.');
   }
 
-  if (userRecord.accountType !== AccountType.CUSTOMER) {
+  if (userRecord.accountType !== AccountType_.CUSTOMER) {
     throw new ErrorResponse(403, 'Not authorized as a customer.');
   }
 
@@ -155,9 +155,9 @@ export const protectEntities = (requiredEntities: string[]) => {
           throw new ErrorResponse(403, 'Admin account is deactivated.');
         }
 
-        // Support both old AccountType system and new role system
+        // Support both old AccountType_ system and new role system
         const isValidAdmin =
-          userRecord.accountType === AccountType.ADMIN ||
+          userRecord.accountType === AccountType_.ADMIN ||
           ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SUPPORT', 'ANALYST'].includes(
             userRecord.role
           );
@@ -185,7 +185,7 @@ export const protectEntities = (requiredEntities: string[]) => {
     // Check Driver
     if (requiredEntities.includes('DRIVER')) {
       userRecord = await Driver.findById(user.id);
-      if (userRecord && userRecord.accountType === AccountType.DRIVER) {
+      if (userRecord && userRecord.accountType === AccountType_.DRIVER) {
         context.user = userRecord;
         return skip;
       }
@@ -194,7 +194,7 @@ export const protectEntities = (requiredEntities: string[]) => {
     // Check Customer
     if (requiredEntities.includes('CUSTOMER')) {
       userRecord = await Customer.findById(user.id);
-      if (userRecord && userRecord.accountType === AccountType.CUSTOMER) {
+      if (userRecord && userRecord.accountType === AccountType_.CUSTOMER) {
         context.user = userRecord;
         return skip;
       }

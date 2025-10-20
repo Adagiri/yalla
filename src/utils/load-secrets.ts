@@ -28,6 +28,7 @@ export async function loadSecrets(): Promise<void> {
 
     Object.entries(secrets).forEach(([key, value]) => {
       process.env[key] = value as string;
+      console.log(key, ': ', value)
     });
 
     console.log(

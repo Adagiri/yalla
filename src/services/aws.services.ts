@@ -35,6 +35,16 @@ class AWSServices {
     contentType: string
   ): Promise<string | null> {
     try {
+            console.log('🔍 DEBUG - AWS Credentials:');
+            console.log(
+              'Access Key from ENV:',
+              ENV.AWS_ACCESS_KEY_ID?.substring(0, 10) + '...'
+            );
+            console.log(
+              'Starts with AKIA?',
+              ENV.AWS_ACCESS_KEY_ID?.startsWith('AKIA')
+            );
+            console.log('Has Secret Key?', !!ENV.AWS_SECRET_ACCESS_KEY);
       const s3Client = new S3Client({
         region: ENV.AWS_S3_REGION,
         credentials: {
@@ -50,7 +60,7 @@ class AWSServices {
       });
 
       const signedUrl = await getSignedUrl(s3Client, command, {
-        expiresIn: 3600,
+        expiresIn: 36000,
       });
       return signedUrl;
     } catch (error: any) {

@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { v4 as uuidv4 } from 'uuid';
-import { AccountType, AuthChannelEnum } from '../../constants/general';
+import { AccountType, AccountType_, AuthChannelEnum } from '../../constants/general';
 import { PhoneType } from '../../types/general';
 
 export interface CustomerModelType extends Document {
@@ -81,7 +81,7 @@ export interface CustomerModelPartialType extends Document {
 const customerSchema = new Schema<CustomerModelType>(
   {
     _id: { type: String, default: uuidv4 },
-    accountType: { type: String, default: AccountType.CUSTOMER },
+    accountType: { type: String, default: AccountType_.CUSTOMER },
     locationId: { type: String },
     firstname: { type: String },
     lastname: { type: String },

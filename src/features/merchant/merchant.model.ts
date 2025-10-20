@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { v4 as uuidv4 } from 'uuid';
-import { AccountType, AuthChannelEnum } from '../../constants/general';
+import { AccountType, AccountType_, AuthChannelEnum } from '../../constants/general';
 
 export interface MerchantModelType extends Document {
   id?: string; // UUID
@@ -55,7 +55,7 @@ export interface MerchantModelPartialType extends Document {
 const merchantSchema = new Schema<MerchantModelType>(
   {
     _id: { type: String, default: uuidv4 },
-    accountType: { type: String, default: AccountType.DRIVER },
+    accountType: { type: String, default: AccountType_.DRIVER },
     locationId: { type: String },
     firstname: { type: String },
     lastname: { type: String },

@@ -78,7 +78,7 @@ const GeneralSettingSchema = new Schema<IGeneralSetting>(
   }
 );
 
-// Create a compound unique index for active settings
+// create a compound unique index for active settings
 GeneralSettingSchema.index(
   { isActive: 1 },
   {
@@ -87,7 +87,7 @@ GeneralSettingSchema.index(
   }
 );
 
-// Pre-save middleware to ensure only one active setting
+// pre-save middleware to ensure only one active setting
 GeneralSettingSchema.pre("save", async function (next) {
   if (this.isActive) {
     try {

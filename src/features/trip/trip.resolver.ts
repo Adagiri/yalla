@@ -187,12 +187,15 @@ const tripResolvers = {
 
     incomingTripsUpdated: {
       subscribe: withFilter(
-        () => pubsub.asyncIterator('INCOMING_TRIPS_UPDATED'),
+        () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.INCOMING_TRIPS_UPDATED),
         (payload, variables, context) => {
-          // Only send to the specific driver
+          console.log(payload, variables)
           return payload.incomingTripsUpdated.driverId === variables.driverId;
         }
       ),
+      resolve: (payload: any) => {
+        return payload.incomingTripsUpdated.trips;
+      },
     },
   },
 
