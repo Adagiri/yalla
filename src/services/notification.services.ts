@@ -1,3 +1,4 @@
+import { AccountType, AccountType_ } from './../constants/general';
 import {
   CreateTemplateCommand,
   DeleteTemplateCommand,
@@ -27,7 +28,7 @@ const sesClient = new SESClient({
 
 interface SendNotificationInput {
   userId: string;
-  userType: 'driver' | 'customer' | 'admin';
+  userType: AccountType;
   type: string;
   title: string;
   message: string;
@@ -74,7 +75,7 @@ class NotificationService {
 
       // Get user details
       let user;
-      if (input.userType === 'driver') {
+      if (input.userType === AccountType_.DRIVER) {
         user = await Driver.findById(input.userId).select(
           'email phone deviceTokens firstname lastname'
         );
@@ -348,7 +349,7 @@ class NotificationService {
    */
   static async sendTripNotification(
     userId: string,
-    userType: 'driver' | 'customer',
+    userType: AccountType,
     notificationType:
       | 'new_request'
       | 'trip_accepted'

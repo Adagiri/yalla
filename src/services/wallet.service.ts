@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Wallet from '../models/wallet.model';
+import Wallet, { WalletDocument } from '../models/wallet.model';
 import { ErrorResponse } from '../utils/responses';
 import PaystackService from '../services/paystack.services';
 import Transaction from '../features/transaction/transaction.model';
@@ -59,6 +59,7 @@ class WalletService {
       await wallet.save();
       return wallet;
     } catch (error: any) {
+      console.log('error creating wallet', error);
       throw new ErrorResponse(500, 'Error creating wallet', error.message);
     }
   }
@@ -68,13 +69,14 @@ class WalletService {
    */
   static async getUserWallet(userId: string) {
     try {
-      let wallet = await Wallet.findOne({ userId });
-
+      let wallet: WalletDocument |null = await Wallet.findOne({ userId });
       if (!wallet) {
         // Auto-create wallet if it doesn't exist
         const userType = await this.getUserType(userId);
         wallet = await this.createWallet({ userId, userType });
       }
+
+     wallet.d
 
       return wallet;
     } catch (error: any) {
@@ -142,6 +144,7 @@ class WalletService {
         },
       };
     } catch (error: any) {
+      console.log(error);
       await session.abortTransaction();
       throw new ErrorResponse(
         500,
@@ -461,9 +464,7 @@ class WalletService {
   /**
    * Helper: Get user type
    */
-  private static async getUserType(
-    userId: string
-  ): Promise<AccountType> {
+  private static async getUserType(userId: string): Promise<AccountType> {
     // This would typically check the user's account type from the user model
     // For now, we'll implement a basic check
     const Driver = mongoose.model('Driver');

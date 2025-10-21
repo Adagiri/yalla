@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { PaymentModel, PaymentModelEnum } from '../../constants/payment-models';
+import { AccountTypeEnum } from '../../constants/general';
 
 export interface TripDocument extends Document {
   _id: string;
@@ -221,7 +222,7 @@ const TripSchema = new Schema<TripDocument>(
     startedAt: { type: Date },
     completedAt: { type: Date },
     cancelledAt: { type: Date },
-    cancelledBy: { type: String, enum: ['driver', 'customer'] },
+    cancelledBy: { type: String, enum: AccountTypeEnum},
     cancellationReason: { type: String },
 
     driverLocation: {
