@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Wallet, { WalletDocument } from '../models/wallet.model';
+import Wallet from '../models/wallet.model';
 import { ErrorResponse } from '../utils/responses';
 import PaystackService from '../services/paystack.services';
 import Transaction from '../features/transaction/transaction.model';
@@ -69,14 +69,12 @@ class WalletService {
    */
   static async getUserWallet(userId: string) {
     try {
-      let wallet: WalletDocument |null = await Wallet.findOne({ userId });
+      let wallet = await Wallet.findOne({ userId });
       if (!wallet) {
         // Auto-create wallet if it doesn't exist
         const userType = await this.getUserType(userId);
         wallet = await this.createWallet({ userId, userType });
       }
-
-     wallet.d
 
       return wallet;
     } catch (error: any) {

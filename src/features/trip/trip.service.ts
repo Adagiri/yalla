@@ -18,6 +18,7 @@ import { CreateTripInput, TripFilter, TripSort } from './trip.type';
 import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
 import { Pagination } from '../../types/list-resources';
 import { BackgroundRunnersService } from '../../services/background-runners.service';
+import { AccountType_ } from '../../constants/general';
 
 class TripService {
   static async listTrips(
@@ -750,7 +751,7 @@ class TripService {
       if (updatedTrip) {
         await NotificationService.sendTripNotification(
           trip.driverId,
-          'driver',
+          AccountType_.DRIVER,
           'earnings_received',
           {
             ...updatedTrip.toObject(),
@@ -1136,7 +1137,7 @@ class TripService {
       // Send notifications
       await NotificationService.sendTripNotification(
         trip.customerId,
-        'customer',
+        AccountType_.CUSTOMER,
         'trip_accepted',
         {
           ...trip.toObject(),

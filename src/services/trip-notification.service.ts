@@ -4,6 +4,7 @@ import Customer from '../features/customer/customer.model';
 import Notification from '../features/notification/notification.model';
 import NotificationService from './notification.services';
 import { ErrorResponse } from '../utils/responses';
+import { AccountType_ } from '../constants/general';
 
 interface TripNotificationData {
   tripId: string;
@@ -421,7 +422,7 @@ class TripNotificationService {
       // Send notification
       await NotificationService.sendTripNotification(
         trip.customerId,
-        'customer',
+        AccountType_.CUSTOMER,
         'trip_cancelled',
         {
           ...trip.toObject(),
