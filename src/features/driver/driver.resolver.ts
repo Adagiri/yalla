@@ -4,53 +4,54 @@ import { protectEntities } from '../../utils/auth-middleware';
 import { withFilter } from 'graphql-subscriptions';
 import { pubsub } from '../../graphql/pubsub';
 import { SUBSCRIPTION_EVENTS } from '../../graphql/subscription-events';
+import { AccountType_ } from '../../constants/general';
 
 const driverResolvers = {
   Query: {
     listDrivers: combineResolvers(
-      protectEntities(['ADMIN']),
+      protectEntities([AccountType_.ADMIN]),
       DriverController.listDrivers
     ),
 
     getDriver: combineResolvers(
-      protectEntities(['ADMIN']),
+      protectEntities([AccountType_.ADMIN]),
       DriverController.getDriver
     ),
 
     getNearbyDrivers: combineResolvers(
-      protectEntities(['ADMIN', 'DRIVER']),
+      protectEntities([AccountType_.ADMIN, AccountType_.DRIVER]),
       DriverController.getNearbyDrivers
     ),
 
     loggedInDriver: combineResolvers(
-      protectEntities(['DRIVER', 'ADMIN']),
+      protectEntities([AccountType_.DRIVER, AccountType_.ADMIN]),
       DriverController.loggedInDriver
     ),
   },
   Mutation: {
     registerDriver: DriverController.registerDriver,
     updateDriverPersonalInfo: combineResolvers(
-      protectEntities(['DRIVER', 'ADMIN']),
+      protectEntities([AccountType_.DRIVER, AccountType_.ADMIN]),
       DriverController.updateDriverPersonalInfo
     ),
     updateDriverLicense: combineResolvers(
-      protectEntities(['DRIVER', 'ADMIN']),
+      protectEntities([AccountType_.DRIVER, AccountType_.ADMIN]),
       DriverController.updateDriverLicense
     ),
 
     updateDriverProfilePhoto: combineResolvers(
-      protectEntities(['DRIVER', 'ADMIN']),
+      protectEntities([AccountType_.DRIVER, AccountType_.ADMIN]),
       DriverController.updateProfilePhoto
     ),
 
     // Update driver location during trip
     updateDriverLocation: combineResolvers(
-      protectEntities(['DRIVER']),
+      protectEntities([AccountType_.DRIVER]),
       DriverController.updateDriverLocation
     ),
 
     updateDriverStatus: combineResolvers(
-      protectEntities(['DRIVER']),
+      protectEntities([AccountType_.DRIVER]),
       DriverController.updateDriverStatus
     ),
   },

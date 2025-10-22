@@ -468,12 +468,7 @@ class TripService {
         `✅ Trip ${trip.tripNumber} accepted by driver ${driver.firstname} ${driver.lastname}`
       );
 
-      return {
-        success: true,
-        message: 'Trip accepted successfully',
-        trip: updatedTrip,
-        driver: driver,
-      };
+      return updatedTrip;
     } catch (error: any) {
       await session.abortTransaction();
 
@@ -690,6 +685,11 @@ class TripService {
       trip.status = 'in_progress';
       trip.startedAt = new Date();
       await trip.save();
+
+      await this.publishTripLifecycleUpdate(tripId, {
+        status: 'in_progress',
+        message: 'Trip started',
+      });
 
       return trip;
     } catch (error: any) {

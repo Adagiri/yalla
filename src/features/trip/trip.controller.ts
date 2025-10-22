@@ -232,6 +232,10 @@ class TripController {
     { tripId }: { tripId: string },
     { user }: ContextType
   ) {
+    // Update trip status in MongoDB first
+    await TripService.arrivedAtPickup(tripId, user.id);
+
+    // Then queue background job for notifications
     await addTripUpdateJob(tripId, 'driver_arrived', {
       message: 'Driver has arrived at pickup location',
       arrivedAt: new Date(),
