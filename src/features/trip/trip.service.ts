@@ -943,6 +943,28 @@ class TripService {
   }
 
   /**
+   * Get active trip for customer
+   */
+  static async getCustomerActiveTrip(customerId: string) {
+    try {
+      const trip = await Trip.findOne({
+        customerId,
+        status: {
+          $in: [
+            'searching',
+            'driver_assigned',
+            'driver_arrived',
+            'in_progress',
+          ],
+        },
+      }).populate('driverId pickup.estateId destination.estateId');
+      return trip;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error fetching active trip', error.message);
+    }
+  }
+
+  /**
    * Mark driver as arrived at pickup location
    */
   static async arrivedAtPickup(tripId: string, driverId: string) {

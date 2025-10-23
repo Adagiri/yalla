@@ -142,6 +142,11 @@ class TripController {
     return await TripService.getActiveTrip(user.id);
   }
 
+  // Get active trip for customer
+  static async getCustomerActiveTrip(_: any, __: any, { user }: ContextType) {
+    return await TripService.getCustomerActiveTrip(user.id);
+  }
+
   // Calculate driver earnings
   static async getDriverEarnings(
     _: any,
