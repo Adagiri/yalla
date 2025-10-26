@@ -675,6 +675,52 @@ class NotificationService {
       throw new Error(`Failed to delete email template: ${error.message}`);
     }
   }
+
+  // Payout notifications
+  static async notifyPayoutProcessed(driverId: string, amount: number) {
+    await this.sendNotification({
+      userId: driverId,
+      userType: AccountType_.DRIVER,
+      type: 'payout_processed',
+      title: '💰 Payout Successful',
+      message: `₦${amount / 100} has been sent to your bank account`,
+      sendPush: true,
+      sendEmail: true,
+    });
+  }
+
+  // Debt warning
+  static async notifyDebtWarning(
+    driverId: string,
+    debtAmount: number,
+    limit: number
+  ) {
+    await this.sendNotification({
+      userId: driverId,
+      userType: AccountType_.DRIVER,
+      type: 'debt_warning',
+      title: '⚠️ Debt Warning',
+      message: `Your debt (₦${debtAmount / 100}) is approaching the limit (₦${limit / 100})`,
+      sendPush: true,
+    });
+  }
+
+  // Refund processed
+  static async notifyRefundProcessed(
+    customerId: string,
+    amount: number,
+    reason: string
+  ) {
+    await this.sendNotification({
+      userId: customerId,
+      userType: AccountType_.CUSTOMER,
+      type: 'refund_processed',
+      title: '💵 Refund Processed',
+      message: `₦${amount / 100} has been refunded: ${reason}`,
+      sendPush: true,
+      sendEmail: true,
+    });
+  }
 }
 
 declare namespace NodeJS {

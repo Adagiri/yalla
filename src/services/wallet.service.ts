@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { ClientSession } from 'mongoose';
 import Wallet from '../models/wallet.model';
 import { ErrorResponse } from '../utils/responses';
 import PaystackService from '../services/paystack.services';
@@ -222,8 +222,13 @@ class WalletService {
   /**
    * Debit wallet (for trip payments, etc.)
    */
-  static async debitWallet(input: WalletTransactionInput) {
-    const session = await mongoose.startSession();
+  static async debitWallet(
+    input: WalletTransactionInput,
+    session?: ClientSession
+  ) {
+    if (!session) {
+      session = await mongoose.startSession();
+    }
 
     try {
       session.startTransaction();
@@ -280,8 +285,13 @@ class WalletService {
   /**
    * Credit wallet (for driver earnings, refunds, etc.)
    */
-  static async creditWallet(input: WalletTransactionInput) {
-    const session = await mongoose.startSession();
+  static async creditWallet(
+    input: WalletTransactionInput,
+    session?: ClientSession
+  ) {
+    if (!session) {
+      session = await mongoose.startSession();
+    }
 
     try {
       session.startTransaction();

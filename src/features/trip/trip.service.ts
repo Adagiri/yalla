@@ -19,6 +19,7 @@ import { listResourcesPagination } from '../../helpers/list-resources-pagination
 import { Pagination } from '../../types/list-resources';
 import { BackgroundRunnersService } from '../../services/background-runners.service';
 import { AccountType_ } from '../../constants/general';
+import PaymentSystemConfigService from '../general/payment-system-config.service';
 
 class TripService {
   static async listTrips(
@@ -367,6 +368,18 @@ class TripService {
       const trip = await Trip.findById(tripId);
       if (!trip) {
         throw new ErrorResponse(404, 'Trip not found');
+      }
+
+      if (trip.paymentMethod === 'cash') {
+        const debtCheck =
+          await PaymentSystemConfigService.canDriverAcceptCashTrip(
+            driverId,
+            trip.pricing.finalAmount * 0.25 // Commission amount
+          );
+
+        if (!debtCheck.allowed) {
+          throw new ErrorResponse(403, debtCheck.reason || 'none');
+        }
       }
 
       if (trip.status !== 'drivers_found') {

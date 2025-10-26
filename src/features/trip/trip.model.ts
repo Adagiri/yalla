@@ -72,7 +72,7 @@ export interface TripDocument extends Document {
   startedAt?: Date;
   completedAt?: Date;
   cancelledAt?: Date;
-  cancelledBy?: 'customer' | 'driver';
+  cancelledBy?: 'customer' | 'driver' | 'system';
   cancellationReason?: String;
 
   // Real-time tracking
