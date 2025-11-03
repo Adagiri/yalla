@@ -22,6 +22,7 @@ import {
   UpdateSystemHealthInput,
   ExportRequestInput,
   ImportRequestInput,
+  VerificationStatus,
 } from "./general.types";
 import SystemHealthService from "./system-health.service";
 import DataManagementService from "./data-management.service";
@@ -104,7 +105,6 @@ class GeneralController {
     { input }: { input: any },
     { user }: ContextType
   ) {
-    console.log(user);
     const accountType = user.accountType.toLowerCase();
     const model = models[accountType];
     input.model = model;
@@ -140,6 +140,8 @@ class GeneralController {
     return new AuthPayload(response.entity, response.token);
   }
 
+  // === Upload and download File ===
+
   static async getFileUploadUrl(
     _: any,
     { input }: { input: any },
@@ -167,6 +169,86 @@ class GeneralController {
     const url = await GeneralService.getFileDownloadUrl(key);
     return url;
   }
+
+  // === Document Verification document ===
+
+ static async verifyDocument(
+    _: any,
+    { userId, documentType, status }: { 
+      userId: string;
+      documentType: string;
+      status: string;
+    },
+    { user }: ContextType
+  ) {
+    if (!user?.id || user.accountType !== 'ADMIN') {
+      throw new ErrorResponse(403, "Only admins can verify documents");
+    }
+
+    const response = await GeneralService.verifyDocument(
+      userId,
+      documentType as any,
+      status as VerificationStatus,
+      user.id
+    );
+
+    return response;
+  }
+
+  static async getVerificationStatus(
+    _: any,
+    { userId }: { userId: string },
+    { user }: ContextType
+  ) {
+    if (!user?.id) {
+      throw new ErrorResponse(401, "Authentication required");
+    }
+
+    // Users can only check their own status unless they're admin
+    if (userId !== user.id && user.accountType !== 'ADMIN') {
+      throw new ErrorResponse(403, "Access denied");
+    }
+
+    const response = await GeneralService.getVerificationStatus(userId);
+    return response;
+  }
+
+  static async toggleDriverLicenseVerification(
+    _: any,
+    { userId, verified }: { userId: string; verified: boolean },
+    { user }: ContextType
+  ) {
+    if (!user?.id || user.accountType !== 'ADMIN') {
+      throw new ErrorResponse(403, "Only admins can verify documents");
+    }
+
+    const response = await GeneralService.toggleDriverLicenseVerification(
+      userId,
+      verified,
+      user.id
+    );
+
+    return response;
+  }
+
+  static async toggleVehicleInspection(
+    _: any,
+    { userId, inspected }: { userId: string; inspected: boolean },
+    { user }: ContextType
+  ) {
+    if (!user?.id || user.accountType !== 'ADMIN') {
+      throw new ErrorResponse(403, "Only admins can verify vehicle inspections");
+    }
+
+    const response = await GeneralService.toggleVehicleInspection(
+      userId,
+      inspected,
+      user.id
+    );
+
+    return response;
+  }
+
 
   // === PRICING SETTINGS ===
   static async createGeneralSetting(

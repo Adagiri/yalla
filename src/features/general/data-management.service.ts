@@ -197,7 +197,6 @@ export class DataManagementService {
 
       await exportRecord.save();
     } catch (error) {
-      console.error("Export processing failed:", error);
       await DataExport.findByIdAndUpdate(exportId, {
         status: "FAILED",
         errorMessage: "Export processing failed",
@@ -230,7 +229,6 @@ export class DataManagementService {
 
       await importRecord.save();
     } catch (error) {
-      console.error("Import processing failed:", error);
       await DataImport.findByIdAndUpdate(importId, {
         status: "FAILED",
         errorMessage: "Import processing failed",

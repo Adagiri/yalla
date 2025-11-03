@@ -24,8 +24,24 @@ export async function listResourcesPagination<T extends Document>(
         { name: { $regex: additionalFilter.search, $options: "i" } },
         { address: { $regex: additionalFilter.search, $options: "i" } },
         { description: { $regex: additionalFilter.search, $options: "i" } },
+        { email: { $regex: additionalFilter.search, $options: "i" } },
+        { firstname: { $regex: additionalFilter.search, $options: "i" } },
+        { lastname: { $regex: additionalFilter.search, $options: "i" } },
+        {
+          phone: {
+            fullphone: { $regex: additionalFilter.search, $options: "i" },
+          },
+        },
+        { modelName: { $regex: additionalFilter.search, $options: "i" } },
+        { manufactureYear: { $regex: additionalFilter.search, $options: "i" } },
+        {
+          identificationNumber: {
+            $regex: additionalFilter.search,
+            $options: "i",
+          },
+        },
       ];
-      // Remove search to avoid processing it as a direct field
+      // Remove search to avoid processing it as a  field
       delete additionalFilter.search;
     }
 
@@ -66,7 +82,6 @@ export async function listResourcesPagination<T extends Document>(
     .skip(skip)
     .limit(limit);
 
-  console.log("reached", docs);
   const docsRetrieved = docs.length;
 
   const hasNextPage = docsRetrieved === limit && totalDocs > page * limit;

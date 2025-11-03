@@ -24,6 +24,7 @@ export interface DriverFilter {
   locationId?: string;
   isMFAEnabled?: boolean;
   authChannels?: AuthChannel[];
+  search: string;
 }
 
 export interface DriverSort {

@@ -45,6 +45,7 @@ const generalResolvers = {
       protectEntities(["ADMIN", "DRIVER", "CUSTOMER"]),
       GeneralController.getFileDownloadUrl
     ),
+    getVerificationStatus: GeneralController.getVerificationStatus,
     // General Settings
     getGeneralSettings: GeneralController.getGeneralSettings,
     getActiveGeneralSetting: GeneralController.getActiveGeneralSetting,
@@ -81,6 +82,18 @@ const generalResolvers = {
   },
 
   Mutation: {
+    verifyDocument: combineResolvers(
+      protectEntities(['ADMIN']),
+      GeneralController.verifyDocument
+    ),
+    toggleDriverLicenseVerification: combineResolvers(
+      protectEntities(['ADMIN']),
+      GeneralController.toggleDriverLicenseVerification
+    ),
+    toggleVehicleInspection: combineResolvers(
+      protectEntities(['ADMIN']),
+      GeneralController.toggleVehicleInspection
+    ),
     resendCode: GeneralController.resendCode,
     verifyCode: GeneralController.verifyCode,
     requestResetPassword: GeneralController.requestResetPassword,

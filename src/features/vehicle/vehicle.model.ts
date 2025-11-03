@@ -1,5 +1,5 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
+import mongoose, { Schema, Document } from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 
 export interface VehicleDocument extends Document {
   brand: string;
@@ -7,6 +7,8 @@ export interface VehicleDocument extends Document {
   manufactureYear: string;
   color: string;
   identificationNumber: string;
+  vehicleInspectionDone: boolean;
+  driverId?: string;
   plateNumber: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -18,6 +20,7 @@ const VehicleSchema = new Schema<VehicleDocument>(
     brand: { type: String, required: true },
     modelName: { type: String, required: true }, // Updated field name
     manufactureYear: { type: String, required: true },
+    vehicleInspectionDone: { type: Boolean, default: false },
     color: { type: String, required: true },
     identificationNumber: { type: String, required: true },
     plateNumber: { type: String, required: true },
@@ -29,6 +32,6 @@ const VehicleSchema = new Schema<VehicleDocument>(
   }
 );
 
-const Vehicle = mongoose.model<VehicleDocument>('Vehicle', VehicleSchema);
+const Vehicle = mongoose.model<VehicleDocument>("Vehicle", VehicleSchema);
 
 export default Vehicle;

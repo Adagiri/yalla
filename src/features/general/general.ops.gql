@@ -17,33 +17,11 @@ extend type Query {
   getFileUploadUrl(input: FileUploadUrlInput!): FileUploadUrlResponse!
 
   getFileDownloadUrl(key: String!): String!
-}
 
-type BankCode {
-  name: String!
-  code: String!
-}
+  getVerificationStatus(userId: ID!): VerificationStatus!
 
-extend type Mutation {
-  resendCode(input: ResendCodeInput!): AuthPayload!
 
-  verifyCode(input: VerifyCodeInput!): AuthPayload!
-
-  login(input: LoginInput!): AuthPayload!
-
-  googleLogin(firebaseToken: String!, accountType: AccountType!): AuthPayload!
-
-  enableMfa(input: EnableMfaInput!): AccountEntity!
-
-  disableMfa: AccountEntity!
-
-  requestResetPassword(input: ResetPasswordRequestInput!): Boolean!
-
-  resetPassword(input: ResetPasswordInput!): Boolean!
-}
-
-extend type Query {
-  # General Settings Queries
+    # General Settings Queries
   getGeneralSettings: GeneralSetting!
   getActiveGeneralSetting: GeneralSetting
   getGeneralSettingHistory(pagination: PaginationInput): [GeneralSetting!]!
@@ -80,9 +58,31 @@ extend type Query {
 
   getExportStatus(exportId: ID!): DataExport!
   getImportStatus(importId: ID!): DataImport!
+
+}
+
+type BankCode {
+  name: String!
+  code: String!
 }
 
 extend type Mutation {
+  resendCode(input: ResendCodeInput!): AuthPayload!
+
+  verifyCode(input: VerifyCodeInput!): AuthPayload!
+
+  login(input: LoginInput!): AuthPayload!
+
+  googleLogin(firebaseToken: String!, accountType: AccountType!): AuthPayload!
+
+  enableMfa(input: EnableMfaInput!): AccountEntity!
+
+  disableMfa: AccountEntity!
+
+  requestResetPassword(input: ResetPasswordRequestInput!): Boolean!
+
+  resetPassword(input: ResetPasswordInput!): Boolean!
+
   # General Settings Mutations
   createGeneralSetting(input: CreateGeneralSettingInput!): GeneralSetting!
   updateGeneralSetting(
@@ -132,4 +132,20 @@ extend type Mutation {
   requestDataImport(input: ImportRequestInput!): ImportResult!
   cancelDataImport(importId: ID!): Boolean!
   getImportTemplate(importType: ImportType!): String!
+
+verifyDocument(
+    userId: ID!
+    documentType: DocumentTypeInput!
+    status: VerificationStatusInput!
+  ): VerificationResult!
+
+  toggleDriverLicenseVerification(
+    userId: ID!
+    verified: Boolean!
+  ): VerificationResult!
+
+  toggleVehicleInspection(
+    userId: ID!
+    inspected: Boolean!
+  ): VerificationResult!
 }

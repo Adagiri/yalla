@@ -1,6 +1,6 @@
-import { combineResolvers } from 'graphql-resolvers';
-import VehicleController from './vehicle.controller';
-import { protectEntities } from '../../utils/auth-middleware';
+import { combineResolvers } from "graphql-resolvers";
+import VehicleController from "./vehicle.controller";
+import { protectEntities } from "../../utils/auth-middleware";
 
 const vehicleResolvers = {
   Query: {
@@ -9,15 +9,15 @@ const vehicleResolvers = {
   },
   Mutation: {
     createVehicle: combineResolvers(
-      protectEntities(['ADMIN', 'DRIVER']),
+      protectEntities(["ADMIN", "DRIVER"]),
       VehicleController.createVehicle
     ),
     updateVehicle: combineResolvers(
-      protectEntities(['ADMIN', 'DRIVER']),
+      protectEntities(["ADMIN", "DRIVER"]),
       VehicleController.updateVehicle
     ),
     deleteVehicle: combineResolvers(
-      protectEntities(['ADMIN', 'DRIVER']),
+      protectEntities(["ADMIN", "DRIVER"]),
       VehicleController.deleteVehicle
     ),
   },

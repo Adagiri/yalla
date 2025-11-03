@@ -1,56 +1,56 @@
-import { combineResolvers } from 'graphql-resolvers';
-import DriverController from './driver.controller';
-import { protectEntities } from '../../utils/auth-middleware';
-import { withFilter } from 'graphql-subscriptions';
-import { pubsub } from '../../graphql/pubsub';
-import { SUBSCRIPTION_EVENTS } from '../../graphql/subscription-events';
+import { combineResolvers } from "graphql-resolvers";
+import DriverController from "./driver.controller";
+import { protectEntities } from "../../utils/auth-middleware";
+import { withFilter } from "graphql-subscriptions";
+import { pubsub } from "../../graphql/pubsub";
+import { SUBSCRIPTION_EVENTS } from "../../graphql/subscription-events";
 
 const driverResolvers = {
   Query: {
     listDrivers: combineResolvers(
-      protectEntities(['ADMIN']),
+      protectEntities(["ADMIN"]),
       DriverController.listDrivers
     ),
 
     getDriver: combineResolvers(
-      protectEntities(['ADMIN']),
+      protectEntities(["ADMIN"]),
       DriverController.getDriver
     ),
 
     getNearbyDrivers: combineResolvers(
-      protectEntities(['ADMIN', 'DRIVER']),
+      protectEntities(["ADMIN", "DRIVER"]),
       DriverController.getNearbyDrivers
     ),
 
     loggedInDriver: combineResolvers(
-      protectEntities(['DRIVER', 'ADMIN']),
+      protectEntities(["DRIVER", "ADMIN"]),
       DriverController.loggedInDriver
     ),
   },
   Mutation: {
     registerDriver: DriverController.registerDriver,
     updateDriverPersonalInfo: combineResolvers(
-      protectEntities(['DRIVER', 'ADMIN']),
+      protectEntities(["DRIVER", "ADMIN"]),
       DriverController.updateDriverPersonalInfo
     ),
     updateDriverLicense: combineResolvers(
-      protectEntities(['DRIVER', 'ADMIN']),
+      protectEntities(["DRIVER", "ADMIN"]),
       DriverController.updateDriverLicense
     ),
 
     updateDriverProfilePhoto: combineResolvers(
-      protectEntities(['DRIVER', 'ADMIN']),
+      protectEntities(["DRIVER", "ADMIN"]),
       DriverController.updateProfilePhoto
     ),
 
     // Update driver location during trip
     updateDriverLocation: combineResolvers(
-      protectEntities(['DRIVER']),
+      protectEntities(["DRIVER"]),
       DriverController.updateDriverLocation
     ),
 
     updateDriverStatus: combineResolvers(
-      protectEntities(['DRIVER']),
+      protectEntities(["DRIVER"]),
       DriverController.updateDriverStatus
     ),
   },
@@ -66,7 +66,7 @@ const driverResolvers = {
           // Allow driver to subscribe to their own status OR admins to monitor all drivers
           const user = context.user;
           const isOwnStatus = statusUpdate.driverId === variables.driverId;
-          const isAdmin = user && ['SUPER_ADMIN', 'admin'].includes(user.role);
+          const isAdmin = user && ["SUPER_ADMIN", "admin"].includes(user.role);
 
           return isOwnStatus || isAdmin;
         }

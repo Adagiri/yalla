@@ -22,11 +22,12 @@ export interface VehicleFilter {
   color?: string;
   identificationNumber?: string;
   plateNumber?: string;
+  search?: string;
 }
 
 export interface VehicleSort {
-  field: 'brand' | 'modelName' | 'createdAt' | 'updatedAt';
-  direction: 'ASC' | 'DESC';
+  field: "brand" | "modelName" | "createdAt" | "updatedAt";
+  direction: "ASC" | "DESC";
 }
 
 /**
