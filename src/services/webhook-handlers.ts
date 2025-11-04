@@ -7,6 +7,7 @@ import {
   DriverSubscription,
   SubscriptionPlan,
 } from '../features/subscription/subscription.model';
+import { AccountType_ } from '../constants/general';
 
 export const handlePaystackWebhook = async (
   req: Request,
@@ -126,7 +127,7 @@ async function handleSubscriptionPayment(data: any) {
         // Send subscription activated notification
         await NotificationService.sendNotification({
           userId: driverId,
-          userType: 'driver',
+          userType: AccountType_.DRIVER,
           type: 'subscription_activated',
           title: '✅ Subscription Activated!',
           message: `Your ${plan.name} subscription is now active. You can start accepting rides!`,
@@ -164,7 +165,7 @@ async function handleFailedPayment(data: any) {
 
       await NotificationService.sendNotification({
         userId: driverId,
-        userType: 'driver',
+        userType: AccountType_.DRIVER,
         type: 'subscription_payment_failed',
         title: '❌ Subscription Payment Failed',
         message: `Your subscription payment could not be processed: ${gateway_response}`,
@@ -228,7 +229,7 @@ async function handleSuccessfulTransfer(data: any) {
       // Send success notification using the new sendNotification method
       await NotificationService.sendNotification({
         userId: transaction.userId,
-        userType: 'driver',
+        userType: AccountType_.DRIVER,
         type: 'cashout_successful',
         title: '💸 Cashout Successful!',
         message: `₦${amount / 100} has been transferred to your bank account`,
@@ -284,7 +285,7 @@ async function handleFailedTransfer(data: any) {
       // Send failure notification
       await NotificationService.sendNotification({
         userId: transaction.userId,
-        userType: 'driver',
+        userType: AccountType_.DRIVER,
         type: 'cashout_failed',
         title: '❌ Cashout Failed',
         message: `Your cashout of ₦${amount / 100} failed. Amount has been refunded to your wallet.`,
@@ -339,7 +340,7 @@ async function handleReversedTransfer(data: any) {
       // Send reversal notification
       await NotificationService.sendNotification({
         userId: transaction.userId,
-        userType: 'driver',
+        userType: AccountType_.DRIVER,
         type: 'cashout_reversed',
         title: '🔄 Cashout Reversed',
         message: `Your cashout of ₦${amount / 100} has been reversed. Amount credited back to your wallet.`,

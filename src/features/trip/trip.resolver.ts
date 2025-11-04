@@ -26,6 +26,12 @@ const tripResolvers = {
       TripController.getActiveTrip
     ),
 
+    // Get active trip for customer
+    getCustomerActiveTrip: combineResolvers(
+      protectEntities(['CUSTOMER']),
+      TripController.getCustomerActiveTrip
+    ),
+    
     // Get driver earnings
     getDriverEarnings: combineResolvers(
       protectEntities(['DRIVER']),
@@ -189,7 +195,7 @@ const tripResolvers = {
       subscribe: withFilter(
         () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.INCOMING_TRIPS_UPDATED),
         (payload, variables, context) => {
-          console.log(payload, variables)
+          console.log(payload, variables);
           return payload.incomingTripsUpdated.driverId === variables.driverId;
         }
       ),

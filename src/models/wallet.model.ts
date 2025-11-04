@@ -1,10 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
+import { AccountType, AccountTypeEnum } from '../constants/general';
 
 export interface WalletDocument extends Document {
   id: string;
   userId: string;
-  userType: 'driver' | 'customer';
+  userType: AccountType;
   balance: number;
   currency: string;
   isActive: boolean;
@@ -28,7 +29,7 @@ const WalletSchema = new Schema<WalletDocument>(
     userId: { type: String, required: true, unique: true },
     userType: {
       type: String,
-      enum: ['driver', 'customer'],
+      enum: AccountTypeEnum,
       required: true,
     },
     balance: {

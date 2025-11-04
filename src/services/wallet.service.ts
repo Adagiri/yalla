@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { ClientSession } from 'mongoose';
 import Wallet from '../models/wallet.model';
 import { ErrorResponse } from '../utils/responses';
 import PaystackService from '../services/paystack.services';
@@ -59,6 +59,7 @@ class WalletService {
       await wallet.save();
       return wallet;
     } catch (error: any) {
+      console.log('error creating wallet', error);
       throw new ErrorResponse(500, 'Error creating wallet', error.message);
     }
   }
@@ -69,7 +70,6 @@ class WalletService {
   static async getUserWallet(userId: string) {
     try {
       let wallet = await Wallet.findOne({ userId });
-
       if (!wallet) {
         // Auto-create wallet if it doesn't exist
         const userType = await this.getUserType(userId);
@@ -142,6 +142,7 @@ class WalletService {
         },
       };
     } catch (error: any) {
+      console.log(error);
       await session.abortTransaction();
       throw new ErrorResponse(
         500,
@@ -221,8 +222,13 @@ class WalletService {
   /**
    * Debit wallet (for trip payments, etc.)
    */
-  static async debitWallet(input: WalletTransactionInput) {
-    const session = await mongoose.startSession();
+  static async debitWallet(
+    input: WalletTransactionInput,
+    session?: ClientSession
+  ) {
+    if (!session) {
+      session = await mongoose.startSession();
+    }
 
     try {
       session.startTransaction();
@@ -279,8 +285,13 @@ class WalletService {
   /**
    * Credit wallet (for driver earnings, refunds, etc.)
    */
-  static async creditWallet(input: WalletTransactionInput) {
-    const session = await mongoose.startSession();
+  static async creditWallet(
+    input: WalletTransactionInput,
+    session?: ClientSession
+  ) {
+    if (!session) {
+      session = await mongoose.startSession();
+    }
 
     try {
       session.startTransaction();
@@ -461,9 +472,7 @@ class WalletService {
   /**
    * Helper: Get user type
    */
-  private static async getUserType(
-    userId: string
-  ): Promise<AccountType> {
+  private static async getUserType(userId: string): Promise<AccountType> {
     // This would typically check the user's account type from the user model
     // For now, we'll implement a basic check
     const Driver = mongoose.model('Driver');

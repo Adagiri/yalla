@@ -296,6 +296,9 @@ extend type Query {
   # Get a driver's active trip
   getDriverActiveTrip: Trip
 
+  # Get a customer's active trip
+  getCustomerActiveTrip: Trip
+
   # Get single trip
   getTrip(id: ID!): Trip
 

@@ -5,8 +5,17 @@ import { ErrorResponse } from '../../utils/responses';
 import WalletService from '../../services/wallet.service';
 import PaymentService from './payment.service';
 import PaystackService from '../../services/paystack.services';
-import { CashoutInput, PaymentFilter, PaymentSort, ProcessTripPaymentInput, TopUpWalletInput, TransactionFilter, TransactionSort } from './payment.types';
-
+import {
+  CashoutInput,
+  PaymentFilter,
+  PaymentSort,
+  ProcessTripPaymentInput,
+  TopUpWalletInput,
+  TransactionFilter,
+  TransactionSort,
+} from './payment.types';
+import WithdrawalLimitService from '../../services/withdrawal-limit.service';
+import PaymentSystemConfigService from '../general/payment-system-config.service';
 
 class PaymentController {
   /**
@@ -264,7 +273,7 @@ class PaymentController {
   }
 
   /**
-   * Driver cashout
+   * Driver cashout with withdrawal frequency limits
    */
   static async driverCashout(
     _: any,
@@ -277,6 +286,32 @@ class PaymentController {
         throw new ErrorResponse(403, 'Only drivers can request cashouts');
       }
 
+      // NEW: Check withdrawal eligibility based on frequency limits
+      const eligibility = await WithdrawalLimitService.canDriverWithdraw(
+        user.id
+      );
+
+      if (!eligibility.canWithdraw) {
+        throw new ErrorResponse(
+          403,
+          eligibility.reason || 'none',
+          `You have ${eligibility.remainingWithdrawals} until the next withdrawal cycle`
+        );
+      }
+
+      // Check Paystack balance before processing
+      const balanceCheck =
+        await PaymentSystemConfigService.checkPaystackBalance();
+
+      if (!balanceCheck.sufficient) {
+        throw new ErrorResponse(
+          503,
+          'Payouts are temporarily unavailable. Please try again later.',
+          'Payouts are temporarily unavailable'
+        );
+      }
+
+      // Process the cashout
       const result = await PaymentService.driverCashout({
         driverId: user.id,
         amount: input.amount,
@@ -284,9 +319,61 @@ class PaymentController {
         bankCode: input.bankCode,
       });
 
+      // ✅ NEW: Record withdrawal in driver's history
+      await WithdrawalLimitService.recordWithdrawal(
+        user.id,
+        input.amount * 100, // Convert to kobo
+        result.transferReference
+      );
+
       return result;
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error processing cashout', error.message);
+    }
+  }
+
+  /**
+   * Get driver's withdrawal statistics and limits
+   */
+  static async getWithdrawalStats(_: any, __: any, { user }: ContextType) {
+    try {
+      if (user.accountType !== 'DRIVER') {
+        throw new ErrorResponse(403, 'Only drivers can view withdrawal stats');
+      }
+
+      const stats = await WithdrawalLimitService.getWithdrawalStats(user.id);
+      return stats;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching withdrawal stats',
+        error.message
+      );
+    }
+  }
+
+  /**
+   * Check if driver can withdraw now (for UI to disable/enable button)
+   */
+  static async canWithdrawNow(_: any, __: any, { user }: ContextType) {
+    try {
+      if (user.accountType !== 'DRIVER') {
+        throw new ErrorResponse(
+          403,
+          'Only drivers can check withdrawal eligibility'
+        );
+      }
+
+      const eligibility = await WithdrawalLimitService.canDriverWithdraw(
+        user.id
+      );
+      return eligibility;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error checking withdrawal eligibility',
+        error.message
+      );
     }
   }
 
