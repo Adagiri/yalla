@@ -5,6 +5,7 @@ import { AccountType, AccountType_, AuthChannelEnum } from '../../constants/gene
 import { PhoneType } from '../../types/general';
 
 export interface CustomerModelType extends Document {
+  _id: string;
   id?: string; // UUID
   firstname: string;
   lastname: string;

@@ -112,8 +112,13 @@ export interface DriverModelType extends Document {
   // Financial tracking
   totalEarningsAllTime: number; // in kobo
   totalCashouts: number; // in kobo
+
   pendingEarnings: number; // in kobo
   lastCashoutAt?: Date;
+
+  cashCollected: number; // Total cash collected from cash trips (in kobo)
+  commissionOwed: number; // Commission owed to platform from cash trips (in kobo)
+  lastCommissionSettlement?: Date; // Last time commission was automatically settled
 
   paymentModel: PaymentModel;
   paymentModelHistory: Array<{
@@ -292,6 +297,17 @@ const driverSchema = new Schema<DriverModelType>(
         changedAt: {
           type: Date,
           default: Date.now,
+          cashCollected: {
+            type: Number,
+            default: 0,
+            get: (value: number) => Math.round(value),
+          },
+          commissionOwed: {
+            type: Number,
+            default: 0,
+            get: (value: number) => Math.round(value),
+          },
+          lastCommissionSettlement: { type: Date },
         },
         changedBy: {
           type: String, // Admin ID
@@ -365,7 +381,7 @@ const driverSchema = new Schema<DriverModelType>(
         bankCode: String,
       },
     ],
-    
+
     createdAt: {
       type: Date,
       default: Date.now,

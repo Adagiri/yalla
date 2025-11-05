@@ -128,13 +128,7 @@ export const ResourceType = {
 } as const;
 export type ResourceType = (typeof ResourceType)[keyof typeof ResourceType];
 
-const PaymentMethodCard = 'card';
-const PaymentMethodTransfer = 'bank_transfer';
-const PaymentMethod = {
-  Card: PaymentMethodCard,
-  Transfer: PaymentMethodTransfer,
-} as const;
-export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
 
 const PaymentTransactionStatusFailed = 'FAILED';
 const PaymentTransactionStatusSuccess = 'SUCCESS';
@@ -176,6 +170,20 @@ export const PaymentStatus = {
 
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
 
+const PaymentMethodCard = 'card';
+const PaymentMethodWallet = 'wallet';
+const PaymentMethodCash = 'cash';
+const PaymentMethodBankTransfer = 'bank_transfer';
+
+export const PaymentMethod = {
+  Card: PaymentMethodCard,
+  Wallet: PaymentMethodWallet,
+  Cash: PaymentMethodCash,
+  BankTransfer: PaymentMethodBankTransfer
+} as const;
+
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
 const ReceivableReasonUnspecified = 'UNSPECIFIED';
 const ReceivableReasonPayBills = 'PAY_BILL';
 
@@ -201,6 +209,7 @@ export type UploadUrlPurpose =
   (typeof UploadUrlPurpose)[keyof typeof UploadUrlPurpose];
 
 export const PaymentStatusEnum: string[] = Object.values(PaymentStatus);
+export const PaymentMethodEnum: string[] = Object.values(PaymentMethod);
 export const AccountTypeEnum: string[] = Object.values(AccountType_);
 export const AuthChannelEnum: string[] = Object.values(AuthChannel);
 export const UserCategoryEnum: string[] = Object.values(UserCategory);
@@ -209,7 +218,6 @@ export const ResendCodeScenarioEnum: string[] =
 export const EmailTemplateEnum: string[] = Object.values(EmailTemplate);
 export const PaymentPurposeEnum: string[] = Object.values(PaymentPurpose);
 export const ResourceTypeEnum: string[] = Object.values(ResourceType);
-export const PaymentMethodEnum: string[] = Object.values(PaymentMethod);
 export const PaymentTransactionStatusEnum: string[] = Object.values(
   PaymentTransactionStatus
 );

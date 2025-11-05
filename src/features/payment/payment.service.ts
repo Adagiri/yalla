@@ -6,10 +6,18 @@ import { ErrorResponse } from '../../utils/responses';
 import Driver from '../driver/driver.model';
 import Customer from '../customer/customer.model';
 import { Pagination } from '../../types/list-resources';
-import { CardPaymentInput, CashoutInput, PaymentFilter, PaymentSort, ProcessTripPaymentInput, SuccessfulCardPaymentResult } from './payment.types';
+import {
+  CardPaymentInput,
+  CashoutInput,
+  PaymentFilter,
+  PaymentSort,
+  ProcessTripPaymentInput,
+  SuccessfulCardPaymentResult,
+} from './payment.types';
 import Transaction from '../transaction/transaction.model';
 import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
-
+import NotificationService from '../../services/notification.services';
+import { AccountType_ } from '../../constants/general';
 
 class PaymentService {
   /**
@@ -389,9 +397,10 @@ class PaymentService {
   /**
    * Driver cashout to bank account
    */
-  static async driverCashout(input: CashoutInput
-    
-  ) {
+  /**
+   * Driver cashout to bank account
+   */
+  static async driverCashout(input: CashoutInput) {
     const session = await mongoose.startSession();
 
     try {
@@ -399,7 +408,6 @@ class PaymentService {
 
       // Get driver wallet
       const wallet = await WalletService.getUserWallet(input.driverId);
-
       const amountInKobo = Math.round(input.amount * 100);
 
       // Check minimum cashout amount (₦500)
@@ -407,9 +415,26 @@ class PaymentService {
         throw new ErrorResponse(400, 'Minimum cashout amount is ₦500');
       }
 
-      // Check sufficient balance
-      if (wallet.balance < amountInKobo) {
-        throw new ErrorResponse(400, 'Insufficient wallet balance');
+      const driver = await Driver.findById(input.driverId).select(
+        'firstname lastname commissionOwed cashCollected'
+      );
+
+      if (!driver) {
+        throw new ErrorResponse(404, 'Driver not found');
+      }
+
+      const commissionOwed = driver.commissionOwed || 0;
+
+      // Calculate available balance (after pending commission)
+      const availableBalance = wallet.balance - commissionOwed;
+
+      if (availableBalance < amountInKobo) {
+        const message =
+          commissionOwed > 0
+            ? `Insufficient balance. Available: ₦${availableBalance / 100} (₦${commissionOwed / 100} reserved for commission settlement)`
+            : `Insufficient balance. Available: ₦${availableBalance / 100}`;
+
+        throw new ErrorResponse(400, message);
       }
 
       // Verify bank account
@@ -418,45 +443,71 @@ class PaymentService {
         input.bankCode
       );
 
-      // Create transfer recipient
-      const recipientCode = await PaystackService.createTransferRecipient(
+      const recipient = await PaystackService.createTransferRecipient(
         accountDetails.account_name,
         input.accountNumber,
         input.bankCode,
         { driverId: input.driverId }
       );
 
-      // Initiate transfer
-      const transferReference = await PaystackService.disburseSingle(
+      // Generate transfer reference
+      const transferReference = `CASHOUT_${input.driverId}_${Date.now()}`;
+
+      // Initiate transfer to Paystack
+      const transfer = await PaystackService.initiateTransfer(
         input.amount,
-        `Cashout for driver ${input.driverId}`,
-        recipientCode
+        recipient.recipient_code,
+        `Cashout for ${driver.firstname} ${driver.lastname}`,
+        transferReference
       );
 
-      // Debit wallet
-      const walletResult = await WalletService.debitWallet({
-        userId: input.driverId,
-        amount: input.amount,
-        type: 'debit',
-        purpose: 'cashout',
-        description: `Cashout to ${accountDetails.account_name} - ${input.accountNumber}`,
-        paymentMethod: 'bank_transfer',
-        metadata: {
-          accountNumber: input.accountNumber,
-          bankCode: input.bankCode,
-          accountName: accountDetails.account_name,
-          transferReference,
+      // Debit wallet with session
+      const walletResult = await WalletService.debitWallet(
+        {
+          userId: input.driverId,
+          amount: input.amount,
+          type: 'debit',
+          purpose: 'cashout',
+          description: `Cashout to ${accountDetails.account_name} - ${input.accountNumber}`,
+          paymentMethod: 'bank_transfer',
+          metadata: {
+            accountNumber: input.accountNumber,
+            bankCode: input.bankCode,
+            accountName: accountDetails.account_name,
+            transferReference,
+            transferCode: transfer.transfer_code,
+            recipientCode: recipient.recipient_code,
+          },
         },
-      });
+        session
+      );
 
       await session.commitTransaction();
+
+      // Send notification
+      await NotificationService.sendNotification({
+        userId: input.driverId,
+        userType: AccountType_.DRIVER,
+        type: 'cashout_initiated',
+        title: '💸 Cashout Initiated',
+        message: `Cashout of ₦${input.amount} initiated to ${accountDetails.account_name}. Funds will arrive shortly.`,
+        data: {
+          amount: input.amount,
+          accountName: accountDetails.account_name,
+          accountNumber: input.accountNumber,
+          transferReference,
+        },
+        sendPush: true,
+      });
 
       return {
         success: true,
         transferReference,
+        transferCode: transfer.transfer_code,
         accountDetails,
         transaction: walletResult.transaction,
-        remainingBalance: walletResult.wallet.balance,
+        remainingBalance: walletResult.wallet.balance / 100,
+        message: 'Cashout initiated successfully',
       };
     } catch (error: any) {
       await session.abortTransaction();

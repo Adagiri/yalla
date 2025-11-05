@@ -5,6 +5,8 @@ import {
   PAYMENT_MODEL_CONFIG,
 } from '../../constants/payment-models';
 import { ErrorResponse } from '../../utils/responses';
+import PricingSettingService from '../general/pricing-setting.service';
+import { PaymentMethod } from '../../constants/general';
 
 interface PaymentModelCalculation {
   model: PaymentModel;
@@ -52,7 +54,7 @@ class PaymentModelService {
       }
     }
 
-    return this.calculateEarnings(
+    return await this.calculateEarnings(
       effectiveModel,
       tripAmount,
       driver,
@@ -64,13 +66,13 @@ class PaymentModelService {
   /**
    * Calculate earnings based on payment model
    */
-  private static calculateEarnings(
+  private static async calculateEarnings(
     model: PaymentModel,
     tripAmount: number,
     driver: any,
     hasActiveSubscription: boolean,
     subscriptionId?: string
-  ): PaymentModelCalculation {
+  ): Promise<PaymentModelCalculation> {
     let driverEarnings: number;
     let platformEarnings: number;
     let commissionRate: number;
@@ -81,10 +83,8 @@ class PaymentModelService {
       platformEarnings = 0;
       commissionRate = 0;
     } else {
-      // Commission model: Platform takes percentage
-      commissionRate =
-        driver.commissionSettings.customRate ||
-        PAYMENT_MODEL_CONFIG.COMMISSION_RATE;
+      // Commission model: Get rate from proper hierarchy
+      commissionRate = await this.getCommissionRate(driver);
       platformEarnings = Math.round(tripAmount * commissionRate);
       driverEarnings = tripAmount - platformEarnings;
     }
@@ -100,13 +100,55 @@ class PaymentModelService {
   }
 
   /**
+   * Get commission rate with proper hierarchy
+   * Priority: Driver custom rate > Admin global rate > Hard-coded fallback
+   */
+  private static async getCommissionRate(driver: any): Promise<number> {
+    // 1. Check if driver has custom commission rate
+    if (
+      driver.commissionSettings?.customRate !== undefined &&
+      driver.commissionSettings?.customRate !== null
+    ) {
+      console.log(
+        `Using custom commission rate ${(driver.commissionSettings.customRate * 100).toFixed(1)}% for driver ${driver._id}`
+      );
+      return driver.commissionSettings.customRate;
+    }
+
+    // 2. Get global commission rate from active PricingSetting
+    try {
+      const pricingSetting =
+        await PricingSettingService.getActivePricingSetting();
+
+      if (pricingSetting?.commissionRate) {
+        const globalRate = pricingSetting.commissionRate / 100; // Convert from percentage to decimal
+        console.log(
+          `Using global commission rate ${pricingSetting.commissionRate}% from PricingSetting`
+        );
+        return globalRate;
+      }
+    } catch (error) {
+      console.warn(
+        'Failed to fetch active PricingSetting, using fallback rate:',
+        error
+      );
+    }
+
+    // 3. Fallback to hard-coded rate
+    console.log(
+      `Using fallback commission rate ${(PAYMENT_MODEL_CONFIG.COMMISSION_RATE * 100).toFixed(1)}%`
+    );
+    return PAYMENT_MODEL_CONFIG.COMMISSION_RATE;
+  }
+
+  /**
    * Process trip payment based on driver's payment model
    */
   static async processTripPayment(
     driverId: string,
     tripId: string,
     tripAmount: number,
-    paymentMethod: 'cash' | 'card' | 'wallet'
+    paymentMethod:PaymentMethod
   ) {
     try {
       // Determine payment model and calculate earnings
@@ -146,7 +188,7 @@ class PaymentModelService {
     tripId: string,
     calculation: PaymentModelCalculation
   ) {
-    const WalletService = require('./wallet.service').default;
+    const WalletService = require('../../services/wallet.service').default;
 
     // Credit full amount to driver's wallet
     await WalletService.creditWallet({
@@ -185,7 +227,7 @@ class PaymentModelService {
     tripId: string,
     calculation: PaymentModelCalculation
   ) {
-    const WalletService = require('./wallet.service').default;
+    const WalletService = require('../../services/wallet.service').default;
 
     // Credit driver's share to wallet
     await WalletService.creditWallet({

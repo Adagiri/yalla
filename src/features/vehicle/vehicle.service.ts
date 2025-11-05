@@ -69,7 +69,7 @@ class VehicleService {
       // Update the driver to associate with the newly created vehicle within the same session
       await Driver.findByIdAndUpdate(
         userId,
-        { vehicle: vehicle._id },
+        { vehicleId: vehicle._id },
         { session }
       );
 

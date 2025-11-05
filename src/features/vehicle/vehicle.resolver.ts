@@ -9,7 +9,7 @@ const vehicleResolvers = {
   },
   Mutation: {
     createVehicle: combineResolvers(
-      protectEntities(['ADMIN', 'DRIVER']),
+      protectEntities(['DRIVER']),
       VehicleController.createVehicle
     ),
     updateVehicle: combineResolvers(
