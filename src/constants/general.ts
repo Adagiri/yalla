@@ -128,8 +128,6 @@ export const ResourceType = {
 } as const;
 export type ResourceType = (typeof ResourceType)[keyof typeof ResourceType];
 
-
-
 const PaymentTransactionStatusFailed = 'FAILED';
 const PaymentTransactionStatusSuccess = 'SUCCESS';
 const PaymentTransactionStatusReversed = 'REVERSED';
@@ -179,7 +177,7 @@ export const PaymentMethod = {
   Card: PaymentMethodCard,
   Wallet: PaymentMethodWallet,
   Cash: PaymentMethodCash,
-  BankTransfer: PaymentMethodBankTransfer
+  BankTransfer: PaymentMethodBankTransfer,
 } as const;
 
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
@@ -226,3 +224,20 @@ export const PaymentRecurringFrequencyEnum: string[] = Object.values(
 );
 export const ReceivableReasonEnum: string[] = Object.values(ReceivableReason);
 export const UploadUrlPurposeEnum: string[] = Object.values(UploadUrlPurpose);
+
+const CustomerAccountStatusActive = 'ACTIVE';
+const CustomerAccountStatusPaymentRequired = 'PAYMENT_REQUIRED';
+const CustomerAccountStatusSuspended = 'SUSPENDED';
+
+export const CustomerAccountStatus = {
+  Active: CustomerAccountStatusActive,
+  PaymentRequired: CustomerAccountStatusPaymentRequired,
+  Suspended: CustomerAccountStatusSuspended,
+} as const;
+
+export type CustomerAccountStatus =
+  (typeof CustomerAccountStatus)[keyof typeof CustomerAccountStatus];
+
+export const CustomerAccountStatusEnum: string[] = Object.values(
+  CustomerAccountStatus
+);

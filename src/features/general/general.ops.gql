@@ -37,7 +37,7 @@ extend type Mutation {
 
   disableMfa: AccountEntity!
 
-  requestResetPassword(input: ResetPasswordRequestInput!): Boolean!
+  requestResetPassword(input: ResetPasswordRequestInput!): String!
 
   resetPassword(input: ResetPasswordInput!): Boolean!
 }

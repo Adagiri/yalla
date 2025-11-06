@@ -18,10 +18,11 @@ import { CreateTripInput, TripFilter, TripSort } from './trip.type';
 import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
 import { Pagination } from '../../types/list-resources';
 import { BackgroundRunnersService } from '../../services/background-runners.service';
-import { AccountType_, PaymentMethod } from '../../constants/general';
+import { AccountType_, CustomerAccountStatus, PaymentMethod } from '../../constants/general';
 import PaymentSystemConfigService from '../general/payment-system-config.service';
 import PaystackService from '../../services/paystack.services';
 import { PaymentModel } from '../../constants/payment-models';
+import DriverEligibilityService from '../../services/driver-eligibility.service';
 
 class TripService {
   static async listTrips(
@@ -94,6 +95,51 @@ class TripService {
 
     try {
       session.startTransaction();
+
+      const existingActiveTrip = await Trip.findOne({
+        customerId: input.customerId,
+        status: {
+          $in: [
+            'searching',
+            'driver_assigned',
+            'driver_arrived',
+            'in_progress',
+          ],
+        },
+      });
+
+      if (existingActiveTrip) {
+        await session.abortTransaction();
+        throw new ErrorResponse(
+          400,
+          'You already have an active trip. Please complete or cancel your current trip before creating a new one.'
+        );
+      }
+
+      const customer = await Customer.findById(input.customerId).select(
+        'outstandingBalance accountStatus'
+      );
+
+      if (!customer) {
+        await session.abortTransaction();
+        throw new ErrorResponse(404, 'Customer not found');
+      }
+
+      if (customer.outstandingBalance > 0) {
+        await session.abortTransaction();
+        throw new ErrorResponse(
+          403,
+          `You have an outstanding balance of ₦${(customer.outstandingBalance / 100).toFixed(2)}. Please clear your balance before creating a new trip.`
+        );
+      }
+
+      if (customer.accountStatus === CustomerAccountStatus.Suspended) {
+        await session.abortTransaction();
+        throw new ErrorResponse(
+          403,
+          'Your account is suspended. Please contact support.'
+        );
+      }
 
       // Calculate route and pricing (existing logic)
       const route = await AmazonLocationService.calculateRoute(
@@ -437,6 +483,17 @@ class TripService {
 
       if (!driver.isAvailable || !driver.isOnline) {
         throw new ErrorResponse(400, 'Driver not available');
+      }
+
+      const eligibilityCheck =
+        await DriverEligibilityService.canDriverAcceptTrips(driverId);
+
+      if (!eligibilityCheck.eligible) {
+        await session.abortTransaction();
+        throw new ErrorResponse(
+          403,
+          eligibilityCheck.reason || 'Driver not eligible to accept trips'
+        );
       }
 
       // 4. Accept the trip
@@ -1456,7 +1513,10 @@ class TripService {
         driver.stats.totalTrips += 1;
 
         // Only update earnings for wallet and cash payments (card payments are handled by webhook)
-        if (trip.paymentMethod === PaymentMethod.Wallet || trip.paymentMethod === PaymentMethod.Cash) {
+        if (
+          trip.paymentMethod === PaymentMethod.Wallet ||
+          trip.paymentMethod === PaymentMethod.Cash
+        ) {
           const driverEarnings = trip.pricing.finalAmount * 0.75; // 75% to driver
           driver.stats.totalEarnings += driverEarnings;
         }
@@ -1556,7 +1616,8 @@ class TripService {
 
       // Check if payment was already processed
       const shouldRefund =
-        trip.paymentStatus === 'completed' && trip.paymentMethod === PaymentMethod.Wallet;
+        trip.paymentStatus === 'completed' &&
+        trip.paymentMethod === PaymentMethod.Wallet;
 
       // Cancel trip
       trip.status = 'cancelled';
