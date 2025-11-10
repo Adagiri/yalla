@@ -18,6 +18,7 @@ import Transaction from '../transaction/transaction.model';
 import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
 import NotificationService from '../../services/notification.services';
 import { AccountType_ } from '../../constants/general';
+import TransactionMetadataService from '../../services/transaction-metadata.service';
 
 class PaymentService {
   /**
@@ -443,6 +444,13 @@ class PaymentService {
         input.bankCode
       );
 
+      const enhancedMetadata =
+        await TransactionMetadataService.generateCashoutMetadata({
+          recipientAccountNumber: input.accountNumber,
+          recipientBankCode: input.bankCode,
+          amount: input.amount,
+        });
+
       const recipient = await PaystackService.createTransferRecipient(
         accountDetails.account_name,
         input.accountNumber,
@@ -461,6 +469,9 @@ class PaymentService {
         transferReference
       );
 
+      enhancedMetadata.transferReference = transferReference;
+      enhancedMetadata.transferCode = transfer.transfer_code;
+
       // Debit wallet with session
       const walletResult = await WalletService.debitWallet(
         {
@@ -470,14 +481,7 @@ class PaymentService {
           purpose: 'cashout',
           description: `Cashout to ${accountDetails.account_name} - ${input.accountNumber}`,
           paymentMethod: 'bank_transfer',
-          metadata: {
-            accountNumber: input.accountNumber,
-            bankCode: input.bankCode,
-            accountName: accountDetails.account_name,
-            transferReference,
-            transferCode: transfer.transfer_code,
-            recipientCode: recipient.recipient_code,
-          },
+          metadata: enhancedMetadata
         },
         session
       );

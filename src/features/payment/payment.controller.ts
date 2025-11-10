@@ -319,7 +319,7 @@ class PaymentController {
         bankCode: input.bankCode,
       });
 
-      // ✅ NEW: Record withdrawal in driver's history
+      // Record withdrawal in driver's history
       await WithdrawalLimitService.recordWithdrawal(
         user.id,
         input.amount * 100, // Convert to kobo

@@ -13,13 +13,10 @@ class PaymentSystemConfigService {
    */
   static async getActiveConfig(): Promise<IPaymentSystemConfig> {
     let config = await PaymentSystemConfig.findOne({ isActive: true });
-
     if (!config) {
-      // Create default configuration
       config = await this.createDefaultConfig();
     }
-
-    return config;
+    return config!; // Add the ! assertion
   }
 
   /**
