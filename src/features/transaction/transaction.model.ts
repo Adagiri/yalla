@@ -94,7 +94,6 @@ const TransactionSchema = new Schema<TransactionDocument>(
       required: true,
       min: 1,
       get: (value: number) => Math.round(value),
-      set: (value: number) => Math.round(value * 100), // Convert to kobo
     },
     currency: { type: String, default: 'NGN' },
 

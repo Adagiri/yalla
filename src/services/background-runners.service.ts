@@ -1,3 +1,4 @@
+import cron, { ScheduledTask } from 'node-cron';
 import Trip from '../features/trip/trip.model';
 import Customer from '../features/customer/customer.model';
 import { cacheService } from './redis-cache.service';
@@ -6,11 +7,11 @@ import { IncomingTripData } from '../types/trip';
 
 export class BackgroundRunnersService {
   private static isRunning = false;
-  private static runner1Interval: NodeJS.Timeout | null = null;
-  private static runner2Interval: NodeJS.Timeout | null = null;
+  private static driverSearchJob: ScheduledTask | null = null;
+  private static cleanupJob: ScheduledTask | null = null;
 
   /**
-   * Start both background runners
+   * Start both background runners using cron
    */
   static start() {
     if (this.isRunning) {
@@ -20,21 +21,26 @@ export class BackgroundRunnersService {
 
     this.isRunning = true;
 
-    // Runner 1: Process searching trips every 10 seconds
-    this.runner1Interval = setInterval(() => {
-      this.runDriverSearchRunner().catch((error) =>
-        console.error('❌ Driver Search Runner error:', error)
-      );
-    }, 60 * 1000);
+    // Runner 1: Process searching trips every 1 minute
+    // Cron expression: */1 * * * * = Every 1 minute
+    this.driverSearchJob = cron.schedule('*/1 * * * *', async () => {
+      try {
+        await this.runDriverSearchRunner();
+      } catch (error) {
+        console.error('❌ Driver Search Runner error:', error);
+      }
+    });
 
-    // Runner 2: Cleanup expired incoming trips every 10 seconds
-    this.runner2Interval = setInterval(() => {
-      this.runCleanupRunner().catch((error) =>
-        console.error('❌ Cleanup Runner error:', error)
-      );
-    }, 60 * 1000);
+    // Runner 2: Cleanup expired incoming trips every 1 minute
+    this.cleanupJob = cron.schedule('*/1 * * * *', async () => {
+      try {
+        await this.runCleanupRunner();
+      } catch (error) {
+        console.error('❌ Cleanup Runner error:', error);
+      }
+    });
 
-    console.log('✅ Background runners started (10-second intervals)');
+    console.log('✅ Background runners started (cron-based, every 1 minute)');
   }
 
   /**
@@ -43,14 +49,14 @@ export class BackgroundRunnersService {
   static stop() {
     if (!this.isRunning) return;
 
-    if (this.runner1Interval) {
-      clearInterval(this.runner1Interval);
-      this.runner1Interval = null;
+    if (this.driverSearchJob) {
+      this.driverSearchJob.stop();
+      this.driverSearchJob = null;
     }
 
-    if (this.runner2Interval) {
-      clearInterval(this.runner2Interval);
-      this.runner2Interval = null;
+    if (this.cleanupJob) {
+      this.cleanupJob.stop();
+      this.cleanupJob = null;
     }
 
     this.isRunning = false;

@@ -3,7 +3,7 @@ import Driver, { DriverModelType } from '../driver/driver.model';
 import { ErrorResponse } from '../../utils/responses';
 import AmazonLocationService from '../../services/amazon-location.services';
 import Location from '../location/location.model';
-import mongoose from 'mongoose';
+import mongoose, { ClientSession } from 'mongoose';
 import NotificationService from '../../services/notification.services';
 import TripNotificationService from '../../services/trip-notification.service';
 import PaymentService from '../payment/payment.service';
@@ -18,11 +18,16 @@ import { CreateTripInput, TripFilter, TripSort } from './trip.type';
 import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
 import { Pagination } from '../../types/list-resources';
 import { BackgroundRunnersService } from '../../services/background-runners.service';
-import { AccountType_, CustomerAccountStatus, PaymentMethod } from '../../constants/general';
+import {
+  AccountType_,
+  CustomerAccountStatus,
+  PaymentMethod,
+} from '../../constants/general';
 import PaymentSystemConfigService from '../general/payment-system-config.service';
 import PaystackService from '../../services/paystack.services';
 import { PaymentModel } from '../../constants/payment-models';
 import DriverEligibilityService from '../../services/driver-eligibility.service';
+import PricingSettingService from '../general/pricing-setting.service';
 
 class TripService {
   static async listTrips(
@@ -109,7 +114,6 @@ class TripService {
       });
 
       if (existingActiveTrip) {
-        await session.abortTransaction();
         throw new ErrorResponse(
           400,
           'You already have an active trip. Please complete or cancel your current trip before creating a new one.'
@@ -121,12 +125,10 @@ class TripService {
       );
 
       if (!customer) {
-        await session.abortTransaction();
         throw new ErrorResponse(404, 'Customer not found');
       }
 
       if (customer.outstandingBalance > 0) {
-        await session.abortTransaction();
         throw new ErrorResponse(
           403,
           `You have an outstanding balance of ₦${(customer.outstandingBalance / 100).toFixed(2)}. Please clear your balance before creating a new trip.`
@@ -134,7 +136,6 @@ class TripService {
       }
 
       if (customer.accountStatus === CustomerAccountStatus.Suspended) {
-        await session.abortTransaction();
         throw new ErrorResponse(
           403,
           'Your account is suspended. Please contact support.'
@@ -150,7 +151,7 @@ class TripService {
       const surgeMultiplier = await this.calculateSurgeMultiplier(
         input.pickup.coordinates
       );
-      const pricing = this.calculatePricing(
+      const pricing = await this.calculatePricing(
         route.distance,
         route.duration,
         surgeMultiplier
@@ -489,7 +490,6 @@ class TripService {
         await DriverEligibilityService.canDriverAcceptTrips(driverId);
 
       if (!eligibilityCheck.eligible) {
-        await session.abortTransaction();
         throw new ErrorResponse(
           403,
           eligibilityCheck.reason || 'Driver not eligible to accept trips'
@@ -669,17 +669,26 @@ class TripService {
       return 1.0;
     }
   }
+
   /**
-   * Calculate trip pricing
+   * Calculate trip pricing using database values
    */
-  static calculatePricing(
+  static async calculatePricing(
     distance: number,
     duration: number,
     surgeMultiplier: number
   ) {
-    const baseFare = 200; // ₦2.00
-    const perKmRate = 150; // ₦1.50 per km
-    const perMinuteRate = 20; // ₦0.20 per minute
+    // Get pricing settings from database
+    const pricingSetting =
+      await PricingSettingService.getActivePricingSetting();
+
+    if (!pricingSetting) {
+      throw new ErrorResponse(500, 'Pricing settings not configured');
+    }
+
+    const baseFare = pricingSetting.baseFare;
+    const perKmRate = pricingSetting.perKmRate;
+    const perMinuteRate = pricingSetting.perMinuteRate;
 
     const distanceInKm = distance / 1000;
     const durationInMinutes = duration / 60;
@@ -808,11 +817,19 @@ class TripService {
   /**
    * Complete trip
    */
-  static async completeTrip(tripId: string, driverId: string) {
-    const session = await mongoose.startSession();
+  static async completeTrip(
+    tripId: string,
+    driverId: string,
+    session?: ClientSession
+  ) {
+    const useSession = session || (await mongoose.startSession());
+    const createdSession = !session;
+    let committed = false;
 
     try {
-      session.startTransaction();
+      if (createdSession) {
+        useSession.startTransaction();
+      }
 
       // Find trip and populate driver and customer
       const trip = await Trip.findById(tripId)
@@ -823,7 +840,7 @@ class TripService {
         throw new ErrorResponse(404, 'Trip not found');
       }
 
-      // Verify driver authorization - comparing String IDs
+      // Verify driver authorization
       if (trip.driverId._id.toString() !== driverId) {
         throw new ErrorResponse(403, 'Not authorized to complete this trip');
       }
@@ -843,7 +860,6 @@ class TripService {
       if (trip.paymentMethod === PaymentMethod.Card) {
         const customer = trip.customerId as unknown as CustomerModelType;
 
-        // Find default or preferred card
         const defaultCard = customer.savedCards?.find((card) => card.isDefault);
         const preferredCardAuth = customer.paymentPreferences?.preferredCard;
         const preferredCard = preferredCardAuth
@@ -862,7 +878,6 @@ class TripService {
         }
 
         try {
-          // Charge the card using Paystack
           const chargeResult = await PaystackService.chargeAuthorization(
             cardToCharge.authorizationCode,
             trip.pricing.finalAmount,
@@ -876,19 +891,17 @@ class TripService {
           if (chargeResult.status !== 'success') {
             cardPaymentFailed = true;
 
-            // Track customer debt
             await Customer.findByIdAndUpdate(
               customer._id,
               {
                 $inc: {
-                  outstandingBalance: trip.pricing.finalAmount * 100, // in kobo
+                  outstandingBalance: trip.pricing.finalAmount * 100,
                 },
                 accountStatus: 'payment_required',
               },
-              { session }
+              { session: useSession }
             );
 
-            // Notify customer
             await NotificationService.sendNotification({
               userId: customer._id.toString(),
               userType: AccountType_.CUSTOMER,
@@ -904,7 +917,6 @@ class TripService {
           console.error('Card charge error:', error);
           cardPaymentFailed = true;
 
-          // Track customer debt
           await Customer.findByIdAndUpdate(
             customer._id,
             {
@@ -913,7 +925,7 @@ class TripService {
               },
               accountStatus: 'payment_required',
             },
-            { session }
+            { session: useSession }
           );
 
           await NotificationService.sendNotification({
@@ -928,12 +940,10 @@ class TripService {
           });
         }
       } else if (trip.paymentMethod === PaymentMethod.Cash) {
-        // Cash payment handling
         console.log(
           `💵 Cash payment of ₦${trip.pricing.finalAmount} confirmed for trip ${trip.tripNumber}`
         );
       } else if (trip.paymentMethod === PaymentMethod.Wallet) {
-        // Wallet payment handling
         console.log(
           `💰 Wallet payment of ₦${trip.pricing.finalAmount} processed for trip ${trip.tripNumber}`
         );
@@ -947,27 +957,31 @@ class TripService {
         trip.paymentMethod
       );
 
-      // ✅ CRITICAL: Track cash collected and commission owed for COMMISSION model
+      console.log(trip.paymentMethod, 'payment method');
+      console.log(paymentResult.model, 'payment result model');
+      console.log(paymentResult.model, 'payment result model');
+
+      // Track cash and commission for commission model
       if (
         trip.paymentMethod === PaymentMethod.Cash &&
         paymentResult.model === PaymentModel.COMMISSION
       ) {
-        const totalCashCollected = trip.pricing.finalAmount * 100; // in kobo
-        const commissionOwed = paymentResult.platformEarnings; // in kobo
+        const totalCashCollected = trip.pricing.finalAmount * 100;
+        const commissionOwed = paymentResult.platformEarnings;
 
-        await Driver.findByIdAndUpdate(
-          trip.driverId._id,
-          {
-            $inc: {
-              cashCollected: totalCashCollected,
-              commissionOwed: commissionOwed,
-            },
-          },
-          { session }
-        );
+        const driver = await Driver.findById(trip.driverId._id);
+        console.log(driver, 'driver');
+        if (driver) {
+          driver.cashCollected =
+            (driver.cashCollected || 0) + totalCashCollected;
+          driver.commissionOwed = (driver.commissionOwed || 0) + commissionOwed;
+          await driver.save({ session: useSession });
+        }
 
         console.log(
-          `💰 Driver collected ₦${trip.pricing.finalAmount} cash, owes ₦${commissionOwed / 100} commission (will be auto-settled by cron)`
+          `💰 Driver collected ₦${trip.pricing.finalAmount} cash, owes ₦${
+            commissionOwed
+          } commission (auto-settled by cron)`
         );
       }
 
@@ -993,22 +1007,45 @@ class TripService {
         },
       };
 
-      // Add cash-specific fields
       if (trip.paymentMethod === PaymentMethod.Cash) {
         updateData.cashReceived = true;
         updateData.cashReceivedAt = new Date();
       }
 
-      // Update trip
       const updatedTrip = await Trip.findByIdAndUpdate(tripId, updateData, {
         new: true,
-        session,
+        session: useSession,
       });
 
-      await session.commitTransaction();
+      const driver = await Driver.findById(trip.driverId._id);
+      if (driver) {
+        driver.isAvailable = true;
+        driver.currentTripId = undefined;
+        await driver.save({ session: useSession });
+      }
 
-      // Send notifications
+      if (createdSession) {
+        await useSession.commitTransaction();
+        committed = true;
+      }
+
+      // Post-commit notifications
       if (updatedTrip) {
+        // Publish trip lifecycle update
+        await SubscriptionService.publishTripLifecycleUpdate({
+          tripId: tripId,
+          status: 'completed',
+          message: `Trip completed successfully`,
+          customer: {
+            id: trip.customerId._id,
+          },
+          driver: {
+            id: trip.driverId._id,
+            name: `${trip.driverId.firstname} ${trip.driverId.lastname}`,
+          },
+          timestamp: new Date(),
+        });
+
         await NotificationService.sendTripNotification(
           trip.driverId._id.toString(),
           AccountType_.DRIVER,
@@ -1030,15 +1067,17 @@ class TripService {
         );
       }
 
-      return {
-        trip: updatedTrip,
-        paymentResult,
-      };
+      return trip;
     } catch (error: any) {
-      await session.abortTransaction();
+      console.log('Error completing Trip: ', error.message);
+      if (createdSession && !committed) {
+        await useSession.abortTransaction();
+      }
       throw new ErrorResponse(500, 'Error completing trip', error.message);
     } finally {
-      session.endSession();
+      if (createdSession) {
+        useSession.endSession();
+      }
     }
   }
 
@@ -1558,108 +1597,6 @@ class TripService {
   }
 
   /**
-   * Create trip with payment method validation
-   */
-  static async createTripWithPaymentValidation(input: CreateTripInput) {
-    const session = await mongoose.startSession();
-
-    try {
-      session.startTransaction();
-
-      // Validate payment method
-      if (input.paymentMethod === 'wallet') {
-        const hasSufficientBalance = await this.checkCustomerBalance(
-          input.customerId,
-          input.priceOffered || 0
-        );
-
-        if (!hasSufficientBalance) {
-          throw new ErrorResponse(
-            400,
-            'Insufficient wallet balance. Please top up your wallet or choose a different payment method.'
-          );
-        }
-      }
-
-      // Create trip using existing logic
-      const trip = await this.createTrip(input);
-
-      await session.commitTransaction();
-      return trip;
-    } catch (error: any) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
-  }
-
-  /**
-   * Cancel trip with refund processing
-   */
-  static async cancelTripWithRefund(
-    tripId: string,
-    cancelledBy: 'customer' | 'driver',
-    reason?: string
-  ) {
-    const session = await mongoose.startSession();
-
-    try {
-      session.startTransaction();
-
-      const trip = await Trip.findById(tripId);
-      if (!trip) throw new ErrorResponse(404, 'Trip not found');
-
-      if (trip.status === 'completed' || trip.status === 'cancelled') {
-        throw new ErrorResponse(400, 'Trip cannot be cancelled');
-      }
-
-      // Check if payment was already processed
-      const shouldRefund =
-        trip.paymentStatus === 'completed' &&
-        trip.paymentMethod === PaymentMethod.Wallet;
-
-      // Cancel trip
-      trip.status = 'cancelled';
-      trip.cancelledAt = new Date();
-      trip.cancelledBy = cancelledBy;
-      trip.cancellationReason = reason;
-      await trip.save({ session });
-
-      // Process refund if applicable
-      let refundResult;
-      if (shouldRefund) {
-        refundResult = await PaymentService.refundTripPayment(
-          tripId,
-          reason || 'Trip cancelled'
-        );
-      }
-
-      // Update driver availability if assigned
-      if (trip.driverId) {
-        const driver = await Driver.findById(trip.driverId);
-        if (driver) {
-          driver.isAvailable = true;
-          driver.currentTripId = undefined;
-          await driver.save({ session });
-        }
-      }
-
-      await session.commitTransaction();
-
-      return {
-        trip,
-        refundResult,
-      };
-    } catch (error: any) {
-      await session.abortTransaction();
-      throw new ErrorResponse(500, 'Error cancelling trip', error.message);
-    } finally {
-      session.endSession();
-    }
-  }
-
-  /**
    * Get trip with payment details
    */
   static async getTripWithPaymentDetails(
@@ -1783,7 +1720,7 @@ class TripService {
         await this.calculateSurgeMultiplier(pickupCoordinates);
 
       // Calculate pricing
-      const pricing = this.calculatePricing(
+      const pricing = await this.calculatePricing(
         route.distance,
         route.duration,
         surgeMultiplier

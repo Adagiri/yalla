@@ -76,7 +76,7 @@ export interface DriverModelType extends Document {
   // Vehicle info already exists
   vehicleInspectionDone: boolean;
   vehicleInsuranceExpiry?: Date;
-
+  outstandingBalance: number;
   deviceTokens: string[];
 
   walletId?: string;
@@ -239,6 +239,8 @@ const driverSchema = new Schema<DriverModelType>(
       completionRate: { type: Number, default: 0 },
     },
 
+    outstandingBalance: { type: Number, default: 0 }, // in kobo
+
     vehicleInspectionDone: { type: Boolean, default: false },
 
     vehicleInsuranceExpiry: { type: Date },
@@ -284,7 +286,7 @@ const driverSchema = new Schema<DriverModelType>(
     paymentModel: {
       type: String,
       enum: PaymentModelEnum,
-      default: PAYMENT_MODEL_CONFIG.DEFAULT_MODEL,
+      default: PaymentModel.COMMISSION,
     },
 
     paymentModelHistory: [
@@ -297,17 +299,6 @@ const driverSchema = new Schema<DriverModelType>(
         changedAt: {
           type: Date,
           default: Date.now,
-          cashCollected: {
-            type: Number,
-            default: 0,
-            get: (value: number) => Math.round(value),
-          },
-          commissionOwed: {
-            type: Number,
-            default: 0,
-            get: (value: number) => Math.round(value),
-          },
-          lastCommissionSettlement: { type: Date },
         },
         changedBy: {
           type: String, // Admin ID
@@ -329,6 +320,18 @@ const driverSchema = new Schema<DriverModelType>(
         default: true,
       },
     },
+
+    cashCollected: {
+      type: Number,
+      default: 0,
+      get: (value: number) => Math.round(value),
+    },
+    commissionOwed: {
+      type: Number,
+      default: 0,
+      get: (value: number) => Math.round(value),
+    },
+    lastCommissionSettlement: { type: Date },
 
     subscriptionSettings: {
       requireActiveSubscription: {

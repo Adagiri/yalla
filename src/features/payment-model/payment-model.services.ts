@@ -36,7 +36,7 @@ class PaymentModelService {
 
     let effectiveModel = driver.paymentModel;
     let hasActiveSubscription = !!activeSubscription;
-
+    console.log("driver's payment model: ", effectiveModel);
     // Handle subscription model logic
     if (driver.paymentModel === PaymentModel.SUBSCRIPTION) {
       if (!activeSubscription) {
@@ -48,7 +48,7 @@ class PaymentModelService {
         } else {
           throw new ErrorResponse(
             403,
-            'Active subscription required. Please subscribe to a plan to accept rides.'
+            'Active subscription required. Please subscribe to a plan.'
           );
         }
       }
@@ -83,9 +83,15 @@ class PaymentModelService {
       platformEarnings = 0;
       commissionRate = 0;
     } else {
+
+      console.log(tripAmount, 'trip amount');
       // Commission model: Get rate from proper hierarchy
       commissionRate = await this.getCommissionRate(driver);
+      console.log(commissionRate, 'commission rate');
+
       platformEarnings = Math.round(tripAmount * commissionRate);
+      console.log(platformEarnings, 'platform earnings');
+
       driverEarnings = tripAmount - platformEarnings;
     }
 
@@ -148,7 +154,7 @@ class PaymentModelService {
     driverId: string,
     tripId: string,
     tripAmount: number,
-    paymentMethod:PaymentMethod
+    paymentMethod: PaymentMethod
   ) {
     try {
       // Determine payment model and calculate earnings
@@ -195,7 +201,7 @@ class PaymentModelService {
       userId: driverId,
       amount: calculation.driverEarnings,
       type: 'credit',
-      purpose: 'subscription_trip_earnings',
+      purpose: 'driver_earnings',
       description: `Subscription model trip earnings - Trip ${tripId}`,
       tripId,
       paymentMethod: 'system',
@@ -234,7 +240,7 @@ class PaymentModelService {
       userId: driverId,
       amount: calculation.driverEarnings,
       type: 'credit',
-      purpose: 'commission_trip_earnings',
+      purpose: 'driver_earnings',
       description: `Commission model trip earnings (${(calculation.commissionRate * 100).toFixed(1)}% commission) - Trip ${tripId}`,
       tripId,
       paymentMethod: 'system',

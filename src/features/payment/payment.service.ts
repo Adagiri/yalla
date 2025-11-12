@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { ClientSession } from 'mongoose';
 import Trip, { TripDocument } from '../trip/trip.model';
 import WalletService from '../../services/wallet.service';
 import PaystackService from '../../services/paystack.services';
@@ -398,14 +398,14 @@ class PaymentService {
   /**
    * Driver cashout to bank account
    */
-  /**
-   * Driver cashout to bank account
-   */
-  static async driverCashout(input: CashoutInput) {
-    const session = await mongoose.startSession();
+  static async driverCashout(input: CashoutInput, session?: ClientSession) {
+    const useSession = session || (await mongoose.startSession());
+    const createdSession = !session;
 
     try {
-      session.startTransaction();
+      if (createdSession) {
+        useSession.startTransaction();
+      }
 
       // Get driver wallet
       const wallet = await WalletService.getUserWallet(input.driverId);
@@ -434,7 +434,6 @@ class PaymentService {
           commissionOwed > 0
             ? `Insufficient balance. Available: ₦${availableBalance / 100} (₦${commissionOwed / 100} reserved for commission settlement)`
             : `Insufficient balance. Available: ₦${availableBalance / 100}`;
-
         throw new ErrorResponse(400, message);
       }
 
@@ -472,7 +471,7 @@ class PaymentService {
       enhancedMetadata.transferReference = transferReference;
       enhancedMetadata.transferCode = transfer.transfer_code;
 
-      // Debit wallet with session
+      // Debit wallet with session (pass session!)
       const walletResult = await WalletService.debitWallet(
         {
           userId: input.driverId,
@@ -481,12 +480,14 @@ class PaymentService {
           purpose: 'cashout',
           description: `Cashout to ${accountDetails.account_name} - ${input.accountNumber}`,
           paymentMethod: 'bank_transfer',
-          metadata: enhancedMetadata
+          metadata: enhancedMetadata,
         },
-        session
+        useSession
       );
 
-      await session.commitTransaction();
+      if (createdSession) {
+        await useSession.commitTransaction();
+      }
 
       // Send notification
       await NotificationService.sendNotification({
@@ -514,21 +515,32 @@ class PaymentService {
         message: 'Cashout initiated successfully',
       };
     } catch (error: any) {
-      await session.abortTransaction();
+      if (createdSession) {
+        await useSession.abortTransaction();
+      }
       throw new ErrorResponse(500, 'Error processing cashout', error.message);
     } finally {
-      session.endSession();
+      if (createdSession) {
+        useSession.endSession();
+      }
     }
   }
 
   /**
    * Refund trip payment
    */
-  static async refundTripPayment(tripId: string, reason: string) {
-    const session = await mongoose.startSession();
+  static async refundTripPayment(
+    tripId: string,
+    reason: string,
+    session?: ClientSession
+  ) {
+    const useSession = session || (await mongoose.startSession());
+    const createdSession = !session;
 
     try {
-      session.startTransaction();
+      if (createdSession) {
+        useSession.startTransaction();
+      }
 
       const trip = await Trip.findById(tripId);
       if (!trip) {
@@ -539,16 +551,19 @@ class PaymentService {
         throw new ErrorResponse(400, 'Cannot refund incomplete payment');
       }
 
-      // Credit customer wallet with refund
-      await WalletService.creditWallet({
-        userId: trip.customerId,
-        amount: trip.pricing.finalAmount,
-        type: 'credit',
-        purpose: 'trip_refund',
-        description: `Refund for trip ${trip.tripNumber}: ${reason}`,
-        tripId: tripId,
-        paymentMethod: 'system',
-      });
+      // Credit customer wallet with refund (pass session!)
+      await WalletService.creditWallet(
+        {
+          userId: trip.customerId,
+          amount: trip.pricing.finalAmount,
+          type: 'credit',
+          purpose: 'trip_refund',
+          description: `Refund for trip ${trip.tripNumber}: ${reason}`,
+          tripId: tripId,
+          paymentMethod: 'system',
+        },
+        useSession
+      );
 
       // Update trip status
       const updatedTrip = await Trip.findByIdAndUpdate(
@@ -563,10 +578,12 @@ class PaymentService {
             },
           },
         },
-        { new: true, session }
+        { new: true, session: useSession }
       );
 
-      await session.commitTransaction();
+      if (createdSession) {
+        await useSession.commitTransaction();
+      }
 
       return {
         success: true,
@@ -575,10 +592,14 @@ class PaymentService {
         reason,
       };
     } catch (error: any) {
-      await session.abortTransaction();
+      if (createdSession) {
+        await useSession.abortTransaction();
+      }
       throw new ErrorResponse(500, 'Error processing refund', error.message);
     } finally {
-      session.endSession();
+      if (createdSession) {
+        useSession.endSession();
+      }
     }
   }
 

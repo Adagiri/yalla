@@ -15,6 +15,7 @@ const NotificationSchema = new mongoose.Schema({
       'trip_started',
       'trip_completed',
       'trip_cancelled',
+      'earnings_received',
       'payment_received',
       'wallet_topup_success',
       'wallet_topup_failed',
