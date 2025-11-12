@@ -20,6 +20,7 @@ const NotificationSchema = new mongoose.Schema({
       'commission_settled',
       'wallet_topup_success',
       'wallet_topup_failed',
+      'outstanding_balance_cleared',
     ],
     required: true,
   },
