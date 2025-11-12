@@ -140,7 +140,7 @@ class CommissionSettlementService {
           amount: commissionOwed / 100, // Convert kobo to naira
           type: 'debit',
           purpose: 'commission_deduction',
-          description: `Commission settlement: ₦${(commissionOwed / 100).toFixed(2)}`,
+          description: `Commission settlement: ₦${commissionOwed.toFixed(2)}`,
           paymentMethod: 'system',
           metadata: {
             commissionAmount: commissionOwed,
