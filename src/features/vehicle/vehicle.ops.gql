@@ -24,6 +24,7 @@ input VehicleFilter {
   identificationNumber: String
   plateNumber: String
   search: String
+  vehicleInspectionDone: Boolean
 }
 
 type Vehicle {

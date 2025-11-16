@@ -22,6 +22,7 @@ export interface VehicleFilter {
   color?: string;
   identificationNumber?: string;
   plateNumber?: string;
+   vehicleInspectionDone?: boolean;
   search?: string;
 }
 

@@ -1,10 +1,10 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
+import mongoose, { Schema, Document } from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 
 export interface WalletDocument extends Document {
   id: string;
   userId: string;
-  userType: 'driver' | 'customer';
+  userType: "driver" | "customer";
   balance: number;
   currency: string;
   isActive: boolean;
@@ -28,7 +28,7 @@ const WalletSchema = new Schema<WalletDocument>(
     userId: { type: String, required: true, unique: true },
     userType: {
       type: String,
-      enum: ['driver', 'customer'],
+      enum: ["driver", "customer"],
       required: true,
     },
     balance: {
@@ -38,7 +38,7 @@ const WalletSchema = new Schema<WalletDocument>(
       get: (value: number) => Math.round(value * 100) / 100, // Round to 2 decimal places
       set: (value: number) => Math.round(value * 100) / 100,
     },
-    currency: { type: String, default: 'NGN' },
+    currency: { type: String, default: "NGN" },
     isActive: { type: Boolean, default: true },
 
     // Limits (in kobo for NGN)
@@ -75,9 +75,9 @@ WalletSchema.index({ userType: 1 });
 WalletSchema.index({ isActive: 1 });
 
 // Virtual for formatted balance
-WalletSchema.virtual('formattedBalance').get(function () {
-  return `₦${(this.balance / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
+WalletSchema.virtual("formattedBalance").get(function () {
+  return `₦${(this.balance / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
 });
 
-const Wallet = mongoose.model<WalletDocument>('Wallet', WalletSchema);
+const Wallet = mongoose.model<WalletDocument>("Wallet", WalletSchema);
 export default Wallet;

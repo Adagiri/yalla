@@ -23,7 +23,7 @@ class VehicleService {
     sort?: VehicleSort
   ) {
     try {
-      const baseFilter = {};
+      const baseFilter: any = {};
 
       const data = await listResourcesPagination({
         model: Vehicle,

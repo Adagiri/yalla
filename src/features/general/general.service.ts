@@ -44,8 +44,8 @@ import FileUploadService, {
   FileAccessLevel,
   FileCategory,
 } from "../../services/file-upload.service";
-import DocumentVerificationService from '../../services/document-verification.service';
-import { VerificationStatus, DocumentType }  from "./general.types"
+import DocumentVerificationService from "../../services/document-verification.service";
+import { VerificationStatus, DocumentType } from "./general.types";
 import FirebaseAuthService from "../../services/firebase-auth.service";
 import Customer, { CustomerModelType } from "../customer/customer.model";
 import { Model } from "mongoose";
@@ -643,8 +643,8 @@ class GeneralService {
       throw new ErrorResponse(500, "Google login failed", error.message);
     }
   }
-  
- /**
+
+  /**
    * Get file upload URL and update user document directly
    */
   static async getFileUploadUrl(input: {
@@ -655,35 +655,34 @@ class GeneralService {
     userId: string;
   }) {
     try {
-      const response = await FileUploadService.generateUploadUrlAndUpdateUser(input);
-    
+      const response = await FileUploadService.generateUploadUrl(input);
+
       return response;
     } catch (error: any) {
       throw new ErrorResponse(
         error.statusCode || 500,
-        error.message || 'Error generating upload URL'
+        error.message || "Error generating upload URL"
       );
     }
   }
 
-/**
+  /**
    * Get download URL for private files
    */
   static async getFileDownloadUrl(key: string): Promise<string> {
     try {
-      if (!key.startsWith('PRIVATE/')) {
-        throw new ErrorResponse(400, 'File is publicly accessible');
+      if (!key.startsWith("PRIVATE/")) {
+        throw new ErrorResponse(400, "File is publicly accessible");
       }
 
       return await FileUploadService.generatePresignedDownloadUrl(key);
     } catch (error: any) {
       throw new ErrorResponse(
         error.statusCode || 500,
-        error.message || 'Error generating download URL'
+        error.message || "Error generating download URL"
       );
     }
   }
-
 
   /**
    * Verify user document using existing fields only
@@ -698,14 +697,14 @@ class GeneralService {
       const action = {
         documentType,
         status,
-        adminId
+        adminId,
       };
 
       return await DocumentVerificationService.verifyDocument(userId, action);
     } catch (error: any) {
       throw new ErrorResponse(
         error.statusCode || 500,
-        error.message || 'Failed to verify document'
+        error.message || "Failed to verify document"
       );
     }
   }
@@ -716,7 +715,7 @@ class GeneralService {
     } catch (error: any) {
       throw new ErrorResponse(
         error.statusCode || 500,
-        error.message || 'Failed to get verification status'
+        error.message || "Failed to get verification status"
       );
     }
   }
@@ -730,11 +729,15 @@ class GeneralService {
     adminId: string
   ) {
     try {
-      return await DocumentVerificationService.toggleDriverLicenseVerification(userId, verified, adminId);
+      return await DocumentVerificationService.toggleDriverLicenseVerification(
+        userId,
+        verified,
+        adminId
+      );
     } catch (error: any) {
       throw new ErrorResponse(
         error.statusCode || 500,
-        error.message || 'Failed to toggle license verification'
+        error.message || "Failed to toggle license verification"
       );
     }
   }
@@ -748,11 +751,15 @@ class GeneralService {
     adminId: string
   ) {
     try {
-      return await DocumentVerificationService.toggleVehicleInspection(userId, inspected, adminId);
+      return await DocumentVerificationService.toggleVehicleInspection(
+        userId,
+        inspected,
+        adminId
+      );
     } catch (error: any) {
       throw new ErrorResponse(
         error.statusCode || 500,
-        error.message || 'Failed to toggle vehicle inspection'
+        error.message || "Failed to toggle vehicle inspection"
       );
     }
   }
