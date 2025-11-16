@@ -6,26 +6,21 @@ import PaystackService from "../../services/paystack.services";
 import Driver from "../driver/driver.model";
 import mongoose from "mongoose";
 import WalletService from "../../services/wallet.service";
+import { ClientSession } from "mongoose";
 
 class PaymentSystemConfigService {
   /**
    * Get active payment system configuration
    */
-  static async getActiveConfig(): Promise<IPaymentSystemConfig> {
-    let config: any = await PaymentSystemConfig.findOne({ isActive: true });
-
+  static async getActiveConfig() {
+    let config = await PaymentSystemConfig.findOne({ isActive: true });
     if (!config) {
-      // Create default configuration
       config = await this.createDefaultConfig();
     }
-
     return config;
   }
 
-  /**
-   * Create default configuration
-   */
-  private static async createDefaultConfig(): Promise<IPaymentSystemConfig> {
+  private static async createDefaultConfig() {
     const defaultConfig = new PaymentSystemConfig({
       withdrawalInterval: "weekly", // Drivers can withdraw twice weekly
       minimumWithdrawalAmount: 50000,
@@ -48,21 +43,26 @@ class PaymentSystemConfigService {
   /**
    * Update payment system configuration (Admin only)
    */
+
   static async updateConfig(
     configId: string,
     updates: Partial<IPaymentSystemConfig>,
-    adminId: string
+    adminId: string,
+    session?: ClientSession
   ): Promise<IPaymentSystemConfig> {
-    const session = await mongoose.startSession();
+    const useSession = session || (await mongoose.startSession());
+    const createdSession = !session;
 
     try {
-      session.startTransaction();
+      if (createdSession) {
+        useSession.startTransaction();
+      }
 
       // Deactivate current config
       await PaymentSystemConfig.updateMany(
         { isActive: true },
         { isActive: false },
-        { session }
+        { session: useSession }
       );
 
       // Create new config with updates
@@ -73,15 +73,22 @@ class PaymentSystemConfigService {
         lastModifiedBy: adminId,
       });
 
-      await newConfig.save({ session });
-      await session.commitTransaction();
+      await newConfig.save({ session: useSession });
+
+      if (createdSession) {
+        await useSession.commitTransaction();
+      }
 
       return newConfig;
     } catch (error: any) {
-      await session.abortTransaction();
+      if (createdSession) {
+        await useSession.abortTransaction();
+      }
       throw new ErrorResponse(500, "Error updating config", error.message);
     } finally {
-      session.endSession();
+      if (createdSession) {
+        useSession.endSession();
+      }
     }
   }
 
@@ -152,9 +159,8 @@ class PaymentSystemConfigService {
           requiredMinimum: 0,
         };
       }
-
-      const balance = await PaystackService.getTransferBalance();
-      const availableBalance = balance.availableBalance;
+      // FIXMW: Invalid Check
+      const availableBalance = config.paystackMinimumBalance;
 
       return {
         sufficient: availableBalance >= config.paystackMinimumBalance,

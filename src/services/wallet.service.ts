@@ -222,18 +222,88 @@ class WalletService {
   }
 
   /**
+   * Credit wallet (for driver earnings, refunds, etc.)
+   */
+  static async creditWallet(
+    input: WalletTransactionInput,
+    session?: ClientSession
+  ) {
+    const useSession = session || (await mongoose.startSession());
+    const createdSession = !session; // ✅ Track if WE created the session
+
+    try {
+      if (createdSession) {
+        // ✅ Only start if we created it
+        useSession.startTransaction();
+      }
+
+      const wallet = await this.getUserWallet(input.userId);
+      if (!wallet.isActive) {
+        throw new ErrorResponse(400, "Wallet is inactive");
+      }
+
+      const amountInKobo = Math.round(input.amount * 100);
+
+      // Update wallet
+      const newBalance = wallet.balance + amountInKobo;
+      wallet.balance = newBalance;
+      wallet.totalCredits += amountInKobo;
+      wallet.lastTransactionAt = new Date();
+
+      // Create transaction record
+      const transaction = new Transaction({
+        userId: input.userId,
+        userType: wallet.userType,
+        type: "credit",
+        amount: amountInKobo,
+        paymentMethod: input.paymentMethod || "system",
+        purpose: input.purpose,
+        status: "completed",
+        balanceBefore: wallet.balance - amountInKobo,
+        balanceAfter: newBalance,
+        description: input.description,
+        tripId: input.tripId,
+        metadata: input.metadata,
+        completedAt: new Date(),
+      });
+
+      await wallet.save({ session: useSession });
+      await transaction.save({ session: useSession });
+
+      if (createdSession) {
+        // ✅ Only commit if we created it
+        await useSession.commitTransaction();
+      }
+
+      return { wallet, transaction };
+    } catch (error: any) {
+      if (createdSession) {
+        // ✅ Only abort if we created it
+        await useSession.abortTransaction();
+      }
+      throw new ErrorResponse(500, "Error crediting wallet", error.message);
+    } finally {
+      if (createdSession) {
+        // ✅ Only end if we created it
+        useSession.endSession();
+      }
+    }
+  }
+
+  /**
    * Debit wallet (for trip payments, etc.)
    */
   static async debitWallet(
     input: WalletTransactionInput,
     session?: ClientSession
   ) {
-    if (!session) {
-      session = await mongoose.startSession();
-    }
+    const useSession = session || (await mongoose.startSession());
+    const createdSession = !session;
 
     try {
-      session.startTransaction();
+      if (createdSession) {
+        useSession.startTransaction();
+      }
 
       const wallet = await this.getUserWallet(input.userId);
       if (!wallet.isActive) {
@@ -270,75 +340,21 @@ class WalletService {
         completedAt: new Date(),
       });
 
-      await wallet.save({ session });
-      await transaction.save({ session });
+      await wallet.save({ session: useSession });
+      await transaction.save({ session: useSession });
 
-      await session.commitTransaction();
-
-      return { wallet, transaction };
-    } catch (error: any) {
-      await session.abortTransaction();
-      throw new ErrorResponse(500, "Error debiting wallet", error.message);
-    } finally {
-      session.endSession();
-    }
-  }
-
-  /**
-   * Credit wallet (for driver earnings, refunds, etc.)
-   */
-  static async creditWallet(
-    input: WalletTransactionInput,
-    session?: ClientSession
-  ) {
-    if (!session) {
-      session = await mongoose.startSession();
-    }
-
-    try {
-      session.startTransaction();
-
-      const wallet = await this.getUserWallet(input.userId);
-      if (!wallet.isActive) {
-        throw new ErrorResponse(400, "Wallet is inactive");
+      if (createdSession) {
+        await useSession.commitTransaction();
       }
 
-      const amountInKobo = Math.round(input.amount * 100);
-
-      // Update wallet
-      const newBalance = wallet.balance + amountInKobo;
-      wallet.balance = newBalance;
-      wallet.totalCredits += amountInKobo;
-      wallet.lastTransactionAt = new Date();
-
-      // Create transaction record
-      const transaction = new Transaction({
-        userId: input.userId,
-        userType: wallet.userType,
-        type: "credit",
-        amount: amountInKobo,
-        paymentMethod: input.paymentMethod || "system",
-        purpose: input.purpose,
-        status: "completed",
-        balanceBefore: wallet.balance - amountInKobo,
-        balanceAfter: newBalance,
-        description: input.description,
-        tripId: input.tripId,
-        metadata: input.metadata,
-        completedAt: new Date(),
-      });
-
-      await wallet.save({ session });
-      await transaction.save({ session });
-
-      await session.commitTransaction();
-
       return { wallet, transaction };
     } catch (error: any) {
-      await session.abortTransaction();
-      throw new ErrorResponse(500, "Error crediting wallet", error.message);
+      if (createdSession) {
+        await useSession.abortTransaction();
+      }
+      throw new ErrorResponse(500, "Error debiting wallet", error.message);
     } finally {
-      session.endSession();
+      useSession.endSession();
     }
   }
 

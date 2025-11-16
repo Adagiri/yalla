@@ -104,6 +104,17 @@ type Driver {
   canAcceptRides: Boolean
   effectivePaymentModel: PaymentModelCalculation
 
+  # Financial tracking
+  totalEarningsAllTime: Float!
+  totalCashouts: Float!
+  pendingEarnings: Float!
+  lastCashoutAt: DateTime
+
+  # Commission tracking
+  cashCollected: Float!
+  commissionOwed: Float!
+  lastCommissionSettlement: DateTime
+
   isOnline: Boolean
   isAvailable: Boolean
   currentLocation: LocationCoordinate

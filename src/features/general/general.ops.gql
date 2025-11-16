@@ -10,6 +10,11 @@ type Subscription {
   _: Int
 }
 
+type BankCode {
+  name: String!
+  code: String!
+}
+
 extend type Query {
   getBankCodes: [BankCode]
   getImageUploadUrl(input: ImageUploadUrlInput!): ImageUploadUrlResponse!
@@ -20,8 +25,29 @@ extend type Query {
 
   getVerificationStatus(userId: ID!): VerificationStatus!
 
+  # General Settings Queries
+}
 
-    # General Settings Queries
+extend type Mutation {
+  resendCode(input: ResendCodeInput!): AuthPayload!
+
+  verifyCode(input: VerifyCodeInput!): AuthPayload!
+
+  login(input: LoginInput!): AuthPayload!
+
+  googleLogin(firebaseToken: String!, accountType: AccountType!): AuthPayload!
+
+  enableMfa(input: EnableMfaInput!): AccountEntity!
+
+  disableMfa: AccountEntity!
+
+  requestResetPassword(input: ResetPasswordRequestInput!): String!
+
+  resetPassword(input: ResetPasswordInput!): Boolean!
+}
+
+extend type Query {
+  # General Settings Queries
   getGeneralSettings: GeneralSetting!
   getActiveGeneralSetting: GeneralSetting
   getGeneralSettingHistory(pagination: PaginationInput): [GeneralSetting!]!
@@ -58,12 +84,6 @@ extend type Query {
 
   getExportStatus(exportId: ID!): DataExport!
   getImportStatus(importId: ID!): DataImport!
-
-}
-
-type BankCode {
-  name: String!
-  code: String!
 }
 
 extend type Mutation {
@@ -133,7 +153,7 @@ extend type Mutation {
   cancelDataImport(importId: ID!): Boolean!
   getImportTemplate(importType: ImportType!): String!
 
-verifyDocument(
+  verifyDocument(
     userId: ID!
     documentType: DocumentTypeInput!
     status: VerificationStatusInput!
@@ -144,8 +164,5 @@ verifyDocument(
     verified: Boolean!
   ): VerificationResult!
 
-  toggleVehicleInspection(
-    userId: ID!
-    inspected: Boolean!
-  ): VerificationResult!
+  toggleVehicleInspection(userId: ID!, inspected: Boolean!): VerificationResult!
 }

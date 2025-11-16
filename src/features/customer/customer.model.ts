@@ -1,10 +1,17 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { v4 as uuidv4 } from 'uuid';
-import { AccountType, AccountType_, AuthChannelEnum } from '../../constants/general';
+import {
+  AccountType,
+  AccountType_,
+  AuthChannelEnum,
+  CustomerAccountStatus,
+  CustomerAccountStatusEnum,
+} from '../../constants/general';
 import { PhoneType } from '../../types/general';
 
 export interface CustomerModelType extends Document {
+  _id: string;
   id?: string; // UUID
   firstname: string;
   lastname: string;
@@ -66,6 +73,9 @@ export interface CustomerModelType extends Document {
   totalWalletTopUps: number; // in kobo
   averageSpendPerTrip: number; // in kobo
   lastPaymentAt?: Date;
+
+  outstandingBalance: number; // in kobo
+  accountStatus:CustomerAccountStatus;
 
   deviceTokens: string[];
 
@@ -155,6 +165,13 @@ const customerSchema = new Schema<CustomerModelType>(
       autoTopUpThreshold: { type: Number, default: 500000 }, // ₦5,000
       autoTopUpAmount: { type: Number, default: 1000000 }, // ₦10,000
       preferredCard: { type: String },
+    },
+
+    outstandingBalance: { type: Number, default: 0 }, // in kobo
+    accountStatus: {
+      type: String,
+      enum: CustomerAccountStatusEnum,
+      default: CustomerAccountStatus.Active,
     },
 
     totalSpentAllTime: { type: Number, default: 0 },

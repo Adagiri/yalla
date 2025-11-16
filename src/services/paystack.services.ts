@@ -232,6 +232,68 @@ class PaystackService {
   }
 
   /**
+   * Charge a saved authorization (recurring payment)
+   * Used for charging cards after trip completion
+   */
+  static async chargeAuthorization(
+    authorizationCode: string,
+    amount: number, // in Naira
+    email: string,
+    metadata?: any
+  ) {
+    try {
+      const payload = {
+        authorization_code: authorizationCode,
+        email,
+        amount: Math.round(amount * 100), // Convert to kobo
+        metadata: metadata || {},
+      };
+
+      const response = await axios.post(
+        `${this.baseUrl}/transaction/charge_authorization`,
+        payload,
+        { headers: this.getHeaders() }
+      );
+
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Error charging authorization:', error.response?.data);
+      throw new Error(error.response?.data?.message || 'Failed to charge card');
+    }
+  }
+
+  /**
+   * Initiate transfer to recipient
+   */
+  static async initiateTransfer(
+    amount: number, // in Naira
+    recipientCode: string,
+    reason: string,
+    reference: string
+  ) {
+    try {
+      const payload = {
+        source: 'balance',
+        amount: Math.round(amount * 100), // Convert to kobo
+        recipient: recipientCode,
+        reason,
+        reference,
+      };
+
+      const response = await axios.post(`${this.baseUrl}/transfer`, payload, {
+        headers: this.getHeaders(),
+      });
+
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Error initiating transfer:', error.response?.data);
+      throw new Error(
+        error.response?.data?.message || 'Failed to initiate transfer'
+      );
+    }
+  }
+
+  /**
    * Handle webhook events from Paystack.
    */
   static async handleWebhookEvent(payload: any) {

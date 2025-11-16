@@ -14,6 +14,7 @@ import { getUserInfo } from "../utils/auth-middleware";
 import rateLimit from "express-rate-limit";
 import { ServiceManager } from "../services/service-manager";
 import { BackgroundRunnersService } from "../services/background-runners.service";
+import { startCommissionSettlementJob } from "../jobs/commission-settlement.job";
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -26,6 +27,7 @@ const authLimiter = rateLimit({
 export const startApolloServer = async (app: express.Application) => {
   await ServiceManager.initialize();
   await BackgroundRunnersService.start();
+  await startCommissionSettlementJob();
   process.on("SIGTERM", async () => {
     console.log("SIGTERM received, shutting down gracefully");
     BackgroundRunnersService.stop();

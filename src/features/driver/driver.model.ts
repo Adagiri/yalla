@@ -76,7 +76,7 @@ export interface DriverModelType extends Document {
   // Vehicle info already exists
   vehicleInspectionDone: boolean;
   vehicleInsuranceExpiry?: Date;
-
+  outstandingBalance: number;
   deviceTokens: string[];
 
   walletId?: string;
@@ -112,8 +112,13 @@ export interface DriverModelType extends Document {
   // Financial tracking
   totalEarningsAllTime: number; // in kobo
   totalCashouts: number; // in kobo
+
   pendingEarnings: number; // in kobo
   lastCashoutAt?: Date;
+
+  cashCollected: number; // Total cash collected from cash trips (in kobo)
+  commissionOwed: number; // Commission owed to platform from cash trips (in kobo)
+  lastCommissionSettlement?: Date; // Last time commission was automatically settled
 
   paymentModel: PaymentModel;
   paymentModelHistory: Array<{
@@ -234,6 +239,8 @@ const driverSchema = new Schema<DriverModelType>(
       completionRate: { type: Number, default: 0 },
     },
 
+    outstandingBalance: { type: Number, default: 0 }, // in kobo
+
     vehicleInspectionDone: { type: Boolean, default: false },
 
     vehicleInsuranceExpiry: { type: Date },
@@ -279,7 +286,7 @@ const driverSchema = new Schema<DriverModelType>(
     paymentModel: {
       type: String,
       enum: PaymentModelEnum,
-      default: PAYMENT_MODEL_CONFIG.DEFAULT_MODEL,
+      default: PaymentModel.COMMISSION,
     },
 
     paymentModelHistory: [
@@ -313,6 +320,18 @@ const driverSchema = new Schema<DriverModelType>(
         default: true,
       },
     },
+
+    cashCollected: {
+      type: Number,
+      default: 0,
+      get: (value: number) => Math.round(value),
+    },
+    commissionOwed: {
+      type: Number,
+      default: 0,
+      get: (value: number) => Math.round(value),
+    },
+    lastCommissionSettlement: { type: Date },
 
     subscriptionSettings: {
       requireActiveSubscription: {
@@ -365,7 +384,7 @@ const driverSchema = new Schema<DriverModelType>(
         bankCode: String,
       },
     ],
-    
+
     createdAt: {
       type: Date,
       default: Date.now,

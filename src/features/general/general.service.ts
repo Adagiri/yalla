@@ -236,10 +236,15 @@ class GeneralService {
 
       // Find user by email or phone
       if (authChannel === AuthChannel.EMAIL && email) {
-        entity = await model.findOne({ email }).select("+password");
+        entity = await model
+          .findOne({ email, isEmailVerified: true })
+          .select("+password");
       } else if (authChannel === AuthChannel.SMS && phone) {
         entity = await model
-          .findOne({ "phone.fullPhone": phone.fullPhone })
+          .findOne({
+            "phone.fullPhone": phone.fullPhone,
+            isPhoneVerified: true,
+          })
           .select("+password");
       }
       if (!entity) throw new ErrorResponse(404, "Invalid credentials");
@@ -484,10 +489,10 @@ class GeneralService {
     phone,
     model,
     authChannel,
-  }: RequestResetPasswordInput): Promise<Boolean> {
+  }: RequestResetPasswordInput): Promise<String> {
     try {
-      let entity: DriverModelType | null;
-
+      let entity: DriverModelType | CustomerModelType | null;
+      let resetToken = "";
       if (
         !authChannel ||
         (authChannel !== AuthChannelEMAIL && authChannel !== AuthChannelSMS)
@@ -529,8 +534,9 @@ class GeneralService {
           "phone.fullPhone": phone.fullPhone,
           isPhoneVerified: true,
         });
-        if (!entity)
+        if (!entity) {
           throw new ErrorResponse(404, "Phone number not registered");
+        }
 
         const { code, encryptedToken, token, tokenExpiry } =
           generateVerificationCode(32, 10);
@@ -542,11 +548,14 @@ class GeneralService {
 
         await NotificationService.sendSMS({
           to: phone.fullPhone,
+
           message: resetPasswordTemplate(code),
         });
+
+        resetToken = token;
       }
 
-      return true;
+      return resetToken;
     } catch (error: any) {
       throw new ErrorResponse(
         500,
@@ -565,9 +574,10 @@ class GeneralService {
     try {
       const encryptedToken = getEncryptedToken(token);
 
-      const entity: DriverModelType | null = await model.findOne({
-        resetPasswordToken: encryptedToken,
-      });
+      const entity: DriverModelType | CustomerModelType | null =
+        await model.findOne({
+          resetPasswordToken: encryptedToken,
+        });
 
       if (!entity) throw new ErrorResponse(404, "Invalid token");
 

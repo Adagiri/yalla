@@ -3,10 +3,11 @@ import PaymentSystemConfigService from '../features/general/payment-system-confi
 import { ErrorResponse } from '../utils/responses';
 
 interface WithdrawalHistory {
-  driverId: string;
   amount: number;
   processedAt: Date;
   reference: string;
+  accountNumber?: string;
+  bankCode?: string;
 }
 
 interface WithdrawalEligibility {

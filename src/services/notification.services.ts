@@ -381,7 +381,6 @@ class NotificationService {
           tripNumber: tripData.tripNumber,
           ...notificationContent.data,
         },
-        sendSMS: this.shouldSendSMS(notificationType),
       });
     } catch (error: any) {
       console.error('Error sending trip notification:', error);
@@ -437,7 +436,7 @@ class NotificationService {
         message:
           userType === 'customer'
             ? `Trip completed. Fare: ₦${tripData.pricing.finalAmount}`
-            : `Trip completed. You earned ₦${tripData.driverEarnings}`,
+            : `Trip completed. You earned ₦${tripData.driverEarnings.toFixed(2)}`,
         data: {
           fare: tripData.pricing.finalAmount,
           earnings: tripData.driverEarnings,
