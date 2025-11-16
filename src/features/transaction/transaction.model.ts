@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
+import { AccountTypeEnum } from '../../constants/general';
 
 export interface TransactionDocument extends Document {
   _id: string;
@@ -79,7 +80,7 @@ const TransactionSchema = new Schema<TransactionDocument>(
     userId: { type: String, required: true, index: true },
     userType: {
       type: String,
-      enum: ['driver', 'customer'],
+      enum: AccountTypeEnum,
       required: true,
     },
 

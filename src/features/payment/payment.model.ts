@@ -90,7 +90,7 @@ const paymentResolvers = {
   Wallet: {
     // Format balance for display
     formattedBalance: (parent: any) => {
-      const balance = parent.balance || 0;
+      const balance = (parent.balance || 0) / 100; // Balance is in kobo by default
       return `₦${balance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
     },
   },

@@ -18,6 +18,8 @@ import { CreateTripInput, TripFilter, TripSort } from './trip.type';
 import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
 import { Pagination } from '../../types/list-resources';
 import { BackgroundRunnersService } from '../../services/background-runners.service';
+import { AccountType_ } from '../../constants/general';
+import PaymentSystemConfigService from '../general/payment-system-config.service';
 
 class TripService {
   static async listTrips(
@@ -368,6 +370,18 @@ class TripService {
         throw new ErrorResponse(404, 'Trip not found');
       }
 
+      if (trip.paymentMethod === 'cash') {
+        const debtCheck =
+          await PaymentSystemConfigService.canDriverAcceptCashTrip(
+            driverId,
+            trip.pricing.finalAmount * 0.25 // Commission amount
+          );
+
+        if (!debtCheck.allowed) {
+          throw new ErrorResponse(403, debtCheck.reason || 'none');
+        }
+      }
+
       if (trip.status !== 'drivers_found') {
         // Remove from driver's incoming trips since it's no longer available
         await BackgroundRunnersService.removeIncomingTripForDriver(
@@ -467,12 +481,7 @@ class TripService {
         `✅ Trip ${trip.tripNumber} accepted by driver ${driver.firstname} ${driver.lastname}`
       );
 
-      return {
-        success: true,
-        message: 'Trip accepted successfully',
-        trip: updatedTrip,
-        driver: driver,
-      };
+      return updatedTrip;
     } catch (error: any) {
       await session.abortTransaction();
 
@@ -690,6 +699,11 @@ class TripService {
       trip.startedAt = new Date();
       await trip.save();
 
+      await this.publishTripLifecycleUpdate(tripId, {
+        status: 'in_progress',
+        message: 'Trip started',
+      });
+
       return trip;
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error starting trip', error.message);
@@ -750,7 +764,7 @@ class TripService {
       if (updatedTrip) {
         await NotificationService.sendTripNotification(
           trip.driverId,
-          'driver',
+          AccountType_.DRIVER,
           'earnings_received',
           {
             ...updatedTrip.toObject(),
@@ -935,6 +949,28 @@ class TripService {
         driverId,
         status: { $in: ['driver_assigned', 'driver_arrived', 'in_progress'] },
       }).populate('customerId pickup.estateId destination.estateId');
+      return trip;
+    } catch (error: any) {
+      throw new ErrorResponse(500, 'Error fetching active trip', error.message);
+    }
+  }
+
+  /**
+   * Get active trip for customer
+   */
+  static async getCustomerActiveTrip(customerId: string) {
+    try {
+      const trip = await Trip.findOne({
+        customerId,
+        status: {
+          $in: [
+            'searching',
+            'driver_assigned',
+            'driver_arrived',
+            'in_progress',
+          ],
+        },
+      }).populate('driverId pickup.estateId destination.estateId');
       return trip;
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error fetching active trip', error.message);
@@ -1136,7 +1172,7 @@ class TripService {
       // Send notifications
       await NotificationService.sendTripNotification(
         trip.customerId,
-        'customer',
+        AccountType_.CUSTOMER,
         'trip_accepted',
         {
           ...trip.toObject(),

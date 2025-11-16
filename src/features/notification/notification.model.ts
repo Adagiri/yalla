@@ -1,10 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
+import { AccountTypeEnum } from '../../constants/general';
 
 const NotificationSchema = new mongoose.Schema({
   _id: { type: String, default: uuidv4 },
   userId: { type: String, required: true },
-  userType: { type: String, enum: ['driver', 'customer'], required: true },
+  userType: { type: String, enum: AccountTypeEnum, required: true },
   type: {
     type: String,
     enum: [
@@ -15,6 +16,8 @@ const NotificationSchema = new mongoose.Schema({
       'trip_completed',
       'trip_cancelled',
       'payment_received',
+      'wallet_topup_success',
+      'wallet_topup_failed',
     ],
     required: true,
   },

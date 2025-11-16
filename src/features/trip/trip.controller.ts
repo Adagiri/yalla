@@ -142,6 +142,11 @@ class TripController {
     return await TripService.getActiveTrip(user.id);
   }
 
+  // Get active trip for customer
+  static async getCustomerActiveTrip(_: any, __: any, { user }: ContextType) {
+    return await TripService.getCustomerActiveTrip(user.id);
+  }
+
   // Calculate driver earnings
   static async getDriverEarnings(
     _: any,
@@ -232,6 +237,10 @@ class TripController {
     { tripId }: { tripId: string },
     { user }: ContextType
   ) {
+    // Update trip status in MongoDB first
+    await TripService.arrivedAtPickup(tripId, user.id);
+
+    // Then queue background job for notifications
     await addTripUpdateJob(tripId, 'driver_arrived', {
       message: 'Driver has arrived at pickup location',
       arrivedAt: new Date(),

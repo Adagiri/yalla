@@ -1,7 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { v4 as uuidv4 } from 'uuid';
-import { AccountType, AccountType_, AuthChannelEnum } from '../../constants/general';
+import {
+  AccountType,
+  AccountType_,
+  AuthChannelEnum,
+} from '../../constants/general';
 import { LocationType, PhoneType } from '../../types/general';
 import {
   PAYMENT_MODEL_CONFIG,
@@ -62,12 +66,12 @@ export interface DriverModelType extends Document {
   currentTripId?: string;
 
   // Statistics
-stats: {
-  totalTrips: number;
-  totalEarnings: number;
-  averageRating: number;
-  completionRate: number;
-};
+  stats: {
+    totalTrips: number;
+    totalEarnings: number;
+    averageRating: number;
+    completionRate: number;
+  };
 
   // Vehicle info already exists
   vehicleInspectionDone: boolean;
@@ -136,6 +140,14 @@ stats: {
     commissionEarnings: number;
     totalEarnings: number;
   };
+
+  withdrawalHistory: Array<{
+    amount: number; // in kobo
+    processedAt: Date;
+    reference: string;
+    accountNumber?: string;
+    bankCode?: string;
+  }>;
 
   createdAt: Date;
   updatedAt: Date;
@@ -334,6 +346,26 @@ const driverSchema = new Schema<DriverModelType>(
       },
     },
 
+    withdrawalHistory: [
+      {
+        amount: {
+          type: Number,
+          required: true,
+        },
+        processedAt: {
+          type: Date,
+          required: true,
+          default: Date.now,
+        },
+        reference: {
+          type: String,
+          required: true,
+        },
+        accountNumber: String,
+        bankCode: String,
+      },
+    ],
+    
     createdAt: {
       type: Date,
       default: Date.now,
@@ -367,7 +399,6 @@ driverSchema.virtual('vehicle', {
 driverSchema.virtual('id').get(function (this: DriverModelType) {
   return this._id;
 });
-
 
 driverSchema.pre(
   /^find/,
