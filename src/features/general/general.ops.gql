@@ -24,29 +24,6 @@ extend type Query {
   getFileDownloadUrl(key: String!): String!
 
   getVerificationStatus(userId: ID!): VerificationStatus!
-
-  # General Settings Queries
-}
-
-extend type Mutation {
-  resendCode(input: ResendCodeInput!): AuthPayload!
-
-  verifyCode(input: VerifyCodeInput!): AuthPayload!
-
-  login(input: LoginInput!): AuthPayload!
-
-  googleLogin(firebaseToken: String!, accountType: AccountType!): AuthPayload!
-
-  enableMfa(input: EnableMfaInput!): AccountEntity!
-
-  disableMfa: AccountEntity!
-
-  requestResetPassword(input: ResetPasswordRequestInput!): String!
-
-  resetPassword(input: ResetPasswordInput!): Boolean!
-}
-
-extend type Query {
   # General Settings Queries
   getGeneralSettings: GeneralSetting!
   getActiveGeneralSetting: GeneralSetting
@@ -99,7 +76,7 @@ extend type Mutation {
 
   disableMfa: AccountEntity!
 
-  requestResetPassword(input: ResetPasswordRequestInput!): Boolean!
+  requestResetPassword(input: ResetPasswordRequestInput!): String!
 
   resetPassword(input: ResetPasswordInput!): Boolean!
 
