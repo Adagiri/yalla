@@ -23,6 +23,8 @@ input VehicleFilter {
   color: String
   identificationNumber: String
   plateNumber: String
+  search: String
+  vehicleInspectionDone: Boolean
 }
 
 type Vehicle {
@@ -33,6 +35,8 @@ type Vehicle {
   color: String!
   identificationNumber: String!
   plateNumber: String!
+  vehicleInspectionDone: Boolean!
+  driverId: String
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -41,12 +45,13 @@ type Vehicle {
 Input type for creating or updating a vehicle.
 """
 input VehicleInput {
-  brand: String!
-  modelName: String!
-  manufactureYear: String!
-  color: String!
-  identificationNumber: String!
-  plateNumber: String!
+  brand: String
+  modelName: String
+  manufactureYear: String
+  color: String
+  identificationNumber: String
+  plateNumber: String
+  vehicleInspectionDone: Boolean
 }
 
 extend type Query {

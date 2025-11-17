@@ -237,7 +237,8 @@ enum FileAccessLevel {
 enum FileCategory {
   PROFILE_PHOTO
   DOCUMENTS
-  DRIVER_LICENSE
+  DRIVER_LICENSE_FRONT
+  DRIVER_LICENSE_BACK
   VEHICLE_PHOTOS
   COMPLAINTS
   COMMUNICATION
@@ -252,6 +253,7 @@ type FileUploadUrlResponse {
   thumbnailUrl: String
   key: String!
   thumbnailKey: String
+  userUpdated: Boolean!
 }
 
 input FileUploadUrlInput {
@@ -260,6 +262,63 @@ input FileUploadUrlInput {
   accessLevel: FileAccessLevel!
   generateThumbnail: Boolean
 }
+
+enum FileAccessLevel {
+  PUBLIC
+  PRIVATE
+}
+
+# Document Verification Types
+enum VerificationStatusInput {
+  APPROVED
+  REJECTED
+}
+
+enum DocumentTypeInput {
+  DRIVER_LICENSE
+  PROFILE_PHOTO
+  VEHICLE_INSPECTION
+}
+
+enum VerificationStatus {
+  APPROVED
+  REJECTED
+}
+
+enum DocumentType {
+  DRIVER_LICENSE
+  PROFILE_PHOTO
+  VEHICLE_INSPECTION
+}
+
+type VerificationStatus {
+  driverLicense: DriverLicenseVerification!
+  profile: ProfileVerification!
+  vehicle: VehicleVerification
+}
+
+type DriverLicenseVerification {
+  verified: Boolean!
+  frontUploaded: Boolean!
+  backUploaded: Boolean!
+  canBeVerified: Boolean!
+}
+
+type ProfileVerification {
+  photoUploaded: Boolean!
+  personalInfoSet: Boolean!
+}
+
+type VehicleVerification {
+  inspectionDone: Boolean!
+}
+
+type VerificationResult {
+  success: Boolean!
+  message: String!
+}
+
+
 
 input ImageUploadUrlInput {
   purpose: UploadUrl!

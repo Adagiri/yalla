@@ -29,6 +29,7 @@ input DriverFilter {
   locationId: ID
   isMFAEnabled: Boolean
   authChannels: [AuthChannel!]
+  search: String
 }
 
 """

@@ -1,12 +1,12 @@
 import PaymentSystemConfig, {
   IPaymentSystemConfig,
-} from './payment-system-config.model';
-import { ErrorResponse } from '../../utils/responses';
-import PaystackService from '../../services/paystack.services';
-import Driver from '../driver/driver.model';
-import mongoose from 'mongoose';
-import WalletService from '../../services/wallet.service';
-import { ClientSession } from 'mongoose';
+} from "./payment-system-config.model";
+import { ErrorResponse } from "../../utils/responses";
+import PaystackService from "../../services/paystack.services";
+import Driver from "../driver/driver.model";
+import mongoose from "mongoose";
+import WalletService from "../../services/wallet.service";
+import { ClientSession } from "mongoose";
 
 class PaymentSystemConfigService {
   /**
@@ -22,7 +22,7 @@ class PaymentSystemConfigService {
 
   private static async createDefaultConfig() {
     const defaultConfig = new PaymentSystemConfig({
-      withdrawalInterval: 'weekly', // Drivers can withdraw twice weekly
+      withdrawalInterval: "weekly", // Drivers can withdraw twice weekly
       minimumWithdrawalAmount: 50000,
       debtLimitEnabled: true,
       maxDebtLimit: -500000,
@@ -43,7 +43,7 @@ class PaymentSystemConfigService {
   /**
    * Update payment system configuration (Admin only)
    */
- 
+
   static async updateConfig(
     configId: string,
     updates: Partial<IPaymentSystemConfig>,
@@ -84,7 +84,7 @@ class PaymentSystemConfigService {
       if (createdSession) {
         await useSession.abortTransaction();
       }
-      throw new ErrorResponse(500, 'Error updating config', error.message);
+      throw new ErrorResponse(500, "Error updating config", error.message);
     } finally {
       if (createdSession) {
         useSession.endSession();
@@ -137,7 +137,7 @@ class PaymentSystemConfigService {
         debtLimit: Math.abs(config.maxDebtLimit),
       };
     } catch (error: any) {
-      throw new ErrorResponse(500, 'Error checking debt limit', error.message);
+      throw new ErrorResponse(500, "Error checking debt limit", error.message);
     }
   }
 
@@ -159,7 +159,7 @@ class PaymentSystemConfigService {
           requiredMinimum: 0,
         };
       }
-
+      // FIXMW: Invalid Check
       const availableBalance = config.paystackMinimumBalance;
 
       return {
@@ -170,7 +170,7 @@ class PaymentSystemConfigService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        'Error checking Paystack balance',
+        "Error checking Paystack balance",
         error.message
       );
     }
@@ -195,40 +195,40 @@ class PaymentSystemConfigService {
         return {
           refundAmount: 0,
           refundPercentage: 0,
-          reason: 'Refunds are currently disabled',
+          reason: "Refunds are currently disabled",
         };
       }
 
       let refundPercentage = 0;
-      let reason = '';
+      let reason = "";
 
       switch (tripStatus) {
-        case 'searching':
-        case 'pending':
+        case "searching":
+        case "pending":
           refundPercentage = config.refundTimeframes.beforeDriverAssigned;
-          reason = 'Trip cancelled before driver assignment';
+          reason = "Trip cancelled before driver assignment";
           break;
 
-        case 'driver_assigned':
+        case "driver_assigned":
           refundPercentage = config.refundTimeframes.afterDriverAssigned;
-          reason = 'Trip cancelled after driver assignment';
+          reason = "Trip cancelled after driver assignment";
           break;
 
-        case 'driver_arrived':
+        case "driver_arrived":
           refundPercentage = config.refundTimeframes.afterDriverArrived;
-          reason = 'Trip cancelled after driver arrival';
+          reason = "Trip cancelled after driver arrival";
           break;
 
-        case 'in_progress':
+        case "in_progress":
           refundPercentage = config.refundTimeframes.afterTripStarted;
-          reason = 'Trip cancelled after start';
+          reason = "Trip cancelled after start";
           break;
 
         default:
           return {
             refundAmount: 0,
             refundPercentage: 0,
-            reason: 'Trip cannot be refunded',
+            reason: "Trip cannot be refunded",
           };
       }
 
@@ -242,7 +242,7 @@ class PaymentSystemConfigService {
         reason,
       };
     } catch (error: any) {
-      throw new ErrorResponse(500, 'Error calculating refund', error.message);
+      throw new ErrorResponse(500, "Error calculating refund", error.message);
     }
   }
 
@@ -270,7 +270,7 @@ class PaymentSystemConfigService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        'Error fetching config history',
+        "Error fetching config history",
         error.message
       );
     }

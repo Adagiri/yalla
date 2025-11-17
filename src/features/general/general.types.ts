@@ -233,3 +233,30 @@ export interface DataImportType {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export enum FileCategory {
+  PROFILE_PHOTO = 'PROFILE_PHOTO',
+  DOCUMENTS = 'DOCUMENTS',
+  DRIVER_LICENSE_FRONT = 'DRIVER_LICENSE_FRONT',
+  DRIVER_LICENSE_BACK = 'DRIVER_LICENSE_BACK', 
+  VEHICLE_PHOTOS = 'VEHICLE_PHOTOS',
+  COMPLAINTS = 'COMPLAINTS',
+  COMMUNICATION = 'COMMUNICATION',
+  PRODUCTS = 'PRODUCTS'
+}
+
+export enum FileAccessLevel {
+  PUBLIC = 'PUBLIC',
+  PRIVATE = 'PRIVATE'
+}
+
+export enum VerificationStatus {
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED'
+}
+
+export enum DocumentType {
+  DRIVER_LICENSE = 'DRIVER_LICENSE',
+  PROFILE_PHOTO = 'PROFILE_PHOTO', 
+  VEHICLE_INSPECTION = 'VEHICLE_INSPECTION'
+}
