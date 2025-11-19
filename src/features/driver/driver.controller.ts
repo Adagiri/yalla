@@ -136,7 +136,7 @@ class DriverController {
     // Return immediate response
     return {
       success: true,
-      message: "Location update queued for processing",
+      message: 'Location update queued for processing',
       timestamp: new Date(),
     };
   }
@@ -159,20 +159,37 @@ class DriverController {
     // If going offline, set unavailable as well
     const isAvailable = input.isOnline ? (input.isAvailable ?? true) : false;
 
-    // Add status update to background job queue
-    await addDriverStatusUpdateJob(user.id, {
+    // Update MongoDB directly
+    await DriverService.updateDriverStatus(user.id, {
       isOnline: input.isOnline,
       isAvailable,
     });
 
-    // If going offline, also update location to remove from geo index
+    // Update Redis cache
+    const currentLocation = await cacheService.getDriverLocation(user.id);
+    if (currentLocation) {
+      await cacheService.updateDriverLocation(user.id, {
+        ...currentLocation,
+        isOnline: input.isOnline,
+        isAvailable,
+        updatedAt: new Date(),
+      });
+    } else if (input.isOnline) {
+      // If going online but no location exists, they need to send location first
+      throw new ErrorResponse(
+        400,
+        'Please update your location before going online'
+      );
+    }
+
+    // If going offline, remove from geo index
     if (!input.isOnline) {
       await cacheService.removeDriverLocation(user.id);
     }
 
     return {
       success: true,
-      message: `Driver status updated: ${input.isOnline ? "online" : "offline"}`,
+      message: `Driver status updated: ${input.isOnline ? 'online' : 'offline'}`,
       timestamp: new Date(),
     };
   }
@@ -221,8 +238,8 @@ class DriverController {
     const targetDriverId = driverId || user.id;
 
     // Only allow drivers to see their own location, or admins to see any
-    if (user.role !== "ADMIN" && targetDriverId !== user.id) {
-      throw new ErrorResponse(403, "Unauthorized to view this driver location");
+    if (user.role !== 'ADMIN' && targetDriverId !== user.id) {
+      throw new ErrorResponse(403, 'Unauthorized to view this driver location');
     }
 
     const location = await cacheService.getDriverLocation(targetDriverId);
