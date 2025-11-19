@@ -1,14 +1,14 @@
 import {
   addDriverLocationUpdateJob,
   addDriverStatusUpdateJob,
-} from "../../services/job-processors.service";
-import { cacheService } from "../../services/redis-cache.service";
-import { ContextType } from "../../types";
-import { Pagination } from "../../types/list-resources";
-import { setPagePaginationHeaders } from "../../utils/pagination-headers.util";
-import { AuthPayload, ErrorResponse } from "../../utils/responses";
-import { DriverModelType } from "./driver.model";
-import DriverService from "./driver.service";
+} from '../../services/job-processors.service';
+import { cacheService } from '../../services/redis-cache.service';
+import { ContextType } from '../../types';
+import { Pagination } from '../../types/list-resources';
+import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
+import { AuthPayload, ErrorResponse } from '../../utils/responses';
+import { DriverModelType } from './driver.model';
+import DriverService from './driver.service';
 import {
   RegisterDriverInput,
   DriverFilter,
@@ -16,7 +16,7 @@ import {
   UpdateDriverPersonalInfoInput,
   UpdateDriverLicenseInput,
   UpdateProfilePhotoInput,
-} from "./driver.type";
+} from './driver.type';
 
 class DriverController {
   static async listDrivers(
@@ -159,33 +159,22 @@ class DriverController {
     // If going offline, set unavailable as well
     const isAvailable = input.isOnline ? (input.isAvailable ?? true) : false;
 
+    // Add status update to background job queue
+    await addDriverStatusUpdateJob(user.id, {
+      isOnline: input.isOnline,
+      isAvailable,
+    });
+
+    // If going offline, also update location to remove from geo index
+    if (!input.isOnline) {
+      await cacheService.removeDriverLocation(user.id);
+    }
+
     // Update MongoDB directly
     await DriverService.updateDriverStatus(user.id, {
       isOnline: input.isOnline,
       isAvailable,
     });
-
-    // Update Redis cache
-    const currentLocation = await cacheService.getDriverLocation(user.id);
-    if (currentLocation) {
-      await cacheService.updateDriverLocation(user.id, {
-        ...currentLocation,
-        isOnline: input.isOnline,
-        isAvailable,
-        updatedAt: new Date(),
-      });
-    } else if (input.isOnline) {
-      // If going online but no location exists, they need to send location first
-      throw new ErrorResponse(
-        400,
-        'Please update your location before going online'
-      );
-    }
-
-    // If going offline, remove from geo index
-    if (!input.isOnline) {
-      await cacheService.removeDriverLocation(user.id);
-    }
 
     return {
       success: true,
