@@ -1,19 +1,19 @@
-import { combineResolvers } from "graphql-resolvers";
-import GeneralController from "./general.controller";
-import { protectEntities } from "../../utils/auth-middleware";
-import { AccountType, AccountType_ } from "../../constants/general";
+import { combineResolvers } from 'graphql-resolvers';
+import GeneralController from './general.controller';
+import { protectEntities } from '../../utils/auth-middleware';
+import { AccountType, AccountType_ } from '../../constants/general';
 
 const generalResolvers = {
   AuthEntity: {
     __resolveType(obj: any) {
       if (obj.accountType === AccountType_.ADMIN) {
-        return "Admin";
+        return 'Admin';
       }
       if (obj.accountType === AccountType_.DRIVER) {
-        return "Driver";
+        return 'Driver';
       }
       if (obj.accountType === AccountType_.CUSTOMER) {
-        return "Customer";
+        return 'Customer';
       }
       return null;
     },
@@ -22,13 +22,13 @@ const generalResolvers = {
   AccountEntity: {
     __resolveType(obj: any) {
       if (obj.accountType === AccountType_.ADMIN) {
-        return "Admin";
+        return 'Admin';
       }
       if (obj.accountType === AccountType_.DRIVER) {
-        return "Driver";
+        return 'Driver';
       }
       if (obj.accountType === AccountType_.CUSTOMER) {
-        return "Customer";
+        return 'Customer';
       }
       return null;
     },
@@ -38,11 +38,11 @@ const generalResolvers = {
     getBankCodes: GeneralController.getBankCodes,
     getImageUploadUrl: GeneralController.getImageUploadUrl,
     getFileUploadUrl: combineResolvers(
-      protectEntities(["ADMIN", "DRIVER", "CUSTOMER"]),
+      protectEntities(['ADMIN', 'DRIVER', 'CUSTOMER']),
       GeneralController.getFileUploadUrl
     ),
     getFileDownloadUrl: combineResolvers(
-      protectEntities(["ADMIN", "DRIVER", "CUSTOMER"]),
+      protectEntities(['ADMIN', 'DRIVER', 'CUSTOMER']),
       GeneralController.getFileDownloadUrl
     ),
     getVerificationStatus: GeneralController.getVerificationStatus,
@@ -72,11 +72,11 @@ const generalResolvers = {
 
     // Data Management Queries
     getDataExports: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.getDataExports
     ),
     getDataImports: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.getDataImports
     ),
   },
@@ -100,103 +100,103 @@ const generalResolvers = {
     resetPassword: GeneralController.resetPassword,
     login: GeneralController.login,
     enableMfa: combineResolvers(
-      protectEntities(["ADMIN", "DRIVER", "CUSTOMER"]),
+      protectEntities(['ADMIN', 'DRIVER', 'CUSTOMER']),
       GeneralController.enableMfa
     ),
     disableMfa: combineResolvers(
-      protectEntities(["ADMIN", "DRIVER", "CUSTOMER"]),
+      protectEntities(['ADMIN', 'DRIVER', 'CUSTOMER']),
       GeneralController.disableMfa
     ),
     googleLogin: GeneralController.googleLogin,
     // General Settings Mutations
     createGeneralSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.createGeneralSetting
     ),
     updateGeneralSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.updateGeneralSetting
     ),
     activateGeneralSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.activateGeneralSetting
     ),
     deactivateGeneralSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.deactivateGeneralSetting
     ),
 
     // Pricing Settings Mutations
     createPricingSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.createPricingSetting
     ),
     updatePricingSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.updatePricingSetting
     ),
     activatePricingSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.activatePricingSetting
     ),
     deactivatePricingSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.deactivatePricingSetting
     ),
 
     // Payment Settings Mutations
     createPaymentSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.createPaymentSetting
     ),
     updatePaymentSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.updatePaymentSetting
     ),
     activatePaymentSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.activatePaymentSetting
     ),
     deactivatePaymentSetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.deactivatePaymentSetting
     ),
 
     // Security Settings Mutations
     createSecuritySetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.createSecuritySetting
     ),
     updateSecuritySetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.updateSecuritySetting
     ),
     activateSecuritySetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.activateSecuritySetting
     ),
     deactivateSecuritySetting: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.deactivateSecuritySetting
     ),
 
     // System Health Mutations
     refreshSystemHealth: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.refreshSystemHealth
     ),
     updateSystemHealth: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.updateSystemHealth
     ),
 
     // Data Management Mutations
     requestDataExport: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.requestDataExport
     ),
     requestDataImport: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       GeneralController.requestDataImport
     ),
   },

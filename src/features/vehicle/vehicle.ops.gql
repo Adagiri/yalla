@@ -15,7 +15,7 @@ input VehicleSort {
 }
 
 input VehicleFilter {
-  "IDs of drivers to match"
+  # IDs of drivers to match
   ids: [ID!]
   brand: String
   modelName: String
@@ -52,7 +52,7 @@ input VehicleInput {
   identificationNumber: String
   plateNumber: String
   vehicleInspectionDone: Boolean
-  driverId: String;
+  driverId: String
 }
 
 extend type Query {

@@ -1,16 +1,16 @@
 
-import Location from "./location.model";
-import { ErrorResponse } from "../../utils/responses";
-import { filterNullAndUndefined } from "../../utils/general";
+import Location from './location.model';
+import { ErrorResponse } from '../../utils/responses';
+import { filterNullAndUndefined } from '../../utils/general';
 import {
   CreateLocationInput,
   LocationFilter,
   LocationSort,
   UpdateLocationInput,
-} from "./location.types";
-import GoogleServices from "../../services/google.services";
-import { Pagination } from "../../types/list-resources";
-import { listResourcesPagination } from "../../helpers/list-resources-pagination.helper";
+} from './location.types';
+import GoogleServices from '../../services/google.services';
+import { Pagination } from '../../types/list-resources';
+import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
 
 export class LocationService {
   static async listLocations(
@@ -32,7 +32,7 @@ export class LocationService {
 
       return data;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error fetching locations", error.message);
+      throw new ErrorResponse(500, 'Error fetching locations', error.message);
     }
   }
 
@@ -41,11 +41,11 @@ export class LocationService {
     try {
       const location = await Location.findById(id);
       if (!location) {
-        throw new ErrorResponse(404, "Location not found");
+        throw new ErrorResponse(404, 'Location not found');
       }
       return location;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error fetching location", error.message);
+      throw new ErrorResponse(500, 'Error fetching location', error.message);
     }
   }
 
@@ -55,7 +55,7 @@ export class LocationService {
       await location.save();
       return location;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error creating location", error.message);
+      throw new ErrorResponse(500, 'Error creating location', error.message);
     }
   }
 
@@ -65,11 +65,11 @@ export class LocationService {
         new: true,
       });
       if (!location) {
-        throw new ErrorResponse(404, "Location not found");
+        throw new ErrorResponse(404, 'Location not found');
       }
       return location;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error updating location", error.message);
+      throw new ErrorResponse(500, 'Error updating location', error.message);
     }
   }
 
@@ -77,11 +77,11 @@ export class LocationService {
     try {
       const location = await Location.findByIdAndDelete(id);
       if (!location) {
-        throw new ErrorResponse(404, "Location not found");
+        throw new ErrorResponse(404, 'Location not found');
       }
       return true;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error deleting location", error.message);
+      throw new ErrorResponse(500, 'Error deleting location', error.message);
     }
   }
 
@@ -89,7 +89,7 @@ export class LocationService {
     try {
       const location = await Location.findById(id);
       if (!location) {
-        throw new ErrorResponse(404, "Location not found");
+        throw new ErrorResponse(404, 'Location not found');
       }
       location.isActive = !location.isActive;
       await location.save();
@@ -97,7 +97,7 @@ export class LocationService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Error toggling location status",
+        'Error toggling location status',
         error.message
       );
     }
@@ -110,11 +110,11 @@ export class LocationService {
     try {
       const location = await Location.findById(id);
       if (!location) {
-        throw new ErrorResponse(404, "Location not found");
+        throw new ErrorResponse(404, 'Location not found');
       }
       return location;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error fetching location", error.message);
+      throw new ErrorResponse(500, 'Error fetching location', error.message);
     }
   }
 
@@ -128,7 +128,7 @@ export class LocationService {
       const filter: any = {
         location: {
           $near: {
-            $geometry: { type: "Point", coordinates: [longitude, latitude] },
+            $geometry: { type: 'Point', coordinates: [longitude, latitude] },
             $maxDistance: maxDistance,
           },
         },
@@ -141,7 +141,7 @@ export class LocationService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Error finding nearby locations",
+        'Error finding nearby locations',
         error.message
       );
     }
@@ -152,7 +152,7 @@ export class LocationService {
       const locations = await Location.find({
         boundary: {
           $geoIntersects: {
-            $geometry: { type: "Point", coordinates: [longitude, latitude] },
+            $geometry: { type: 'Point', coordinates: [longitude, latitude] },
           },
         },
       });
@@ -160,7 +160,7 @@ export class LocationService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Error finding locations by point",
+        'Error finding locations by point',
         error.message
       );
     }

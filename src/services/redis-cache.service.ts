@@ -287,7 +287,7 @@ export class RedisCacheService {
    * Get all cached driver IDs
    */
   async getAllCachedDriverIds(): Promise<string[]> {
-    const pattern = `driver:location:*`;
+    const pattern = 'driver:location:*';
     const keys = await this.redis.keys(pattern);
 
     return keys.map((key) => key.split(':')[2]); // Extract driver ID from key

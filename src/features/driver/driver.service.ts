@@ -1,20 +1,22 @@
-import Driver, { DriverModelType } from "./driver.model";
-import { ErrorResponse } from "../../utils/responses";
+import mongoose from 'mongoose';
+import Driver, { DriverModelType } from './driver.model';
+import { ErrorResponse } from '../../utils/responses';
 import {
   RegisterDriverInput,
   DriverFilter,
   DriverSort,
   UpdateDriverPersonalInfoInput,
+  UpdateDriverVehicleInfo,
   UpdateDriverLicenseInput,
   UpdateProfilePhotoInput,
-} from "./driver.type";
-import { Pagination } from "../../types/list-resources";
-import { listResourcesPagination } from "../../helpers/list-resources-pagination.helper";
-import { filterNullAndUndefined } from "../../utils/general";
-import { generateVerificationCode, hashPassword } from "../../utils/auth";
-import NotificationService from "../../services/notification.services";
-import { verificationTemplate } from "../../utils/sms-templates";
-import Location from "../location/location.model";
+} from './driver.type';
+import { Pagination } from '../../types/list-resources';
+import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
+import { filterNullAndUndefined } from '../../utils/general';
+import { generateVerificationCode, hashPassword } from '../../utils/auth';
+import NotificationService from '../../services/notification.services';
+import { verificationTemplate } from '../../utils/sms-templates';
+import Location from '../location/location.model';
 
 class DriverService {
   static async listDrivers(
@@ -37,7 +39,7 @@ class DriverService {
 
       return data;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error fetching drivers", error.message);
+      throw new ErrorResponse(500, 'Error fetching drivers', error.message);
     }
   }
 
@@ -45,11 +47,11 @@ class DriverService {
     try {
       const driver = await Driver.findById(id);
       if (!driver) {
-        throw new ErrorResponse(404, "Driver not found");
+        throw new ErrorResponse(404, 'Driver not found');
       }
       return driver;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error fetching driver", error.message);
+      throw new ErrorResponse(500, 'Error fetching driver', error.message);
     }
   }
 
@@ -59,7 +61,7 @@ class DriverService {
 
       return drivers;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error fetching driver", error.message);
+      throw new ErrorResponse(500, 'Error fetching driver', error.message);
     }
   }
 
@@ -69,17 +71,17 @@ class DriverService {
       const { email, phone, password } = input;
 
       if (!email || !phone) {
-        throw new ErrorResponse(400, "Email and phone are required");
+        throw new ErrorResponse(400, 'Email and phone are required');
       }
 
       // Check if the phone number is already registered and verified
       const existingDriver = await Driver.findOne({
-        "phone.fullPhone": phone.fullPhone,
+        'phone.fullPhone': phone.fullPhone,
         isPhoneVerified: true,
       });
 
       if (existingDriver) {
-        throw new ErrorResponse(400, "Phone number already registered");
+        throw new ErrorResponse(400, 'Phone number already registered');
       }
 
       const hashedPassword = await hashPassword(password);
@@ -110,7 +112,7 @@ class DriverService {
       const entity = await Driver.findById(driver._id);
       return { token, entity: driver };
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error registering driver", error.message);
+      throw new ErrorResponse(500, 'Error registering driver', error.message);
     }
   }
 
@@ -139,13 +141,35 @@ class DriverService {
         new: true,
       });
       if (!updatedDriver) {
-        throw new ErrorResponse(404, "Driver not found");
+        throw new ErrorResponse(404, 'Driver not found');
       }
       return updatedDriver;
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Error updating personal info",
+        'Error updating personal info',
+        error.message
+      );
+    }
+  }
+  static async updateDriverVehicleInfo(input: UpdateDriverVehicleInfo) {
+    try {
+      const { driverId: id, vehicleInfoSet } = input;
+      const updatedDriver = await Driver.findByIdAndUpdate(
+        id,
+        { vehicleInfoSet },
+        {
+          new: true,
+        }
+      );
+      if (!updatedDriver) {
+        throw new ErrorResponse(404, 'Driver not found');
+      }
+      return updatedDriver;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error updating driver\'s vehicle info',
         error.message
       );
     }
@@ -166,13 +190,13 @@ class DriverService {
         new: true,
       });
       if (!updatedDriver) {
-        throw new ErrorResponse(404, "Driver not found");
+        throw new ErrorResponse(404, 'Driver not found');
       }
       return updatedDriver;
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Error updating driver license",
+        'Error updating driver license',
         error.message
       );
     }
@@ -188,14 +212,14 @@ class DriverService {
         }
       );
       if (!updatedDriver) {
-        throw new ErrorResponse(404, "Driver not found");
+        throw new ErrorResponse(404, 'Driver not found');
       }
 
       return updatedDriver;
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Error updating driver license",
+        'Error updating driver license',
         error.message
       );
     }
@@ -217,7 +241,7 @@ class DriverService {
       });
 
       if (!driver) {
-        throw new ErrorResponse(404, "Driver not found");
+        throw new ErrorResponse(404, 'Driver not found');
       }
 
       // If going offline, remove from location tracking
@@ -230,7 +254,7 @@ class DriverService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Error updating driver status",
+        'Error updating driver status',
         error.message
       );
     }
@@ -251,7 +275,7 @@ class DriverService {
         driverId,
         {
           currentLocation: {
-            type: "Point",
+            type: 'Point',
             coordinates: location.coordinates,
             heading: location.heading,
             updatedAt: new Date(),
@@ -261,14 +285,14 @@ class DriverService {
       );
 
       if (!driver) {
-        throw new ErrorResponse(404, "Driver not found");
+        throw new ErrorResponse(404, 'Driver not found');
       }
 
       return driver;
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Error updating driver location",
+        'Error updating driver location',
         error.message
       );
     }
@@ -277,11 +301,11 @@ class DriverService {
   static async updateDeviceToken(
     userId: string,
     token: string,
-    action: "add" | "remove"
+    action: 'add' | 'remove'
   ) {
     try {
       const updateQuery =
-        action === "add"
+        action === 'add'
           ? { $addToSet: { deviceTokens: token } }
           : { $pull: { deviceTokens: token } };
 
@@ -290,11 +314,11 @@ class DriverService {
       });
 
       if (!user) {
-        throw new ErrorResponse(404, "User not found");
+        throw new ErrorResponse(404, 'User not found');
       }
 
       // If adding and exceeds limit, remove oldest token
-      if (action === "add" && user.deviceTokens.length > 10) {
+      if (action === 'add' && user.deviceTokens.length > 10) {
         user.deviceTokens.shift(); // Remove first (oldest) token
         await user.save();
       }
@@ -303,7 +327,7 @@ class DriverService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Error updating device token",
+        'Error updating device token',
         error.message
       );
     }

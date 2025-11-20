@@ -1,11 +1,11 @@
-import { ErrorResponse } from "../../utils/responses";
+import { ErrorResponse } from '../../utils/responses';
 import {
   DataExport,
   DataImport,
   IDataExport,
   IDataImport,
-} from "./data-management.model";
-import { ExportRequestInput, ImportRequestInput } from "./general.types";
+} from './data-management.model';
+import { ExportRequestInput, ImportRequestInput } from './general.types';
 
 // NB: All the implementation below are not real, just dummny data and placeholder
 export class DataManagementService {
@@ -22,7 +22,7 @@ export class DataManagementService {
       // Create export record; To be implemented later with real data
       const exportRecord = new DataExport({
         exportType: input.exportType,
-        status: "PENDING",
+        status: 'PENDING',
         recordCount: this.getEstimatedRecordCount(input.exportType),
         filters: input.filters || {},
         requestedBy: adminId,
@@ -38,12 +38,12 @@ export class DataManagementService {
         success: true,
         exportId: exportRecord.id.toString(),
         message:
-          "Export request submitted successfully. You will be notified when ready.",
+          'Export request submitted successfully. You will be notified when ready.',
       };
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to request data export",
+        'Failed to request data export',
         error.message
       );
     }
@@ -60,17 +60,17 @@ export class DataManagementService {
   }> {
     try {
       // validate file type and size
-      if (!input.fileName.endsWith(".csv")) {
-        throw new ErrorResponse(400, "Only CSV files are supported for import");
+      if (!input.fileName.endsWith('.csv')) {
+        throw new ErrorResponse(400, 'Only CSV files are supported for import');
       }
 
       if (input.fileSizeMB > 50) {
-        throw new ErrorResponse(400, "File size must be less than 50MB");
+        throw new ErrorResponse(400, 'File size must be less than 50MB');
       }
 
       const importRecord = new DataImport({
         importType: input.importType,
-        status: "PENDING",
+        status: 'PENDING',
         fileName: input.fileName,
         fileSizeMB: input.fileSizeMB,
         recordCount: input.recordCount,
@@ -89,12 +89,12 @@ export class DataManagementService {
         success: true,
         importId: importRecord.id.toString(),
         message:
-          "Import request submitted successfully. Processing in background.",
+          'Import request submitted successfully. Processing in background.',
       };
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to request data import",
+        'Failed to request data import',
         error.message
       );
     }
@@ -120,7 +120,7 @@ export class DataManagementService {
 
       const [exports, total] = await Promise.all([
         DataExport.find(query)
-          .populate("requestedBy", "firstname lastname email")
+          .populate('requestedBy', 'firstname lastname email')
           .sort({ requestedAt: -1 })
           .skip(skip)
           .limit(limit)
@@ -132,7 +132,7 @@ export class DataManagementService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch data exports",
+        'Failed to fetch data exports',
         error.message
       );
     }
@@ -158,7 +158,7 @@ export class DataManagementService {
 
       const [imports, total] = await Promise.all([
         DataImport.find(query)
-          .populate("importedBy", "firstname lastname email")
+          .populate('importedBy', 'firstname lastname email')
           .sort({ importedAt: -1 })
           .skip(skip)
           .limit(limit)
@@ -170,7 +170,7 @@ export class DataManagementService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch data imports",
+        'Failed to fetch data imports',
         error.message
       );
     }
@@ -182,14 +182,14 @@ export class DataManagementService {
       if (!exportRecord) return;
 
       // update status to processing
-      exportRecord.status = "PROCESSING";
+      exportRecord.status = 'PROCESSING';
       await exportRecord.save();
 
       // simulate export processing time
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
       // generate dummy file URL
-      exportRecord.status = "COMPLETED";
+      exportRecord.status = 'COMPLETED';
       exportRecord.fileUrl = `/exports/${exportId}/data-export-${Date.now()}.csv`;
       // File siz  approximately  1-11 MB
       exportRecord.fileSizeMB = Math.random() * 10 + 1;
@@ -198,8 +198,8 @@ export class DataManagementService {
       await exportRecord.save();
     } catch (error) {
       await DataExport.findByIdAndUpdate(exportId, {
-        status: "FAILED",
-        errorMessage: "Export processing failed",
+        status: 'FAILED',
+        errorMessage: 'Export processing failed',
         completedAt: new Date(),
       });
     }
@@ -211,7 +211,7 @@ export class DataManagementService {
       if (!importRecord) return;
 
       // update status to processing
-      importRecord.status = "PROCESSING";
+      importRecord.status = 'PROCESSING';
       await importRecord.save();
 
       // simulate import processing time
@@ -224,14 +224,14 @@ export class DataManagementService {
       );
       importRecord.failedImports =
         importRecord.recordCount - importRecord.successfulImports;
-      importRecord.status = "COMPLETED";
+      importRecord.status = 'COMPLETED';
       importRecord.completedAt = new Date();
 
       await importRecord.save();
     } catch (error) {
       await DataImport.findByIdAndUpdate(importId, {
-        status: "FAILED",
-        errorMessage: "Import processing failed",
+        status: 'FAILED',
+        errorMessage: 'Import processing failed',
         completedAt: new Date(),
       });
     }

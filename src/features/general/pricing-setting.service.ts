@@ -1,9 +1,9 @@
-import { ErrorResponse } from "../../utils/responses";
-import PricingSetting, { IPricingSetting } from "./pricing-setting.model";
+import { ErrorResponse } from '../../utils/responses';
+import PricingSetting, { IPricingSetting } from './pricing-setting.model';
 import {
   CreatePricingSettingInput,
   UpdatePricingSettingInput,
-} from "./general.types";
+} from './general.types';
 
 export class PricingSettingService {
   static async createPricingSetting(
@@ -13,13 +13,13 @@ export class PricingSettingService {
       if (input.maximumFare < input.minimumFare) {
         throw new ErrorResponse(
           400,
-          "Maximum fare must be greater than minimum fare"
+          'Maximum fare must be greater than minimum fare'
         );
       }
 
       const setting = new PricingSetting({
         ...input,
-        currency: "NGN",
+        currency: 'NGN',
         // new setting are inactive by default
         isActive: false,
       });
@@ -27,16 +27,16 @@ export class PricingSettingService {
       await setting.save();
       return setting;
     } catch (error: any) {
-      console.log(error, "create-error");
+      console.log(error, 'create-error');
       if (error.code === 11000) {
         throw new ErrorResponse(
           400,
-          "An active pricing setting already exists"
+          'An active pricing setting already exists'
         );
       }
       throw new ErrorResponse(
         500,
-        "Failed to create pricing settings",
+        'Failed to create pricing settings',
         error.message
       );
     }
@@ -49,7 +49,7 @@ export class PricingSettingService {
     try {
       const setting = await PricingSetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "Pricing settings not found");
+        throw new ErrorResponse(404, 'Pricing settings not found');
       }
 
       if (
@@ -59,7 +59,7 @@ export class PricingSettingService {
       ) {
         throw new ErrorResponse(
           400,
-          "Maximum fare must be greater than minimum fare"
+          'Maximum fare must be greater than minimum fare'
         );
       }
 
@@ -78,7 +78,7 @@ export class PricingSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to update pricing settings",
+        'Failed to update pricing settings',
         error.message
       );
     }
@@ -88,7 +88,7 @@ export class PricingSettingService {
     try {
       const setting = await PricingSetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "Pricing settings not found");
+        throw new ErrorResponse(404, 'Pricing settings not found');
       }
 
       // deactivate all other pricing settings
@@ -103,10 +103,10 @@ export class PricingSettingService {
 
       return setting;
     } catch (error: any) {
-      console.log(error, "this is  the new error");
+      console.log(error, 'this is  the new error');
       throw new ErrorResponse(
         500,
-        "Failed to activate pricing settings",
+        'Failed to activate pricing settings',
         error.message
       );
     }
@@ -116,7 +116,7 @@ export class PricingSettingService {
     try {
       const setting = await PricingSetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "Pricing settings not found");
+        throw new ErrorResponse(404, 'Pricing settings not found');
       }
 
       setting.isActive = false;
@@ -126,7 +126,7 @@ export class PricingSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to deactivate pricing settings",
+        'Failed to deactivate pricing settings',
         error.message
       );
     }
@@ -138,7 +138,7 @@ export class PricingSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch pricing settings",
+        'Failed to fetch pricing settings',
         error.message
       );
     }
@@ -156,7 +156,7 @@ export class PricingSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch pricing settings",
+        'Failed to fetch pricing settings',
         error.message
       );
     }
@@ -182,7 +182,7 @@ export class PricingSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch pricing settings history",
+        'Failed to fetch pricing settings history',
         error.message
       );
     }
@@ -198,7 +198,7 @@ export class PricingSettingService {
       surgeMultiplier: 1.5,
       commissionRate: 20,
       cancellationFee: 300,
-      currency: "NGN",
+      currency: 'NGN',
       isActive: true,
     });
 

@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 // NB: this needs model need to align with  system health data (realtime); this is just placeholder
 export interface ISystemHealth {
   // Database Metrics
@@ -105,7 +105,7 @@ const SystemHealthSchema = new Schema<ISystemHealthDocument>(
   },
   {
     timestamps: true,
-    collection: "system_health",
+    collection: 'system_health',
   }
 );
 
@@ -120,6 +120,6 @@ SystemHealthSchema.index(
 
 // export the model with the correct type
 export default mongoose.model<ISystemHealthDocument>(
-  "SystemHealth",
+  'SystemHealth',
   SystemHealthSchema
 );

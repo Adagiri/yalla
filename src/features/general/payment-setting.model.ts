@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPaymentSetting extends Document {
   // Payment Methods
@@ -43,14 +43,14 @@ const PaymentSettingSchema = new Schema<IPaymentSetting>(
     // Wallet Configuration
     minimumWalletBalance: {
       type: Number,
-      required: [true, "Minimum wallet balance is required"],
-      min: [100, "Minimum wallet balance cannot be negative"],
+      required: [true, 'Minimum wallet balance is required'],
+      min: [100, 'Minimum wallet balance cannot be negative'],
     },
     processingFeeRate: {
       type: Number,
-      required: [true, "Processing fee rate is required"],
-      min: [0, "Processing fee rate cannot be negative"],
-      max: [10, "Processing fee rate cannot exceed 10%"],
+      required: [true, 'Processing fee rate is required'],
+      min: [0, 'Processing fee rate cannot be negative'],
+      max: [10, 'Processing fee rate cannot exceed 10%'],
     },
     autoTopupEnabled: {
       type: Boolean,
@@ -58,16 +58,16 @@ const PaymentSettingSchema = new Schema<IPaymentSetting>(
     },
     autoTopupThreshold: {
       type: Number,
-      min: [0, "Auto top-up threshold cannot be negative"],
+      min: [0, 'Auto top-up threshold cannot be negative'],
     },
     autoTopupAmount: {
       type: Number,
-      min: [0, "Auto top-up amount cannot be negative"],
+      min: [0, 'Auto top-up amount cannot be negative'],
     },
 
     currency: {
       type: String,
-      default: "NGN",
+      default: 'NGN',
     },
     isActive: {
       type: Boolean,
@@ -91,6 +91,6 @@ PaymentSettingSchema.index(
 );
 
 export default mongoose.model<IPaymentSetting>(
-  "PaymentSetting",
+  'PaymentSetting',
   PaymentSettingSchema
 );

@@ -1,22 +1,23 @@
 import {
   addDriverLocationUpdateJob,
   addDriverStatusUpdateJob,
-} from "../../services/job-processors.service";
-import { cacheService } from "../../services/redis-cache.service";
-import { ContextType } from "../../types";
-import { Pagination } from "../../types/list-resources";
-import { setPagePaginationHeaders } from "../../utils/pagination-headers.util";
-import { AuthPayload, ErrorResponse } from "../../utils/responses";
-import { DriverModelType } from "./driver.model";
-import DriverService from "./driver.service";
+} from '../../services/job-processors.service';
+import { cacheService } from '../../services/redis-cache.service';
+import { ContextType } from '../../types';
+import { Pagination } from '../../types/list-resources';
+import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
+import { AuthPayload, ErrorResponse } from '../../utils/responses';
+import { DriverModelType } from './driver.model';
+import DriverService from './driver.service';
 import {
   RegisterDriverInput,
   DriverFilter,
   DriverSort,
   UpdateDriverPersonalInfoInput,
+  UpdateDriverVehicleInfo,
   UpdateDriverLicenseInput,
   UpdateProfilePhotoInput,
-} from "./driver.type";
+} from './driver.type';
 
 class DriverController {
   static async listDrivers(
@@ -69,6 +70,14 @@ class DriverController {
   ) {
     const response = await DriverService.registerDriver(input);
     return new AuthPayload(response.entity, response.token);
+  }
+
+  static async updateDriverVehicleInfo(
+    _: any,
+    { input }: { input: UpdateDriverVehicleInfo }
+  ) {
+    const updatedDriver = await DriverService.updateDriverVehicleInfo(input);
+    return updatedDriver;
   }
 
   static async updateDriverPersonalInfo(
@@ -136,7 +145,7 @@ class DriverController {
     // Return immediate response
     return {
       success: true,
-      message: "Location update queued for processing",
+      message: 'Location update queued for processing',
       timestamp: new Date(),
     };
   }
@@ -172,7 +181,7 @@ class DriverController {
 
     return {
       success: true,
-      message: `Driver status updated: ${input.isOnline ? "online" : "offline"}`,
+      message: `Driver status updated: ${input.isOnline ? 'online' : 'offline'}`,
       timestamp: new Date(),
     };
   }
@@ -221,8 +230,8 @@ class DriverController {
     const targetDriverId = driverId || user.id;
 
     // Only allow drivers to see their own location, or admins to see any
-    if (user.role !== "ADMIN" && targetDriverId !== user.id) {
-      throw new ErrorResponse(403, "Unauthorized to view this driver location");
+    if (user.role !== 'ADMIN' && targetDriverId !== user.id) {
+      throw new ErrorResponse(403, 'Unauthorized to view this driver location');
     }
 
     const location = await cacheService.getDriverLocation(targetDriverId);

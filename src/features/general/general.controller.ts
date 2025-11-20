@@ -1,15 +1,15 @@
-import { ContextType } from "../../types";
-import { AuthPayload, ErrorResponse } from "../../utils/responses";
-import Admin from "../admin/admin.model";
-import Driver from "../driver/driver.model";
-import Customer from "../customer/customer.model";
-import GeneralService from "./general.service";
-import { AccountType } from "../../constants/general";
-import GeneralSettingService from "./general-setting.service";
+import { ContextType } from '../../types';
+import { AuthPayload, ErrorResponse } from '../../utils/responses';
+import Admin from '../admin/admin.model';
+import Driver from '../driver/driver.model';
+import Customer from '../customer/customer.model';
+import GeneralService from './general.service';
+import { AccountType } from '../../constants/general';
+import GeneralSettingService from './general-setting.service';
 
-import PricingSettingService from "./pricing-setting.service";
-import PaymentSettingService from "./payment-setting.service";
-import SecuritySettingService from "./security-setting.service";
+import PricingSettingService from './pricing-setting.service';
+import PaymentSettingService from './payment-setting.service';
+import SecuritySettingService from './security-setting.service';
 import {
   CreateGeneralSettingInput,
   UpdateGeneralSettingInput,
@@ -23,9 +23,9 @@ import {
   ExportRequestInput,
   ImportRequestInput,
   VerificationStatus,
-} from "./general.types";
-import SystemHealthService from "./system-health.service";
-import DataManagementService from "./data-management.service";
+} from './general.types';
+import SystemHealthService from './system-health.service';
+import DataManagementService from './data-management.service';
 
 const models: any = {
   admin: Admin,
@@ -163,7 +163,7 @@ class GeneralController {
     context: ContextType
   ) {
     if (!context.user) {
-      throw new ErrorResponse(401, "Authentication required");
+      throw new ErrorResponse(401, 'Authentication required');
     }
 
     const url = await GeneralService.getFileDownloadUrl(key);
@@ -182,7 +182,7 @@ class GeneralController {
     { user }: ContextType
   ) {
     if (!user?.id || user.accountType !== 'ADMIN') {
-      throw new ErrorResponse(403, "Only admins can verify documents");
+      throw new ErrorResponse(403, 'Only admins can verify documents');
     }
 
     const response = await GeneralService.verifyDocument(
@@ -201,12 +201,12 @@ class GeneralController {
     { user }: ContextType
   ) {
     if (!user?.id) {
-      throw new ErrorResponse(401, "Authentication required");
+      throw new ErrorResponse(401, 'Authentication required');
     }
 
     // Users can only check their own status unless they're admin
     if (userId !== user.id && user.accountType !== 'ADMIN') {
-      throw new ErrorResponse(403, "Access denied");
+      throw new ErrorResponse(403, 'Access denied');
     }
 
     const response = await GeneralService.getVerificationStatus(userId);
@@ -219,7 +219,7 @@ class GeneralController {
     { user }: ContextType
   ) {
     if (!user?.id || user.accountType !== 'ADMIN') {
-      throw new ErrorResponse(403, "Only admins can verify documents");
+      throw new ErrorResponse(403, 'Only admins can verify documents');
     }
 
     const response = await GeneralService.toggleDriverLicenseVerification(
@@ -237,7 +237,7 @@ class GeneralController {
     { user }: ContextType
   ) {
     if (!user?.id || user.accountType !== 'ADMIN') {
-      throw new ErrorResponse(403, "Only admins can verify vehicle inspections");
+      throw new ErrorResponse(403, 'Only admins can verify vehicle inspections');
     }
 
     const response = await GeneralService.toggleVehicleInspection(
@@ -497,7 +497,7 @@ class GeneralController {
     { user }: ContextType
   ) {
     if (!user?.id) {
-      throw new Error("Authentication required");
+      throw new Error('Authentication required');
     }
     const response = await DataManagementService.requestDataExport(
       input,
@@ -512,7 +512,7 @@ class GeneralController {
     { user }: ContextType
   ) {
     if (!user?.id) {
-      throw new Error("Authentication required");
+      throw new Error('Authentication required');
     }
     const response = await DataManagementService.requestDataImport(
       input,

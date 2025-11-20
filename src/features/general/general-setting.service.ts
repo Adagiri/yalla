@@ -1,9 +1,9 @@
-import { ErrorResponse } from "../../utils/responses";
-import GeneralSetting, { IGeneralSetting } from "./general-setting.model";
+import { ErrorResponse } from '../../utils/responses';
+import GeneralSetting, { IGeneralSetting } from './general-setting.model';
 import {
   CreateGeneralSettingInput,
   UpdateGeneralSettingInput,
-} from "./general.types";
+} from './general.types';
 
 export class GeneralSettingService {
   /**
@@ -18,7 +18,7 @@ export class GeneralSettingService {
       if (existingActive) {
         throw new ErrorResponse(
           400,
-          "An active setting already exists. Please deactivate it first or update the existing one."
+          'An active setting already exists. Please deactivate it first or update the existing one.'
         );
       }
 
@@ -32,11 +32,11 @@ export class GeneralSettingService {
       return setting;
     } catch (error: any) {
       if (error.code === 11000) {
-        throw new ErrorResponse(400, "An active setting already exists");
+        throw new ErrorResponse(400, 'An active setting already exists');
       }
       throw new ErrorResponse(
         500,
-        "Failed to create general settings",
+        'Failed to create general settings',
         error.message
       );
     }
@@ -52,7 +52,7 @@ export class GeneralSettingService {
     try {
       const setting = await GeneralSetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "General settings not found");
+        throw new ErrorResponse(404, 'General settings not found');
       }
 
       // if activating this setting, deactivate others
@@ -70,7 +70,7 @@ export class GeneralSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to update general settings",
+        'Failed to update general settings',
         error.message
       );
     }
@@ -85,7 +85,7 @@ export class GeneralSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch general settings",
+        'Failed to fetch general settings',
         error.message
       );
     }
@@ -107,7 +107,7 @@ export class GeneralSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch general settings",
+        'Failed to fetch general settings',
         error.message
       );
     }
@@ -136,7 +136,7 @@ export class GeneralSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch settings history",
+        'Failed to fetch settings history',
         error.message
       );
     }
@@ -149,7 +149,7 @@ export class GeneralSettingService {
     try {
       const setting = await GeneralSetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "General settings not found");
+        throw new ErrorResponse(404, 'General settings not found');
       }
 
       // deactivate all other settings
@@ -165,7 +165,7 @@ export class GeneralSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to activate general settings",
+        'Failed to activate general settings',
         error.message
       );
     }
@@ -178,7 +178,7 @@ export class GeneralSettingService {
     try {
       const setting = await GeneralSetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "General settings not found");
+        throw new ErrorResponse(404, 'General settings not found');
       }
 
       setting.isActive = false;
@@ -188,7 +188,7 @@ export class GeneralSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to deactivate general settings",
+        'Failed to deactivate general settings',
         error.message
       );
     }
@@ -199,12 +199,12 @@ export class GeneralSettingService {
    */
   private static async createDefaultSettings(): Promise<IGeneralSetting> {
     const defaultSettings = new GeneralSetting({
-      applicationName: "Yalla Ride",
-      supportPhone: "+2348000000000",
-      defaultCurrency: "NGN",
-      supportEmail: "support@yallaride.com",
-      timeZone: "WAT",
-      defaultLanguage: "en",
+      applicationName: 'Yalla Ride',
+      supportPhone: '+2348000000000',
+      defaultCurrency: 'NGN',
+      supportEmail: 'support@yallaride.com',
+      timeZone: 'WAT',
+      defaultLanguage: 'en',
       isActive: true,
     });
 

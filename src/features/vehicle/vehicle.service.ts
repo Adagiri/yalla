@@ -1,17 +1,17 @@
-import mongoose from "mongoose";
-import Vehicle from "./vehicle.model";
-import { ErrorResponse } from "../../utils/responses";
-import { filterNullAndUndefined } from "../../utils/general";
+import mongoose from 'mongoose';
+import Vehicle from './vehicle.model';
+import { ErrorResponse } from '../../utils/responses';
+import { filterNullAndUndefined } from '../../utils/general';
 import {
   CreateVehicleInput,
   UpdateVehicleInput,
   VehicleFilter,
   VehicleSort,
-} from "./vehicle.types";
-import GoogleServices from "../../services/google.services";
-import { Pagination } from "../../types/list-resources";
-import { listResourcesPagination } from "../../helpers/list-resources-pagination.helper";
-import Driver from "../driver/driver.model";
+} from './vehicle.types';
+import GoogleServices from '../../services/google.services';
+import { Pagination } from '../../types/list-resources';
+import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
+import Driver from '../driver/driver.model';
 
 class VehicleService {
   /**
@@ -35,7 +35,7 @@ class VehicleService {
 
       return data;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error fetching vehicles", error.message);
+      throw new ErrorResponse(500, 'Error fetching vehicles', error.message);
     }
   }
 
@@ -46,11 +46,11 @@ class VehicleService {
     try {
       const vehicle = await Vehicle.findById(id);
       if (!vehicle) {
-        throw new ErrorResponse(404, "Vehicle not found");
+        throw new ErrorResponse(404, 'Vehicle not found');
       }
       return vehicle;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error fetching vehicle", error.message);
+      throw new ErrorResponse(500, 'Error fetching vehicle', error.message);
     }
   }
 
@@ -79,7 +79,7 @@ class VehicleService {
     } catch (error: any) {
       // Abort the transaction in case of any error
       await session.abortTransaction();
-      throw new ErrorResponse(500, "Error creating vehicle", error.message);
+      throw new ErrorResponse(500, 'Error creating vehicle', error.message);
     } finally {
       session.endSession();
     }
@@ -94,11 +94,11 @@ class VehicleService {
         new: true,
       });
       if (!updatedVehicle) {
-        throw new ErrorResponse(404, "Vehicle not found");
+        throw new ErrorResponse(404, 'Vehicle not found');
       }
       return updatedVehicle;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error updating vehicle", error.message);
+      throw new ErrorResponse(500, 'Error updating vehicle', error.message);
     }
   }
 
@@ -109,11 +109,11 @@ class VehicleService {
     try {
       const result = await Vehicle.findByIdAndDelete(id);
       if (!result) {
-        throw new ErrorResponse(404, "Vehicle not found");
+        throw new ErrorResponse(404, 'Vehicle not found');
       }
       return true;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error deleting vehicle", error.message);
+      throw new ErrorResponse(500, 'Error deleting vehicle', error.message);
     }
   }
 }

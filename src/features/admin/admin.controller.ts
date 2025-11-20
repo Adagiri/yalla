@@ -349,7 +349,7 @@ class AdminController {
 
       return result;
     } catch (error: any) {
-      console.log(error, "Error from broadcasting notification")
+      console.log(error, 'Error from broadcasting notification')
       throw new ErrorResponse(
         500,
         'Error broadcasting notification',

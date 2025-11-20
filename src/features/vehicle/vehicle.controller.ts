@@ -1,13 +1,13 @@
-import { ContextType } from "../../types";
-import { Pagination } from "../../types/list-resources";
-import { setPagePaginationHeaders } from "../../utils/pagination-headers.util";
-import VehicleService from "./vehicle.service";
+import { ContextType } from '../../types';
+import { Pagination } from '../../types/list-resources';
+import { setPagePaginationHeaders } from '../../utils/pagination-headers.util';
+import VehicleService from './vehicle.service';
 import {
   CreateVehicleInput,
   UpdateVehicleInput,
   VehicleFilter,
   VehicleSort,
-} from "./vehicle.types";
+} from './vehicle.types';
 
 class VehicleController {
   static async listVehicles(

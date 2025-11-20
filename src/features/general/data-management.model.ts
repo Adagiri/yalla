@@ -1,8 +1,8 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IDataExport extends Document {
-  exportType: "TRIP_REPORTS" | "USERS_DATA" | "PAYMENT_RECORDS" | "ALL_DATA";
-  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  exportType: 'TRIP_REPORTS' | 'USERS_DATA' | 'PAYMENT_RECORDS' | 'ALL_DATA';
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   fileUrl?: string;
   fileSizeMB?: number;
   recordCount: number;
@@ -14,8 +14,8 @@ export interface IDataExport extends Document {
 }
 
 export interface IDataImport extends Document {
-  importType: "DRIVER_DATA" | "CUSTOMER_DATA" | "VEHICLE_DATA";
-  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  importType: 'DRIVER_DATA' | 'CUSTOMER_DATA' | 'VEHICLE_DATA';
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   fileName: string;
   fileSizeMB: number;
   recordCount: number;
@@ -32,13 +32,13 @@ const DataExportSchema = new Schema<IDataExport>(
     exportType: {
       type: String,
       required: true,
-      enum: ["TRIP_REPORTS", "USERS_DATA", "PAYMENT_RECORDS", "ALL_DATA"],
+      enum: ['TRIP_REPORTS', 'USERS_DATA', 'PAYMENT_RECORDS', 'ALL_DATA'],
     },
     status: {
       type: String,
       required: true,
-      enum: ["PENDING", "PROCESSING", "COMPLETED", "FAILED"],
-      default: "PENDING",
+      enum: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'],
+      default: 'PENDING',
     },
     fileUrl: String,
     fileSizeMB: Number,
@@ -50,7 +50,7 @@ const DataExportSchema = new Schema<IDataExport>(
     filters: Schema.Types.Mixed,
     requestedBy: {
       type: Schema.Types.ObjectId,
-      ref: "Admin",
+      ref: 'Admin',
       required: true,
     },
     requestedAt: {
@@ -72,13 +72,13 @@ const DataImportSchema = new Schema<IDataImport>(
     importType: {
       type: String,
       required: true,
-      enum: ["DRIVER_DATA", "CUSTOMER_DATA", "VEHICLE_DATA"],
+      enum: ['DRIVER_DATA', 'CUSTOMER_DATA', 'VEHICLE_DATA'],
     },
     status: {
       type: String,
       required: true,
-      enum: ["PENDING", "PROCESSING", "COMPLETED", "FAILED"],
-      default: "PENDING",
+      enum: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'],
+      default: 'PENDING',
     },
     fileName: {
       type: String,
@@ -104,7 +104,7 @@ const DataImportSchema = new Schema<IDataImport>(
     },
     importedBy: {
       type: Schema.Types.ObjectId,
-      ref: "Admin",
+      ref: 'Admin',
       required: true,
     },
     importedAt: {
@@ -122,10 +122,10 @@ const DataImportSchema = new Schema<IDataImport>(
 );
 
 export const DataExport = mongoose.model<IDataExport>(
-  "DataExport",
+  'DataExport',
   DataExportSchema
 );
 export const DataImport = mongoose.model<IDataImport>(
-  "DataImport",
+  'DataImport',
   DataImportSchema
 );

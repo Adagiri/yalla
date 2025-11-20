@@ -1,4 +1,4 @@
-import { TripDocument } from "../trip/trip.model";
+import { TripDocument } from '../trip/trip.model';
 
 export interface SuccessfulCardPaymentResult {
   success: boolean;

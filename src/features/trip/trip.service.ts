@@ -1035,7 +1035,7 @@ class TripService {
         await SubscriptionService.publishTripLifecycleUpdate({
           tripId: tripId,
           status: 'completed',
-          message: `Trip completed successfully`,
+          message: 'Trip completed successfully',
           customer: {
             id: trip.customerId._id,
           },

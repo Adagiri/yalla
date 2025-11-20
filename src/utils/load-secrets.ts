@@ -35,7 +35,7 @@ export async function loadSecrets(): Promise<void> {
       `✅ Loaded ${Object.keys(secrets).length} secrets from ${secretName}`
     );
   } catch (error) {
-    console.error(`❌ Failed to load secrets:`, error);
+    console.error('❌ Failed to load secrets:', error);
     console.log('🔄 Continuing with existing environment variables...');
   }
 }

@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPricingSetting extends Document {
   baseFare: number;
@@ -20,55 +20,55 @@ const PricingSettingSchema = new Schema<IPricingSetting>(
   {
     baseFare: {
       type: Number,
-      required: [true, "Base fare is required"],
-      min: [0, "Base fare cannot be negative"],
+      required: [true, 'Base fare is required'],
+      min: [0, 'Base fare cannot be negative'],
     },
     perKmRate: {
       type: Number,
-      required: [true, "Per kilometer rate is required"],
-      min: [0, "Per kilometer rate cannot be negative"],
+      required: [true, 'Per kilometer rate is required'],
+      min: [0, 'Per kilometer rate cannot be negative'],
     },
     perMinuteRate: {
       type: Number,
-      required: [true, "Per minute rate is required"],
-      min: [0, "Per minute rate cannot be negative"],
+      required: [true, 'Per minute rate is required'],
+      min: [0, 'Per minute rate cannot be negative'],
     },
     minimumFare: {
       type: Number,
-      required: [true, "Minimum fare is required"],
-      min: [0, "Minimum fare cannot be negative"],
+      required: [true, 'Minimum fare is required'],
+      min: [0, 'Minimum fare cannot be negative'],
     },
     maximumFare: {
       type: Number,
-      required: [true, "Maximum fare is required"],
-      min: [0, "Maximum fare cannot be negative"],
+      required: [true, 'Maximum fare is required'],
+      min: [0, 'Maximum fare cannot be negative'],
       validate: {
         validator: function (this: IPricingSetting, value: number) {
           return value >= this.minimumFare;
         },
-        message: "Maximum fare must be greater than or equal to minimum fare",
+        message: 'Maximum fare must be greater than or equal to minimum fare',
       },
     },
     surgeMultiplier: {
       type: Number,
-      required: [true, "Surge multiplier is required"],
-      min: [1, "Surge multiplier must be at least 1"],
-      max: [5, "Surge multiplier cannot exceed 5"],
+      required: [true, 'Surge multiplier is required'],
+      min: [1, 'Surge multiplier must be at least 1'],
+      max: [5, 'Surge multiplier cannot exceed 5'],
     },
     commissionRate: {
       type: Number,
-      required: [true, "Commission rate is required"],
-      min: [0, "Commission rate cannot be negative"],
-      max: [100, "Commission rate cannot exceed 100%"],
+      required: [true, 'Commission rate is required'],
+      min: [0, 'Commission rate cannot be negative'],
+      max: [100, 'Commission rate cannot exceed 100%'],
     },
     cancellationFee: {
       type: Number,
-      required: [true, "Cancellation fee is required"],
-      min: [0, "Cancellation fee cannot be negative"],
+      required: [true, 'Cancellation fee is required'],
+      min: [0, 'Cancellation fee cannot be negative'],
     },
     currency: {
       type: String,
-      default: "NGN",
+      default: 'NGN',
     },
     isActive: {
       type: Boolean,
@@ -96,6 +96,6 @@ PricingSettingSchema.index(
 );
 
 export default mongoose.model<IPricingSetting>(
-  "PricingSetting",
+  'PricingSetting',
   PricingSettingSchema
 );

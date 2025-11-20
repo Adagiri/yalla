@@ -27,8 +27,8 @@ export interface VehicleFilter {
 }
 
 export interface VehicleSort {
-  field: "brand" | "modelName" | "createdAt" | "updatedAt";
-  direction: "ASC" | "DESC";
+  field: 'brand' | 'modelName' | 'createdAt' | 'updatedAt';
+  direction: 'ASC' | 'DESC';
 }
 
 /**

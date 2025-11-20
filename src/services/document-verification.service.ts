@@ -2,7 +2,7 @@ import { ErrorResponse } from '../utils/responses';
 import Driver from '../features/driver/driver.model';
 import Customer from '../features/customer/customer.model';
 import Admin from '../features/admin/admin.model';
-import { VerificationStatus, DocumentType } from "../features/general/general.types";
+import { VerificationStatus, DocumentType } from '../features/general/general.types';
 
 
 interface VerificationAction {
@@ -32,23 +32,23 @@ export class DocumentVerificationService {
       let message = '';
 
       switch (action.documentType) {
-        case "DRIVER_LICENSE":
+        case 'DRIVER_LICENSE':
           // Check if both license sides are uploaded
           if (!user.driverLicenseFront || !user.driverLicenseBack) {
             throw new ErrorResponse(400, 'Both license front and back must be uploaded before verification');
           }
           
-          updateData.driverLicenseVerified = action.status === "APPROVED";
+          updateData.driverLicenseVerified = action.status === 'APPROVED';
           message = `Driver license ${action.status.toLowerCase()}`;
           break;
 
-        case "PROFILE_PHOTO":
+        case 'PROFILE_PHOTO':
           // Just update the existing profilePhotoSet field
           updateData.profilePhotoSet = action.status === VerificationStatus.APPROVED;
           message = `Profile photo ${action.status.toLowerCase()}`;
           break;
 
-        case "VEHICLE_INSPECTION":
+        case 'VEHICLE_INSPECTION':
           if (userType !== 'DRIVER') {
             throw new ErrorResponse(400, 'Vehicle inspection is only for drivers');
           }
