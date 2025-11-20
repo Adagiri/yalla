@@ -22,7 +22,7 @@ export interface VehicleFilter {
   color?: string;
   identificationNumber?: string;
   plateNumber?: string;
-   vehicleInspectionDone?: boolean;
+  vehicleInspectionDone?: boolean;
   search?: string;
 }
 
@@ -46,6 +46,7 @@ export interface CreateVehicleInput extends BaseVehicleInput {
   color: string;
   identificationNumber: string;
   plateNumber: string;
+  driverId: string;
 }
 
 /**
@@ -59,4 +60,5 @@ export interface UpdateVehicleInput extends Partial<BaseVehicleInput> {
   color: string;
   identificationNumber: string;
   plateNumber: string;
+  driverId: string;
 }
