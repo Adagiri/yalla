@@ -52,7 +52,7 @@ input VehicleInput {
   identificationNumber: String
   plateNumber: String
   vehicleInspectionDone: Boolean
-  driverId: String;
+  driverId: String
 }
 
 extend type Query {
