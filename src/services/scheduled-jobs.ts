@@ -2,6 +2,7 @@ import SubscriptionService from '../features/subscription/subscription.service';
 import { startCommissionSettlementJob } from '../jobs/commission-settlement.job';
 import { startWalletBalanceClearanceJob } from '../jobs/wallet-balance-clearance.job';
 import { startCardChargingJob } from '../jobs/card-charging.job';
+import { startReferralCheckJob, startRewardExpiryJob } from '../jobs/referral.job';
 
 /**
  * Start all scheduled jobs
@@ -32,6 +33,12 @@ export function startScheduledJobs() {
   // NEW: Card charging job (every 3 days at 2 AM)
   const cardChargingJob = startCardChargingJob();
 
+  // NEW: Referral check job (every hour)
+  const referralCheckJob = startReferralCheckJob();
+
+  // NEW: Reward expiry job (daily at 3 AM)
+  const rewardExpiryJob = startRewardExpiryJob();
+
   // Graceful shutdown handler
   process.on('SIGTERM', () => {
     console.log('🛑 Stopping scheduled jobs...');
@@ -39,6 +46,8 @@ export function startScheduledJobs() {
     commissionJob.stop();
     walletClearanceJob.stop();
     cardChargingJob.stop();
+    referralCheckJob.stop();
+    rewardExpiryJob.stop();
   });
 
   process.on('SIGINT', () => {
@@ -47,6 +56,8 @@ export function startScheduledJobs() {
     commissionJob.stop();
     walletClearanceJob.stop();
     cardChargingJob.stop();
+    referralCheckJob.stop();
+    rewardExpiryJob.stop();
   });
 
   console.log('✅ Scheduled jobs started');
