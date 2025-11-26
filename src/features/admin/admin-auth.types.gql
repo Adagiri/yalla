@@ -1,0 +1,67 @@
+# Admin Authentication GraphQL Types
+# src/features/admin/admin-auth.types.gql
+
+extend type Query {
+  getCurrentAdmin: Admin!
+  verifyAdminResetCode(input: VerifyAdminResetCodeInput!): GenericResponse!
+}
+
+extend type Mutation {
+  # Admin Authentication
+  adminLogin(input: AdminLoginInput!): AdminAuthPayload!
+  # adminLogout: GenericResponse!
+  
+  # Admin Password Reset
+  requestAdminPasswordReset(input: AdminPasswordResetRequestInput!): AdminPasswordResetResponse!
+  verifyAdminResetCode(input: VerifyAdminResetCodeInput!): GenericResponse!
+  resetAdminPassword(input: ResetAdminPasswordInput!): GenericResponse!
+  
+  # Admin Password Change (when logged in)
+  changeAdminPassword(input: ChangeAdminPasswordInput!): GenericResponse!
+}
+
+# Input Types
+input AdminLoginInput {
+  email: String!
+  password: String!
+}
+
+input AdminPasswordResetRequestInput {
+  email: String!
+}
+
+input VerifyAdminResetCodeInput {
+  email: String!
+  code: String!
+  token: String!
+}
+
+input ResetAdminPasswordInput {
+  email: String!
+  code: String!
+  token: String!
+  newPassword: String!
+}
+
+input ChangeAdminPasswordInput {
+  currentPassword: String!
+  newPassword: String!
+}
+
+# Response Types
+type AdminAuthPayload {
+  token: String!
+  admin: Admin!
+  expiresAt: DateTime!
+}
+
+type AdminPasswordResetResponse {
+  success: Boolean!
+  message: String!
+  token: String!
+}
+
+type GenericResponse {
+  success: Boolean!
+  message: String!
+}

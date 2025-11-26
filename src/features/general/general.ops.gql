@@ -1,0 +1,145 @@
+type Query {
+  _: Int
+}
+
+type Mutation {
+  _: Int
+}
+
+type Subscription {
+  _: Int
+}
+
+type BankCode {
+  name: String!
+  code: String!
+}
+
+extend type Query {
+  getBankCodes: [BankCode]
+  getImageUploadUrl(input: ImageUploadUrlInput!): ImageUploadUrlResponse!
+
+  getFileUploadUrl(input: FileUploadUrlInput!): FileUploadUrlResponse!
+
+  getFileDownloadUrl(key: String!): String!
+
+  getVerificationStatus(userId: ID!): VerificationStatus!
+  # General Settings Queries
+  getGeneralSettings: GeneralSetting!
+  getActiveGeneralSetting: GeneralSetting
+  getGeneralSettingHistory(pagination: PaginationInput): [GeneralSetting!]!
+
+  # Pricing Settings Queries
+  getPricingSettings: PricingSetting!
+  getActivePricingSetting: PricingSetting
+  getPricingSettingHistory(pagination: PaginationInput): [PricingSetting!]!
+
+  # Payment Settings Queries
+  getPaymentSettings: PaymentSetting!
+  getActivePaymentSetting: PaymentSetting
+  getPaymentSettingHistory(pagination: PaginationInput): [PaymentSetting!]!
+
+  # Security Settings Queries
+  getSecuritySettings: SecuritySetting!
+  getActiveSecuritySetting: SecuritySetting
+  getSecuritySettingHistory(pagination: PaginationInput): [SecuritySetting!]!
+
+  # System Health Queries
+  getSystemHealth: SystemHealth!
+  getSystemHealthStats: SystemHealthStats!
+
+  # Data Management Queries
+  getDataExports(
+    pagination: PaginationInput
+    filters: ExportFilterInput
+  ): [DataExport!]!
+
+  getDataImports(
+    pagination: PaginationInput
+    filters: ImportFilterInput
+  ): [DataImport!]!
+
+  getExportStatus(exportId: ID!): DataExport!
+  getImportStatus(importId: ID!): DataImport!
+}
+
+extend type Mutation {
+  resendCode(input: ResendCodeInput!): AuthPayload!
+
+  verifyCode(input: VerifyCodeInput!): AuthPayload!
+
+  login(input: LoginInput!): AuthPayload!
+
+  googleLogin(firebaseToken: String!, accountType: AccountType!): AuthPayload!
+
+  enableMfa(input: EnableMfaInput!): AccountEntity!
+
+  disableMfa: AccountEntity!
+
+  requestResetPassword(input: ResetPasswordRequestInput!): String!
+
+  resetPassword(input: ResetPasswordInput!): Boolean!
+
+  # General Settings Mutations
+  createGeneralSetting(input: CreateGeneralSettingInput!): GeneralSetting!
+  updateGeneralSetting(
+    id: ID!
+    input: UpdateGeneralSettingInput!
+  ): GeneralSetting!
+  activateGeneralSetting(id: ID!): GeneralSetting!
+  deactivateGeneralSetting(id: ID!): GeneralSetting!
+
+  # Pricing Settings Mutations
+  createPricingSetting(input: CreatePricingSettingInput!): PricingSetting!
+  updatePricingSetting(
+    id: ID!
+    input: UpdatePricingSettingInput!
+  ): PricingSetting!
+  activatePricingSetting(id: ID!): PricingSetting!
+  deactivatePricingSetting(id: ID!): PricingSetting!
+
+  # Payment Settings Mutations
+  createPaymentSetting(input: CreatePaymentSettingInput!): PaymentSetting!
+  updatePaymentSetting(
+    id: ID!
+    input: UpdatePaymentSettingInput!
+  ): PaymentSetting!
+  activatePaymentSetting(id: ID!): PaymentSetting!
+  deactivatePaymentSetting(id: ID!): PaymentSetting!
+
+  # Security Settings Mutations
+  createSecuritySetting(input: CreateSecuritySettingInput!): SecuritySetting!
+  updateSecuritySetting(
+    id: ID!
+    input: UpdateSecuritySettingInput!
+  ): SecuritySetting!
+  activateSecuritySetting(id: ID!): SecuritySetting!
+  deactivateSecuritySetting(id: ID!): SecuritySetting!
+
+  # System Health Mutations
+  updateSystemHealth(input: UpdateSystemHealthInput!): SystemHealth!
+  refreshSystemHealth: SystemHealth!
+
+  # Data Export Mutations
+  requestDataExport(input: ExportRequestInput!): ExportResult!
+  cancelDataExport(exportId: ID!): Boolean!
+  downloadExportFile(exportId: ID!): String!
+
+  # Data Import Mutations
+  requestDataImport(input: ImportRequestInput!): ImportResult!
+  cancelDataImport(importId: ID!): Boolean!
+  getImportTemplate(importType: ImportType!): String!
+
+  verifyDocument(
+    userId: ID!
+    documentType: DocumentTypeInput!
+    status: VerificationStatusInput!
+  ): VerificationResult!
+
+  toggleDriverLicenseVerification(
+    userId: ID!
+    verified: Boolean!
+  ): VerificationResult!
+
+  toggleVehicleInspection(userId: ID!, inspected: Boolean!): VerificationResult!
+}

@@ -1,0 +1,711 @@
+# src/features/general/general.types.gql
+# Scalars
+scalar Date
+scalar Time
+scalar DateTime
+scalar DefaultDate
+scalar Any
+scalar Number
+scalar AnyObject
+scalar Odd
+scalar JSON # Added for admin system
+# Enums
+enum AuthChannel {
+  SMS
+  EMAIL
+  GOOGLE
+}
+
+enum UploadUrl {
+  PROFILE_PHOTO
+  PRODUCT
+  DRIVER_LISCENCE
+  ADMIN_PROFILE # Added for admin profile photos
+}
+
+enum PaymentPurpose {
+  ADD_CARD
+  PAY_INVOICE
+  PAY_INVOICES
+}
+
+enum PaymentMethod {
+  card
+  bank_transfer
+}
+
+enum PaymentTransactionStatus {
+  SUCCESS
+  FAILED
+  REVERSED
+}
+
+enum PaymentStatus {
+  PAID # The invoice has been fully settled.
+  OUTSTANDING # No payment has been received yet (previously "pending").
+  PARTIALLY_PAID # Only part of the invoice amount has been paid.
+}
+
+enum DeviceType {
+  ANDROID
+  IOS
+}
+
+enum AccountType {
+  ADMIN
+  DRIVER
+  CUSTOMER
+}
+
+enum AccountLevel {
+  MAIN
+  SUB
+  NONE
+}
+
+enum ResendCodeScenario {
+  MFA
+  ACCOUNT_ACTIVATION
+  RESET_PASSWORD
+}
+
+enum UserCategory {
+  OWNER
+  TENANT
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+# Common Types
+type PaginatedPayload {
+  totalDocs: Int!
+  docsRetrieved: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+# Updated to support admin authentication
+union AuthEntity = Driver | Customer | Admin
+
+union AccountEntity = Driver | Customer | Admin
+
+input EnableMfaInput {
+  authChannel: AuthChannel! # Type of MFA: 'email' or 'sms'
+}
+
+input PhoneInput {
+  countryCode: String!
+  localNumber: String!
+  fullPhone: String!
+}
+
+input RegisterManagerInput {
+  name: String!
+  email: String
+  country: String!
+  password: String!
+  phone: PhoneInput
+  authChannel: AuthChannel!
+}
+
+# Enhanced to support admin login
+input LoginInput {
+  email: String
+  phone: PhoneInput
+  password: String!
+  authChannel: AuthChannel!
+  accountType: AccountType!
+}
+
+input ResendCodeInput {
+  token: String!
+  accountType: AccountType!
+  scenario: ResendCodeScenario!
+}
+
+input VerifyCodeInput {
+  token: String!
+  code: String!
+  accountType: AccountType!
+}
+
+input ResetPasswordRequestInput {
+  email: String
+  phone: PhoneInput
+  authChannel: AuthChannel!
+  accountType: AccountType!
+}
+
+input ResetPasswordInput {
+  password: String!
+  token: String!
+  code: String!
+  accountType: AccountType!
+}
+
+# Enhanced AuthPayload that can return different entity types
+type AuthPayload {
+  entity: AuthEntity
+  token: String
+  expiresAt: DateTime # Added for token expiration
+}
+
+# Phone Type
+type Phone {
+  countryCode: String # E.g., "+1"
+  localNumber: String # E.g., "4155552671"
+  fullPhone: String # E.g., "+14155552671"
+}
+
+type PaymentMetadata {
+  purpose: PaymentPurpose!
+  resourceIds: [ID]!
+  resourceType: ID!
+  payerType: AccountType!
+  payerId: ID!
+  payerCategory: UserCategory
+  baseAmounts: [Float!]!
+}
+
+# Enhanced image upload to support admin profile photos
+type ImageUploadUrlResponse {
+  uploadUrl: String!
+  url: String!
+}
+
+input ImageUploadUrlInput {
+  purpose: UploadUrl!
+  contentType: String!
+}
+
+# Inputs
+input TagInput {
+  name: String!
+  value: String!
+}
+
+"""
+Tie-breaker cursor input for keyset pagination.
+'fieldValue' corresponds to the primary sort field (e.g., a string),
+'id' is used to break ties between documents sharing the same fieldValue.
+"""
+input CursorInput {
+  fieldValue: String!
+  id: ID!
+}
+
+"""
+Keyset-based pagination input.
+- 'limit' controls how many items to return.
+- 'after' fetches items after (i.e., older if sorting DESC) a specific boundary.
+- 'before' fetches items before (i.e., newer if sorting DESC) a specific boundary.
+"""
+input KeysetPaginationInput {
+  limit: Int = 10
+  after: CursorInput
+  before: CursorInput
+}
+
+input PaginationInput {
+  page: Int! # Page number (1-based index)
+  limit: Int! # Number of items per page
+}
+
+# Common error type for better error handling
+type ErrorDetails {
+  code: String!
+  message: String!
+  field: String
+}
+
+# Common success response
+type OperationResult {
+  success: Boolean!
+  message: String
+  errors: [ErrorDetails!]
+}
+
+# Add to existing enums
+enum FileAccessLevel {
+  PUBLIC
+  PRIVATE
+}
+
+enum FileCategory {
+  PROFILE_PHOTO
+  DOCUMENTS
+  DRIVER_LICENSE_FRONT
+  DRIVER_LICENSE_BACK
+  VEHICLE_PHOTOS
+  COMPLAINTS
+  COMMUNICATION
+  PRODUCTS
+}
+
+# New types
+type FileUploadUrlResponse {
+  uploadUrl: String!
+  fileUrl: String!
+  thumbnailUploadUrl: String
+  thumbnailUrl: String
+  key: String!
+  thumbnailKey: String
+  userUpdated: Boolean!
+}
+
+input FileUploadUrlInput {
+  contentType: String!
+  category: FileCategory!
+  accessLevel: FileAccessLevel!
+  generateThumbnail: Boolean
+}
+
+enum FileAccessLevel {
+  PUBLIC
+  PRIVATE
+}
+
+# Document Verification Types
+enum VerificationStatusInput {
+  APPROVED
+  REJECTED
+}
+
+enum DocumentTypeInput {
+  DRIVER_LICENSE
+  PROFILE_PHOTO
+  VEHICLE_INSPECTION
+}
+
+enum VerificationStatus {
+  APPROVED
+  REJECTED
+}
+
+enum DocumentType {
+  DRIVER_LICENSE
+  PROFILE_PHOTO
+  VEHICLE_INSPECTION
+}
+
+type VerificationStatus {
+  driverLicense: DriverLicenseVerification!
+  profile: ProfileVerification!
+  vehicle: VehicleVerification
+}
+
+type DriverLicenseVerification {
+  verified: Boolean!
+  frontUploaded: Boolean!
+  backUploaded: Boolean!
+  canBeVerified: Boolean!
+}
+
+type ProfileVerification {
+  photoUploaded: Boolean!
+  personalInfoSet: Boolean!
+}
+
+type VehicleVerification {
+  inspectionDone: Boolean!
+}
+
+type VerificationResult {
+  success: Boolean!
+  message: String!
+}
+
+
+
+input ImageUploadUrlInput {
+  purpose: UploadUrl!
+  contentType: String!
+}
+
+# === GENERAL SETTINGS TYPES ===
+enum Currency {
+  NGN
+  USD
+}
+
+enum TimeZone {
+  WAT
+  UTC
+}
+
+enum Language {
+  en
+  ha
+  ig
+  yo
+}
+
+type GeneralSetting {
+  id: ID!
+  applicationName: String!
+  supportPhone: String!
+  defaultCurrency: Currency!
+  supportEmail: String!
+  timeZone: TimeZone!
+  defaultLanguage: Language!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreateGeneralSettingInput {
+  applicationName: String!
+  supportPhone: String!
+  defaultCurrency: Currency!
+  supportEmail: String!
+  timeZone: TimeZone!
+  defaultLanguage: Language!
+}
+# === PRICING-SETTING  ===
+input UpdateGeneralSettingInput {
+  applicationName: String
+  supportPhone: String
+  defaultCurrency: Currency
+  supportEmail: String
+  timeZone: TimeZone
+  defaultLanguage: Language
+  isActive: Boolean
+}
+
+type PricingSetting {
+  id: ID!
+  baseFare: Float!
+  perKmRate: Float!
+  perMinuteRate: Float!
+  minimumFare: Float!
+  maximumFare: Float!
+  surgeMultiplier: Float!
+  commissionRate: Float!
+  cancellationFee: Float!
+  currency: String!
+  isActive: Boolean!
+  effectiveFrom: DateTime!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreatePricingSettingInput {
+  baseFare: Float!
+  perKmRate: Float!
+  perMinuteRate: Float!
+  minimumFare: Float!
+  maximumFare: Float!
+  surgeMultiplier: Float!
+  commissionRate: Float!
+  cancellationFee: Float!
+  effectiveFrom: DateTime
+}
+
+input UpdatePricingSettingInput {
+  baseFare: Float
+  perKmRate: Float
+  perMinuteRate: Float
+  minimumFare: Float
+  maximumFare: Float
+  surgeMultiplier: Float
+  commissionRate: Float
+  cancellationFee: Float
+  effectiveFrom: DateTime
+  isActive: Boolean
+}
+
+# === PAYMENT SETTINGS TYPES ===
+type PaymentSetting {
+  id: ID!
+  # Payment Methods
+  cashPaymentsEnabled: Boolean!
+  walletPaymentsEnabled: Boolean!
+  paystackEnabled: Boolean!
+  flutterwaveEnabled: Boolean!
+
+  # Wallet Configuration
+  minimumWalletBalance: Float!
+  processingFeeRate: Float!
+  autoTopupEnabled: Boolean!
+  autoTopupThreshold: Float
+  autoTopupAmount: Float
+
+  currency: String!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreatePaymentSettingInput {
+  # Payment Methods
+  cashPaymentsEnabled: Boolean
+  walletPaymentsEnabled: Boolean
+  paystackEnabled: Boolean
+  flutterwaveEnabled: Boolean
+
+  # Wallet Configuration
+  minimumWalletBalance: Float!
+  processingFeeRate: Float!
+  autoTopupEnabled: Boolean
+  autoTopupThreshold: Float
+  autoTopupAmount: Float
+}
+
+input UpdatePaymentSettingInput {
+  # Payment Methods
+  cashPaymentsEnabled: Boolean
+  walletPaymentsEnabled: Boolean
+  paystackEnabled: Boolean
+  flutterwaveEnabled: Boolean
+
+  # Wallet Configuration
+  minimumWalletBalance: Float
+  processingFeeRate: Float
+  autoTopupEnabled: Boolean
+  autoTopupThreshold: Float
+  autoTopupAmount: Float
+  isActive: Boolean
+}
+
+# === SECURITY SETTINGS TYPES ===
+type SecuritySetting {
+  id: ID!
+  # Authentication
+  sessionTimeoutHours: Int!
+  maxLoginAttempts: Int!
+
+  # Password Policy
+  minimumPasswordLength: Int!
+  requireStrongPasswords: Boolean!
+
+  # Two-Factor Authentication
+  requireMfaForAdmins: Boolean!
+  enable2faForAllUsers: Boolean!
+
+  # Security Features
+  enableIpWhitelisting: Boolean!
+  allowedIps: [String!]!
+  enableAuditLogging: Boolean!
+
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreateSecuritySettingInput {
+  # Authentication
+  sessionTimeoutHours: Int
+  maxLoginAttempts: Int
+
+  # Password Policy
+  minimumPasswordLength: Int
+  requireStrongPasswords: Boolean
+
+  # Two-Factor Authentication
+  requireMfaForAdmins: Boolean
+  enable2faForAllUsers: Boolean
+
+  # Security Features
+  enableIpWhitelisting: Boolean
+  allowedIps: [String]
+  enableAuditLogging: Boolean
+}
+
+input UpdateSecuritySettingInput {
+  # Authentication
+  sessionTimeoutHours: Int
+  maxLoginAttempts: Int
+
+  # Password Policy
+  minimumPasswordLength: Int
+  requireStrongPasswords: Boolean
+
+  # Two-Factor Authentication
+  requireMfaForAdmins: Boolean
+  enable2faForAllUsers: Boolean
+
+  # Security Features
+  enableIpWhitelisting: Boolean
+  allowedIps: [String!]
+  enableAuditLogging: Boolean
+  isActive: Boolean
+}
+
+# === System Health ===
+
+type SystemHealth {
+  id: ID!
+
+  # Database Metrics
+  totalRecords: Int!
+  databaseUsagePercent: Float!
+
+  # Storage Metrics
+  usedSpaceGB: Float!
+  storageUsagePercent: Float!
+
+  # User Metrics
+  activeUsersOnline: Int!
+  peakUsersToday: Int!
+  userUtilizationPercent: Float!
+
+  # System Metrics
+  serverUptimeHours: Float!
+  averageResponseTime: Float!
+  errorRate: Float!
+
+  lastUpdated: DateTime!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input UpdateSystemHealthInput {
+  totalRecords: Int
+  databaseUsagePercent: Float
+  usedSpaceGB: Float
+  storageUsagePercent: Float
+  activeUsersOnline: Int
+  peakUsersToday: Int
+  userUtilizationPercent: Float
+  serverUptimeHours: Float
+  averageResponseTime: Float
+  errorRate: Float
+}
+
+input ExportRequestInput {
+  exportType: ExportType!
+  filters: JSON
+}
+
+input ImportRequestInput {
+  importType: ImportType!
+  fileName: String!
+  fileSizeMB: Float!
+  recordCount: Int!
+}
+
+input ExportFilterInput {
+  exportType: ExportType
+  status: ProcessStatus
+  dateFrom: DateTime
+  dateTo: DateTime
+}
+
+input ImportFilterInput {
+  importType: ImportType
+  status: ProcessStatus
+  dateFrom: DateTime
+  dateTo: DateTime
+}
+
+# === DATA EXPORT TYPES ===
+enum ExportType {
+  TRIP_REPORTS
+  USERS_DATA
+  PAYMENT_RECORDS
+  ALL_DATA
+}
+
+enum ImportType {
+  DRIVER_DATA
+  CUSTOMER_DATA
+  VEHICLE_DATA
+}
+
+enum ProcessStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+type DataExport {
+  id: ID!
+  exportType: ExportType!
+  status: ProcessStatus!
+  fileUrl: String
+  fileSizeMB: Float
+  recordCount: Int!
+  filters: JSON
+  requestedBy: Admin!
+  requestedAt: DateTime!
+  completedAt: DateTime
+  errorMessage: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DataImport {
+  id: ID!
+  importType: ImportType!
+  status: ProcessStatus!
+  fileName: String!
+  fileSizeMB: Float!
+  recordCount: Int!
+  successfulImports: Int!
+  failedImports: Int!
+  importedBy: Admin!
+  importedAt: DateTime!
+  completedAt: DateTime
+  errorMessage: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ExportResult {
+  success: Boolean!
+  exportId: ID!
+  fileUrl: String
+  message: String
+}
+
+type ImportResult {
+  success: Boolean!
+  importId: ID!
+  message: String
+  summary: ImportSummary
+}
+
+type ImportSummary {
+  totalRecords: Int!
+  successfulImports: Int!
+  failedImports: Int!
+  errors: [String!]
+}
+
+type SystemHealthStats {
+  database: DatabaseStats!
+  storage: StorageStats!
+  users: UserStats!
+  system: SystemStats!
+}
+
+type DatabaseStats {
+  totalRecords: Int!
+  usagePercent: Float!
+  growthRate: Float!
+}
+
+type StorageStats {
+  usedSpaceGB: Float!
+  usagePercent: Float!
+  availableSpaceGB: Float!
+}
+
+type UserStats {
+  activeOnline: Int!
+  peakToday: Int!
+  utilizationPercent: Float!
+  totalUsers: Int!
+}
+
+type SystemStats {
+  uptimeHours: Float!
+  averageResponseTime: Float!
+  errorRate: Float!
+  lastBackup: DateTime
+}

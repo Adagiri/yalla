@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Invoice Available</title>
+  </head>
+  <body style="margin: 0; padding: 0; font-family: 'Satoshi', Arial, sans-serif">
+    <div
+      style="
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        color: #555555;
+        overflow: hidden;
+        line-height: 24px;
+        font-size: 15px;
+        font-weight: 400;
+      "
+    >
+      <!-- Header / Logo -->
+      <div style="text-align: left; padding: 20px">
+        <img
+          src="https://propatize.s3.us-east-1.amazonaws.com/resources/propatize-logo.png"
+          width="100"
+          alt="Propatize"
+          style="display: block; outline: none; cursor: default"
+        />
+      </div>
+      <!-- Invoice Content -->
+      <div style="padding: 20px; padding-top: 20px; padding-bottom: 60px">
+        <p style="margin-top: 20px; margin-bottom: 10px">Hi ((name)),</p>
+        <p style="margin-top: 12px; margin-bottom: 10px">
+          You have a new invoice available. Please review the details below:
+        </p>
+        <div
+          style="
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            margin: 20px 0;
+          "
+        >
+          <p style="margin: 0; font-weight: bold;">((invoiceTitle))</p>
+          <p style="margin: 0; font-weight: bold;">Amount: ((invoiceAmount)) NGN</p>
+          <p style="margin: 0; font-weight: bold;">Due Date: ((dueDate))</p>
+        </div>
+        <!-- Call-to-Action Button -->
+        <div style="text-align: center; margin-top: 30px">
+          <a
+            href="((paymentLink))"
+            style="
+              background-color: #4a3aff;
+              color: #ffffff;
+              padding: 12px 20px;
+              text-decoration: none;
+              border-radius: 5px;
+              font-size: 16px;
+              display: inline-block;
+            "
+          >
+            Pay Invoice
+          </a>
+        </div>
+        <div style="margin-top: 70px">
+          <p style="margin: 0">Thanks,</p>
+          <p style="margin: 0">The Propatize Team</p>
+        </div>
+      </div>
+      <!-- Footer -->
+      <div
+        style="
+          background-color: #4a3aff;
+          color: #ffffff;
+          text-align: center;
+          padding: 27px;
+        "
+      >
+        <div style="margin-top: 10px">
+          <a href="https://www.linkedin.com/company/propatizeng"
+            ><img
+              src="https://propatize.s3.us-east-1.amazonaws.com/resources/LinkedIn.png"
+              alt="LinkedIn"
+              style="width: 24px; height: 24px; margin: 0 3px"
+          /></a>
+          <a href="https://propatize.com"
+            ><img
+              src="https://propatize.s3.us-east-1.amazonaws.com/resources/Twitter.png"
+              alt="Twitter"
+              style="width: 24px; height: 24px; margin: 0 3px"
+          /></a>
+          <a href="https://www.instagram.com/propatize"
+            ><img
+              src="https://propatize.s3.us-east-1.amazonaws.com/resources/Instagram.png"
+              alt="Instagram"
+              style="width: 24px; height: 24px; margin: 0 3px"
+          /></a>
+          <a href="https://propatize.com"
+            ><img
+              src="https://propatize.s3.us-east-1.amazonaws.com/resources/Facebook.png"
+              alt="Facebook"
+              style="width: 24px; height: 24px; margin: 0 3px"
+          /></a>
+        </div>
+        <p
+          style="
+            font-size: 14px;
+            font-weight: 500;
+            margin: 32px 0;
+            color: #ffffff;
+          "
+        >
+          <a
+            href="https://propatize.com/#contact"
+            style="color: #ffffff; text-decoration: none; margin: 0 4px"
+            >Contact Support</a
+          >
+          |
+          <a
+            href="https://propatize.com/privacy.html"
+            style="color: #ffffff; text-decoration: none; margin: 0 4px"
+            >Privacy</a
+          >
+          |
+          <a
+            href="https://propatize.com/terms.html"
+            style="color: #ffffff; text-decoration: none; margin: 0 4px"
+            >Terms</a
+          >
+        </p>
+        <p style="font-size: 13px">
+          &copy; 2024, Propatize. All rights reserved.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

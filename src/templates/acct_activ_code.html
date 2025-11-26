@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      @font-face {
+        font-family: 'Satoshi';
+        src: url('https://fonts.example.com/satoshi.woff2') format('woff2');
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Satoshi', Arial, sans-serif;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+        line-height: 24px;
+        font-size: 15px;
+      }
+
+      .header {
+        text-align: left;
+        padding: 20px;
+      }
+
+      .header img {
+        width: 100px;
+      }
+
+      .content {
+        padding: 20px;
+        padding-top: 30px;
+        padding-bottom: 40px;
+      }
+
+      .content h1 {
+        font-size: 22px;
+        color: #333333;
+        margin-bottom: 30px;
+      }
+
+      .content p {
+        color: #555555;
+        margin-top: 20px;
+        margin-bottom: 10px;
+      }
+
+      .code {
+        display: flex;
+        justify-content: start;
+        gap: 10px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+      }
+
+      .code div {
+        font-size: 25px;
+        font-weight: 600;
+        text-align: center;
+        width: 50px;
+        height: 50px;
+        line-height: 50px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+
+      .note {
+        color: #888888;
+        margin-top: 20px;
+      }
+
+      .conclusion {
+        margin-top: 70px;
+      }
+
+      .conclusion p {
+        margin: 0;
+      }
+
+      .footer {
+        background-color: #4a3aff;
+        color: #ffffff;
+        text-align: center;
+        padding: 27px;
+      }
+
+      .footer a {
+        color: #ffffff;
+        text-decoration: none;
+        margin: 0 10px;
+      }
+
+      .social-icons {
+        margin-top: 10px;
+      }
+
+      .social-icons img {
+        width: 24px;
+        height: 24px;
+        margin: 0 3px;
+      }
+
+      .footer-links {
+        font-size: 14px;
+        font-weight: 500;
+        margin: 32px 0;
+      }
+
+      .footer-links a {
+        margin: 0 4px;
+      }
+
+      .copyright {
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <img
+          src="https://propatize.s3.us-east-1.amazonaws.com/resources/propatize-logo.png"
+          alt="Propatize"
+          class="logo"
+        />
+      </div>
+      <div class="content">
+        <h1>Activation Code</h1>
+        <p>Hi ${name},</p>
+        <p>Please, use the code below to activate your account.</p>
+        <div class="code">
+          <div>${c}</div>
+          <div>${o}</div>
+          <div>${d}</div>
+          <div>${e}</div>
+        </div>
+        <p class="note">
+          Note, this code will only be valid for the next 10 minutes. If the
+          code does not work, you can retry the process.
+        </p>
+        <div class="conclusion">
+          <p>Thanks,</p>
+          <p>The Propatize Team</p>
+        </div>
+      </div>
+      <div class="footer">
+        <div class="social-icons">
+          <a href="https://www.linkedin.com/company/propatizeng"
+            ><img
+              src="https://propatize.s3.us-east-1.amazonaws.com/resources/LinkedIn.png"
+              alt="LinkedIn"
+          /></a>
+          <a href="https://propatize.com"
+            ><img
+              src="https://propatize.s3.us-east-1.amazonaws.com/resources/Twitter.png"
+              alt="Twitter"
+          /></a>
+          <a href="https://www.instagram.com/propatize"
+            ><img
+              src="https://propatize.s3.us-east-1.amazonaws.com/resources/Instagram.png"
+              alt="Instagram"
+          /></a>
+          <a href="https://propatize.com"
+            ><img
+              src="https://propatize.s3.us-east-1.amazonaws.com/resources/Facebook.png"
+              alt="Facebook"
+          /></a>
+        </div>
+        <p class="footer-links">
+          <a href="https://propatize.com/#contact">Contact Support</a> |
+          <a href="https://propatize.com/privacy.html">Privacy</a> |
+          <a href="https://propatize.com/privacy.html">Terms</a>
+        </p>
+        <p class="copyright">&copy; 2024, Propatize. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,223 @@
+# Enum for sorting driver results. We now support sorting by firstname, lastname, email, createdAt, and updatedAt.
+enum DriverSortField {
+  firstname
+  lastname
+  email
+  createdAt
+  updatedAt
+}
+
+"""
+Specify which field to sort by (e.g., firstname, email)
+and in which direction (ASC or DESC).
+"""
+input DriverSort {
+  field: DriverSortField!
+  direction: SortDirection = ASC
+}
+
+"""
+Filters for searching drivers by various fields.
+All fields are optional; if provided, they constrain the query results.
+"""
+input DriverFilter {
+  "IDs of drivers to match"
+  ids: [ID!]
+  firstname: String
+  lastname: String
+  email: String
+  locationId: ID
+  isMFAEnabled: Boolean
+  authChannels: [AuthChannel!]
+  search: String
+}
+
+"""
+Used when registering a new driver.
+"""
+input RegisterDriverInput {
+  email: String!
+  phone: PhoneInput!
+  password: String!
+  authChannel: AuthChannel!
+}
+
+"""
+Input type for updating personal information.
+"""
+input UpdateDriverPersonalInfoInput {
+  firstname: String!
+  lastname: String!
+  locationId: ID!
+}
+
+"""
+Input type for updating driver license images.
+"""
+input UpdateDriverLicenseInput {
+  driverLicenseFront: String!
+  driverLicenseBack: String!
+}
+
+input UpdateProfilePhotoInput {
+  src: String!
+}
+"""
+A driver as stored in the system.
+Note: the underlying model stores firstname, lastname, email, phone (as an object),
+accountType, locationId, and verification/MFA details.
+"""
+type Driver {
+  id: ID!
+  firstname: String
+  lastname: String
+  email: String
+  phone: Phone
+  accountType: String!
+  locationId: ID
+  vehicleId: ID
+  isEmailVerified: Boolean!
+  isPhoneVerified: Boolean!
+  isMFAEnabled: Boolean!
+  authChannels: [AuthChannel!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  # Optionally, if you want to expose the populated location:
+  location: Location
+  vehicle: Vehicle
+
+  # New fields for profile and driver license status
+  profilePhotoSet: Boolean!
+  profilePhoto: String
+  personalInfoSet: Boolean!
+  vehicleInfoSet: Boolean!
+  driverLicenseVerified: Boolean!
+  driverLicenseFront: String
+  driverLicenseBack: String
+  vehicleInspectionDone: Boolean!
+
+  paymentModel: PaymentModel!
+  paymentModelHistory: [PaymentModelHistory!]
+  commissionSettings: CommissionSettings
+  subscriptionSettings: SubscriptionSettings
+  earningsBreakdown: EarningsBreakdown
+  canAcceptRides: Boolean
+  effectivePaymentModel: PaymentModelCalculation
+
+  # Financial tracking
+  totalEarningsAllTime: Float!
+  totalCashouts: Float!
+  pendingEarnings: Float!
+  lastCashoutAt: DateTime
+
+  # Commission tracking
+  cashCollected: Float!
+  commissionOwed: Float!
+  lastCommissionSettlement: DateTime
+
+  isOnline: Boolean
+  isAvailable: Boolean
+  currentLocation: LocationCoordinate
+  stats: DriverStats
+}
+
+type DriverPartial {
+  id: ID!
+  firstname: String!
+  lastname: String!
+  phone: Phone
+  email: String
+}
+
+extend type Query {
+  listDrivers(
+    pagination: PaginationInput
+    filter: DriverFilter
+    sort: DriverSort
+  ): [Driver!]!
+
+  getDriver(id: ID!): Driver!
+  loggedInDriver: Driver!
+}
+
+extend type Mutation {
+  registerDriver(input: RegisterDriverInput!): AuthPayload!
+  updateDriverPersonalInfo(input: UpdateDriverPersonalInfoInput!): Driver!
+  updateDriverProfilePhoto(input: UpdateProfilePhotoInput!): Driver!
+  updateDriverLicense(input: UpdateDriverLicenseInput!): Driver!
+}
+
+type DriverLocationResponse {
+  success: Boolean!
+  message: String!
+  timestamp: DateTime!
+}
+
+type DriverStatusResponse {
+  success: Boolean!
+  message: String!
+  timestamp: DateTime!
+}
+
+type DriverLocationInfo {
+  driverId: ID!
+  coordinates: [Float!]!
+  heading: Float
+  speed: Float
+  isOnline: Boolean!
+  isAvailable: Boolean!
+  lastUpdated: DateTime!
+}
+
+type NearbyDriver {
+  id: ID!
+  name: String!
+  coordinates: [Float!]!
+  distance: Float!
+  rating: Float!
+  vehicle: Vehicle
+}
+
+type DriverStats {
+  totalTrips: Int!
+  totalEarnings: Float!
+  averageRating: Float!
+  completionRate: Float!
+}
+
+# Add to existing driver inputs
+input UpdateDriverLocationInput {
+  coordinates: [Float!]!
+  heading: Float
+  speed: Float
+}
+
+input UpdateDriverStatusInput {
+  isOnline: Boolean!
+  isAvailable: Boolean
+}
+
+input NearbyDriversInput {
+  coordinates: [Float!]!
+  radius: Float # in kilometers, default 5
+}
+
+# Add to existing driver mutations
+extend type Mutation {
+  # Driver: Update current location
+  updateDriverLocation(
+    input: UpdateDriverLocationInput!
+  ): DriverLocationResponse!
+
+  # Driver: Update online/offline status
+  updateDriverStatus(input: UpdateDriverStatusInput!): DriverStatusResponse!
+}
+
+# Add to existing driver queries
+extend type Query {
+  # Get driver's current location from cache
+  getDriverLocation(driverId: ID): DriverLocationInfo
+
+  # Admin: Get nearby drivers
+  getNearbyDrivers(input: NearbyDriversInput!): [Driver!]!
+}

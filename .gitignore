@@ -1,0 +1,21 @@
+# node_modules
+node_modules
+
+# .evn files
+.env 
+*/.env 
+config/config.env
+.vercel
+temp.js
+tasks.md
+handy.js
+dist/
+test.ts
+commands
+deploy
+todo*
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
+me.js

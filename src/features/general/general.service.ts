@@ -1,0 +1,796 @@
+import {
+  generateAuthToken,
+  generateVerificationCode,
+  getEncryptedToken,
+  hashPassword,
+  verifyPassword,
+} from "../../utils/auth";
+import { ErrorResponse } from "../../utils/responses";
+import Driver, { DriverModelType } from "../driver/driver.model";
+import {
+  AccountType,
+  AccountType_,
+  AuthChannel,
+  AuthChannelEMAIL,
+  AuthChannelSMS,
+  EmailTemplate,
+  UploadUrlPurposeEnum,
+} from "../../constants/general";
+import NotificationService from "../../services/notification.services";
+import {
+  loginAccessCodeTemplate,
+  mfaEnabledTemplate,
+  resetPasswordTemplate,
+  verificationTemplate,
+} from "../../utils/sms-templates";
+import {
+  AuthPayloadType,
+  DisableMfaInput,
+  EnableMfaInput,
+  LoginInput,
+  RequestResetPasswordInput,
+  ResendCodeInput,
+  ResetPasswordInput,
+  VerifyCodeInput,
+} from "../../types/auth";
+import {
+  generateRandomNumbers,
+  generateRandomString,
+} from "../../utils/general";
+import AWSServices from "../../services/aws.services";
+import PaystackService from "../../services/paystack.services";
+import WalletService from "../../services/wallet.service";
+import FileUploadService, {
+  FileAccessLevel,
+  FileCategory,
+} from "../../services/file-upload.service";
+import DocumentVerificationService from "../../services/document-verification.service";
+import { VerificationStatus, DocumentType } from "./general.types";
+import FirebaseAuthService from "../../services/firebase-auth.service";
+import Customer, { CustomerModelType } from "../customer/customer.model";
+import { Model } from "mongoose";
+import Admin from "../admin/admin.model";
+import { AnyCnameRecord } from "dns";
+
+class GeneralService {
+  /**
+   * Auto-create wallet for new verified users
+   */
+  static async createWalletForNewUser(userId: string, userType: AccountType) {
+    try {
+      await WalletService.createWallet({
+        userId,
+        userType,
+      });
+      // console.log(`Wallet created for new ${userType}: ${userId}`);
+    } catch (error: any) {
+      console.error(`Error creating wallet for ${userType} ${userId}:`, error);
+    }
+  }
+
+  static async getBankCodes() {
+    try {
+      const banks = await PaystackService.getBanks();
+
+      return banks.map((bank: any) => {
+        return {
+          name: bank.name,
+          code: bank.code,
+        };
+      });
+    } catch (error: any) {
+      throw new ErrorResponse(500, "Error fetching banks", error.message);
+    }
+  }
+
+  /**
+   * Returns the image upload URL and public URL for the file.
+   * @param contentType - The MIME type of the file.
+   * @param purpose - The purpose of the upload (e.g., 'profile_picture', 'complaints', 'communication').
+   */
+  static async getImageUploadUrl(contentType: string, purpose: string) {
+    try {
+      const allowedPurposes = UploadUrlPurposeEnum;
+      if (!allowedPurposes.includes(purpose)) {
+        throw new ErrorResponse(400, "Unsupported purpose option");
+      }
+
+      const allowedContentTypes = ["image/png", "image/jpeg", "image/jpg"];
+      if (!allowedContentTypes.includes(contentType)) {
+        throw new ErrorResponse(400, "Please upload a jpeg or png file");
+      }
+
+      const randomString = generateRandomString(30);
+      // Extract file extension from the MIME type (e.g., "image/png" => "png")
+      const extension = contentType.slice(6);
+      const key = `${purpose.toLowerCase().replace("_", "-")}/${randomString}.${extension}`;
+
+      // Generate the pre-signed URL for upload.
+      const uploadUrl = await AWSServices.generateS3SignedUrl(key, contentType);
+      if (!uploadUrl) {
+        throw new ErrorResponse(500, "Could not generate S3 signed URL");
+      }
+
+      // Construct the public URL for accessing the file after upload.
+      const url = `https://${process.env.AWS_S3_ASSET_HOSTNAME}/${key}`;
+
+      return {
+        uploadUrl,
+        url,
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        "Error generating upload URL",
+        error.message
+      );
+    }
+  }
+
+  static async resendCode({ token, model }: ResendCodeInput) {
+    const dbEncryptedToken = getEncryptedToken(token);
+
+    const entity: any = await model.findOne({
+      $or: [
+        { emailVerificationToken: dbEncryptedToken },
+        { phoneVerificationToken: dbEncryptedToken },
+        { mfaVerificationToken: dbEncryptedToken },
+      ],
+    });
+
+    if (!entity) {
+      throw new ErrorResponse(404, "Invalid token");
+    }
+
+    const isEmailVerification =
+      entity.emailVerificationToken === dbEncryptedToken;
+    const isPhoneVerification =
+      entity.phoneVerificationToken === dbEncryptedToken;
+    const isMfaVerification = entity.mfaVerificationToken === dbEncryptedToken;
+
+    if (isEmailVerification && entity.isEmailVerified) {
+      throw new ErrorResponse(400, "Email is already verified");
+    }
+
+    if (isPhoneVerification && entity.isPhoneVerified) {
+      throw new ErrorResponse(400, "Phone is already verified");
+    }
+
+    const code = generateRandomNumbers(4);
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    const data = {
+      name: entity.name,
+      c: code[0],
+      o: code[1],
+      d: code[2],
+      e: code[3],
+    };
+
+    if (isEmailVerification) {
+      entity.emailVerificationExpiry = expiry;
+      entity.emailVerificationCode = code;
+
+      await entity.save();
+
+      await NotificationService.sendEmail({
+        to: entity.email,
+        template: EmailTemplate.ACCOUNT_ACTIVATION,
+        data: data,
+      });
+    }
+
+    if (isPhoneVerification) {
+      entity.phoneVerificationExpiry = expiry;
+      entity.phoneVerificationCode = code;
+
+      await entity.save();
+
+      await NotificationService.sendSMS({
+        to: entity.phone?.fullPhone,
+        message: verificationTemplate(code),
+      });
+    }
+
+    if (isMfaVerification) {
+      entity.mfaVerificationExpiry = expiry;
+      entity.mfaVerificationCode = code;
+
+      await entity.save();
+
+      if (entity.mfaActiveMethod === AuthChannel.EMAIL) {
+        await NotificationService.sendEmail({
+          to: entity.email,
+          template: EmailTemplate.LOGIN_ACCESS_CODE,
+          data: {
+            name: entity.name,
+            c: code[0],
+            o: code[1],
+            d: code[2],
+            e: code[3],
+          },
+        });
+      }
+
+      if (entity.mfaActiveMethod === AuthChannel.SMS) {
+        await NotificationService.sendSMS({
+          to: entity.phone?.fullPhone,
+          message: loginAccessCodeTemplate(code),
+        });
+      }
+    }
+
+    return { token, entity };
+  }
+
+  static async login({
+    model,
+    email,
+    phone,
+    password,
+    authChannel,
+  }: LoginInput) {
+    try {
+      const response: AuthPayloadType = {};
+      let entity: any;
+
+      // Find user by email or phone
+      if (authChannel === AuthChannel.EMAIL && email) {
+        entity = await model
+          .findOne({ email, isEmailVerified: true })
+          .select("+password");
+      } else if (authChannel === AuthChannel.SMS && phone) {
+        entity = await model
+          .findOne({
+            "phone.fullPhone": phone.fullPhone,
+            isPhoneVerified: true,
+          })
+          .select("+password");
+      }
+      if (!entity) throw new ErrorResponse(404, "Invalid credentials");
+
+      const isValidPassword = await verifyPassword(password, entity.password);
+      if (!isValidPassword) throw new ErrorResponse(400, "Invalid credentials");
+      if (entity.isMFAEnabled) {
+        const { code, encryptedToken, token, tokenExpiry } =
+          generateVerificationCode(32, 10);
+
+        entity.mfaVerificationCode = code;
+        entity.mfaVerificationToken = encryptedToken;
+        entity.mfaVerificationExpiry = tokenExpiry;
+        entity.mfaActiveMethod = authChannel;
+        await entity.save();
+
+        // Send MFA Code via email or SMS
+        if (authChannel === AuthChannel.EMAIL) {
+          await NotificationService.sendEmail({
+            to: entity.email,
+            template: EmailTemplate.LOGIN_ACCESS_CODE,
+            data: {
+              name: entity.name,
+              c: code[0],
+              o: code[1],
+              d: code[2],
+              e: code[3],
+            },
+          });
+        } else if (authChannel === AuthChannel.SMS) {
+          await NotificationService.sendSMS({
+            to: entity.phone.fullPhone,
+            message: verificationTemplate(code),
+          });
+        }
+
+        response.entity = entity;
+        response.token = token;
+      } else {
+        response.entity = entity;
+        response.token = generateAuthToken({
+          id: entity._id,
+          name: entity.name,
+          email: entity.email,
+          accountType: entity.accountType,
+        });
+      }
+
+      return response;
+    } catch (error: any) {
+      throw new ErrorResponse(500, "Error logging in", error.message);
+    }
+  }
+
+  static async verifyCode({ code, model, token }: VerifyCodeInput) {
+    try {
+      const encryptedToken = getEncryptedToken(token);
+      const now = Date.now();
+      const response: any = {};
+
+      const entity: DriverModelType | null = await model.findOne({
+        $or: [
+          { emailVerificationToken: encryptedToken },
+          { phoneVerificationToken: encryptedToken },
+          { mfaVerificationToken: encryptedToken },
+        ],
+      });
+
+      if (!entity) throw new ErrorResponse(404, "Invalid token");
+
+      const isEmailVerification =
+        entity.emailVerificationToken === encryptedToken;
+      const isPhoneVerification =
+        entity.phoneVerificationToken === encryptedToken;
+      const isMfaVerification = entity.mfaVerificationToken === encryptedToken;
+
+      if (isEmailVerification) {
+        if (entity.emailVerificationCode !== code) {
+          throw new ErrorResponse(400, "Invalid code");
+        }
+
+        if (
+          entity.emailVerificationExpiry &&
+          entity.emailVerificationExpiry.getTime() < now
+        ) {
+          throw new ErrorResponse(400, "Verification code has expired");
+        }
+
+        entity.isEmailVerified = true;
+        entity.emailVerificationCode = null;
+        entity.emailVerificationToken = null;
+        entity.emailVerificationExpiry = null;
+        entity.createdAt = new Date();
+        if (!entity.authChannels.includes(AuthChannel.EMAIL)) {
+          entity.authChannels.push(AuthChannel.EMAIL);
+        }
+
+        await entity.save();
+        response.entity = entity;
+
+        // Delete all redundant, unverified accounts related with the email
+        await model.deleteMany({
+          isEmailVerified: false,
+          isPhoneVerified: false,
+          email: entity.email,
+        });
+
+        await NotificationService.sendEmail({
+          to: entity.email,
+          template:
+            entity.accountType !== AccountType_.DRIVER
+              ? "ManagerWelcomeEmailTemplate"
+              : "UserWelcomeEmailTemplate",
+          data: {
+            name: entity.firstname,
+          },
+        });
+
+        await this.createWalletForNewUser(entity._id, entity.accountType);
+      }
+
+      if (isPhoneVerification) {
+        if (entity.phoneVerificationCode !== code) {
+          throw new ErrorResponse(400, "Invalid code");
+        }
+
+        if (
+          entity.phoneVerificationExpiry &&
+          entity.phoneVerificationExpiry.getTime() < now
+        ) {
+          throw new ErrorResponse(400, "Verification code has expired");
+        }
+
+        entity.isPhoneVerified = true;
+        entity.phoneVerificationCode = null;
+        entity.phoneVerificationToken = null;
+        entity.phoneVerificationExpiry = null;
+        entity.createdAt = new Date();
+
+        if (!entity.authChannels.includes(AuthChannel.SMS)) {
+          entity.authChannels.push(AuthChannel.SMS);
+        }
+        await entity.save();
+        response.entity = entity;
+
+        // Delete all redundant, unverified accounts related with the email
+        await model.deleteMany({
+          isEmailVerified: false,
+          isPhoneVerified: false,
+          phone: entity.phone,
+        });
+
+        await this.createWalletForNewUser(entity._id, entity.accountType);
+      }
+
+      if (isMfaVerification) {
+        if (entity.mfaVerificationCode !== code) {
+          throw new ErrorResponse(400, "Invalid code");
+        }
+
+        if (
+          entity.mfaVerificationExpiry &&
+          entity.mfaVerificationExpiry.getTime() < now
+        ) {
+          throw new ErrorResponse(400, "Verification code has expired");
+        }
+
+        entity.mfaVerificationCode = null;
+        entity.mfaVerificationToken = null;
+        entity.mfaVerificationExpiry = null;
+
+        await entity.save();
+        response.entity = entity;
+      }
+
+      response.token = generateAuthToken({
+        id: response.entity._id,
+        name: response.entity.name,
+        email: response.entity.email,
+      });
+      return response;
+    } catch (error: any) {
+      throw new ErrorResponse(500, "Error verifying the code", error.message);
+    }
+  }
+
+  static async enableMfa({ id, model, authChannel }: EnableMfaInput) {
+    try {
+      const entity: any = await model.findOne({ id: id });
+      if (!entity) throw new ErrorResponse(404, "User not found");
+
+      // Ensure required information is verified
+      if (authChannel === AuthChannel.EMAIL && !entity.isEmailVerified) {
+        throw new ErrorResponse(400, "Email verification is required for MFA");
+      }
+
+      if (authChannel === AuthChannel.SMS && !entity.isPhoneVerified) {
+        throw new ErrorResponse(400, "Phone verification is required for MFA");
+      }
+
+      entity.isMFAEnabled = true;
+
+      // Send notification
+      if (authChannel === AuthChannel.EMAIL) {
+        await NotificationService.sendEmail({
+          to: entity.email,
+          template: EmailTemplate.MFA_CONFIRMATION,
+          data: { name: entity.name },
+        });
+      }
+
+      if (authChannel === AuthChannel.SMS) {
+        await NotificationService.sendSMS({
+          to: entity.phone.fullPhone,
+          message: mfaEnabledTemplate(),
+        });
+      }
+
+      await entity.save();
+      return entity;
+    } catch (error: any) {
+      throw new ErrorResponse(500, "Error enabling MFA", error.message);
+    }
+  }
+
+  static async disableMfa({ id, model }: DisableMfaInput) {
+    try {
+      const entity: any = await model.findOne({ id: id });
+      if (!entity) throw new ErrorResponse(404, "User not found");
+
+      entity.isMFAEnabled = false;
+      await entity.save();
+
+      return entity;
+    } catch (error: any) {
+      throw new ErrorResponse(500, "Error disabling MFA", error.message);
+    }
+  }
+
+  static async requestResetPassword({
+    email,
+    phone,
+    model,
+    authChannel,
+  }: RequestResetPasswordInput): Promise<String> {
+    try {
+      let entity: DriverModelType | CustomerModelType | null;
+      let resetToken = "";
+      if (
+        !authChannel ||
+        (authChannel !== AuthChannelEMAIL && authChannel !== AuthChannelSMS)
+      ) {
+        throw new ErrorResponse(400, "Invalid or missing authChannel");
+      }
+
+      if (authChannel === AuthChannelEMAIL) {
+        if (!email) {
+          throw new ErrorResponse(400, "Email must be provided");
+        }
+
+        entity = await model.findOne({ email, isEmailVerified: true });
+        if (!entity) throw new ErrorResponse(404, "Email not registered");
+
+        const { code, encryptedToken, tokenExpiry } = generateVerificationCode(
+          32,
+          10
+        );
+        entity.resetPasswordCode = code;
+        entity.resetPasswordExpiry = tokenExpiry;
+        entity.resetPasswordToken = encryptedToken;
+
+        await entity.save();
+
+        await NotificationService.sendEmail({
+          to: entity.email,
+          template: EmailTemplate.RESET_PASSWORD_REQUEST,
+          data: { c: code[0], o: code[1], d: code[2], e: code[3] },
+        });
+      }
+
+      if (authChannel === AuthChannelSMS) {
+        if (!phone) {
+          throw new ErrorResponse(400, "Phone number must be provided");
+        }
+
+        entity = await model.findOne({
+          "phone.fullPhone": phone.fullPhone,
+          isPhoneVerified: true,
+        });
+        if (!entity) {
+          throw new ErrorResponse(404, "Phone number not registered");
+        }
+
+        const { code, encryptedToken, token, tokenExpiry } =
+          generateVerificationCode(32, 10);
+        entity.resetPasswordCode = code;
+        entity.resetPasswordExpiry = tokenExpiry;
+        entity.resetPasswordToken = encryptedToken;
+
+        await entity.save();
+
+        await NotificationService.sendSMS({
+          to: phone.fullPhone,
+
+          message: resetPasswordTemplate(code),
+        });
+
+        resetToken = token;
+      }
+
+      return resetToken;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        "Error processing reset password request",
+        error.message
+      );
+    }
+  }
+
+  static async resetPassword({
+    code,
+    model,
+    token,
+    password,
+  }: ResetPasswordInput): Promise<Boolean> {
+    try {
+      const encryptedToken = getEncryptedToken(token);
+
+      const entity: DriverModelType | CustomerModelType | null =
+        await model.findOne({
+          resetPasswordToken: encryptedToken,
+        });
+
+      if (!entity) throw new ErrorResponse(404, "Invalid token");
+
+      if (
+        entity.resetPasswordCode !== code ||
+        entity.resetPasswordExpiry! < new Date()
+      ) {
+        throw new ErrorResponse(400, "Invalid or expired reset code");
+      }
+
+      if (entity.resetPasswordCode !== code) {
+        throw new ErrorResponse(400, "Invalid code");
+      }
+
+      entity.password = await hashPassword(password);
+      entity.resetPasswordCode = null;
+      entity.resetPasswordToken = null;
+      entity.resetPasswordExpiry = null;
+      await entity.save();
+
+      return true;
+    } catch (error: any) {
+      throw new ErrorResponse(500, "Error resetting password", error.message);
+    }
+  }
+
+  static async googleLogin(
+    firebaseToken: string,
+    accountType: AccountType
+  ): Promise<{ token: string; entity: DriverModelType | CustomerModelType }> {
+    try {
+      const model: Model<any> =
+        accountType === AccountType_.DRIVER ? Driver : Customer;
+
+      // Verify Firebase token and get user info
+      const firebaseUser =
+        await FirebaseAuthService.verifyFirebaseToken(firebaseToken);
+
+      // Check if user exists
+      let user = await model.findOne({
+        email: firebaseUser.email.toLowerCase(),
+      });
+
+      if (!user) {
+        // Auto-register new user
+        user = await model.create({
+          email: firebaseUser.email.toLowerCase(),
+          firstname: firebaseUser.firstName,
+          lastname: firebaseUser.lastName,
+          profilePhoto: firebaseUser.profilePhoto,
+          isEmailVerified: true,
+          accountType: accountType,
+          password: await hashPassword(Math.random().toString(36)),
+        });
+      } else {
+        // Update existing user
+        if (firebaseUser.profilePhoto && !user.profilePhoto) {
+          user.profilePhoto = firebaseUser.profilePhoto;
+        }
+        user.isEmailVerified = true;
+        await user.save();
+      }
+
+      // Generate JWT token
+      const token = generateAuthToken({
+        id: user._id,
+        accountType: accountType,
+        email: user.email,
+      });
+
+      return { token, entity: user };
+    } catch (error: any) {
+      throw new ErrorResponse(500, "Google login failed", error.message);
+    }
+  }
+
+  /**
+   * Get file upload URL and update user document directly
+   */
+  static async getFileUploadUrl(input: {
+    contentType: string;
+    category: FileCategory;
+    accessLevel: FileAccessLevel;
+    generateThumbnail?: boolean;
+    userId: string;
+  }) {
+    try {
+      const response = await FileUploadService.generateUploadUrl(input);
+
+      return response;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        error.statusCode || 500,
+        error.message || "Error generating upload URL"
+      );
+    }
+  }
+
+  /**
+   * Get download URL for private files
+   */
+  static async getFileDownloadUrl(key: string): Promise<string> {
+    try {
+      if (!key.startsWith("PRIVATE/")) {
+        throw new ErrorResponse(400, "File is publicly accessible");
+      }
+
+      return await FileUploadService.generatePresignedDownloadUrl(key);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        error.statusCode || 500,
+        error.message || "Error generating download URL"
+      );
+    }
+  }
+
+  /**
+   * Verify user document using existing fields only
+   */
+  static async verifyDocument(
+    userId: string,
+    documentType: DocumentType,
+    status: VerificationStatus,
+    adminId: string
+  ) {
+    try {
+      const action = {
+        documentType,
+        status,
+        adminId,
+      };
+
+      return await DocumentVerificationService.verifyDocument(userId, action);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        error.statusCode || 500,
+        error.message || "Failed to verify document"
+      );
+    }
+  }
+
+  static async getVerificationStatus(userId: string) {
+    try {
+      return await DocumentVerificationService.getVerificationStatus(userId);
+    } catch (error: any) {
+      throw new ErrorResponse(
+        error.statusCode || 500,
+        error.message || "Failed to get verification status"
+      );
+    }
+  }
+
+  /**
+   * Simple toggle for driver license verification
+   */
+  static async toggleDriverLicenseVerification(
+    userId: string,
+    verified: boolean,
+    adminId: string
+  ) {
+    try {
+      return await DocumentVerificationService.toggleDriverLicenseVerification(
+        userId,
+        verified,
+        adminId
+      );
+    } catch (error: any) {
+      throw new ErrorResponse(
+        error.statusCode || 500,
+        error.message || "Failed to toggle license verification"
+      );
+    }
+  }
+
+  /**
+   * Simple toggle for vehicle inspection
+   */
+  static async toggleVehicleInspection(
+    userId: string,
+    inspected: boolean,
+    adminId: string
+  ) {
+    try {
+      return await DocumentVerificationService.toggleVehicleInspection(
+        userId,
+        inspected,
+        adminId
+      );
+    } catch (error: any) {
+      throw new ErrorResponse(
+        error.statusCode || 500,
+        error.message || "Failed to toggle vehicle inspection"
+      );
+    }
+  }
+
+  // /**
+  //  * Get download URL for private files
+  //  */
+  // static async getFileDownloadUrl(key: string) {
+  //   try {
+  //     if (!key.startsWith("PRIVATE/")) {
+  //       throw new ErrorResponse(400, "File is publicly accessible");
+  //     }
+
+  //     return await FileUploadService.generatePresignedDownloadUrl(key);
+  //   } catch (error: any) {
+  //     throw new ErrorResponse(
+  //       error.statusCode || 500,
+  //       error.message || "Error generating download URL"
+  //     );
+  //   }
+  // }
+}
+
+export default GeneralService;

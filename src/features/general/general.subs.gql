@@ -1,0 +1,72 @@
+type EmergencyAlertPayload {
+  id: ID!
+  type: EmergencyAlertType!
+  severity: AlertSeverity!
+  title: String!
+  message: String!
+  affectedAreas: [String!]
+  actionRequired: Boolean!
+  actionInstructions: String
+  estimatedDuration: Int # in minutes
+  createdAt: DateTime!
+  metadata: JSON
+}
+
+type CustomerNotificationPayload {
+  customerId: ID!
+  notification: Notification!
+  priority: NotificationPriority!
+}
+
+type SystemWideAnnouncementPayload {
+  id: ID!
+  title: String!
+  message: String!
+  targetAudience: [AccountType!]!
+  priority: AnnouncementPriority!
+  validUntil: DateTime
+  actionUrl: String
+  actionLabel: String
+  createdAt: DateTime!
+}
+
+enum EmergencyAlertType {
+  SYSTEM_OUTAGE
+  SECURITY_INCIDENT
+  WEATHER_ALERT
+  TRAFFIC_ALERT
+  SERVICE_DISRUPTION
+  MAINTENANCE_ALERT
+}
+
+enum AnnouncementPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+type Notification {
+  id: ID!
+  userId: ID!
+  userType: String!
+  type: String!
+  title: String!
+  message: String!
+  data: JSON
+  isRead: Boolean!
+  readAt: DateTime
+  createdAt: DateTime!
+}
+
+# ===== GENERAL SUBSCRIPTIONS =====
+extend type Subscription {
+  # Emergency alerts for all users (system-wide)
+  emergencyAlert: EmergencyAlertPayload!
+
+  # Customer notifications - for specific customer
+  customerNotification(customerId: ID!): CustomerNotificationPayload!
+
+  # System-wide announcements - for all users or specific user types
+  systemAnnouncement(userType: AccountType): SystemWideAnnouncementPayload!
+}

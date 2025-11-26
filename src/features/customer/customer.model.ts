@@ -1,0 +1,241 @@
+import mongoose, { Schema, Document } from 'mongoose';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  AccountType,
+  AccountType_,
+  AuthChannelEnum,
+  CustomerAccountStatus,
+  CustomerAccountStatusEnum,
+} from '../../constants/general';
+import { PhoneType } from '../../types/general';
+
+export interface CustomerModelType extends Document {
+  _id: string;
+  id?: string; // UUID
+  firstname: string;
+  lastname: string;
+  email: string;
+  phone: PhoneType;
+  password: string;
+  oldPasswords: string[];
+  accountType: AccountType;
+  locationId: string;
+  emailVerificationCode: string | null;
+  emailVerificationToken: string | null;
+  emailVerificationExpiry: Date | null;
+  isEmailVerified: boolean;
+
+  phoneVerificationCode: string | null;
+  phoneVerificationToken: string | null;
+  phoneVerificationExpiry: Date | null;
+  isPhoneVerified: boolean;
+
+  resetPasswordCode: string | null;
+  resetPasswordToken: string | null;
+  resetPasswordExpiry: Date | null;
+
+  authChannels: string[];
+  mfaVerificationCode: string | null;
+  mfaVerificationToken: string | null;
+  mfaVerificationExpiry: Date | null;
+  mfaActiveMethod: string | null;
+  isMFAEnabled: boolean;
+
+  // profile and customer license info
+  profilePhoto: string;
+  profilePhotoSet: boolean;
+  personalInfoSet: boolean;
+
+  walletId?: string;
+
+  // Saved payment methods
+  savedCards: Array<{
+    authorizationCode: string;
+    lastFour: string;
+    brand: string;
+    bank: string;
+    isDefault: boolean;
+    createdAt: Date;
+  }>;
+
+  // Payment preferences
+  paymentPreferences: {
+    preferredMethod: 'wallet' | 'card' | 'cash';
+    autoTopUp: boolean;
+    autoTopUpThreshold: number; // in kobo
+    autoTopUpAmount: number; // in kobo
+    preferredCard?: string; // authorization code
+  };
+
+  // Spending tracking
+  totalSpentAllTime: number; // in kobo
+  totalWalletTopUps: number; // in kobo
+  averageSpendPerTrip: number; // in kobo
+  lastPaymentAt?: Date;
+
+  outstandingBalance: number; // in kobo
+  accountStatus:CustomerAccountStatus;
+
+  deviceTokens: string[];
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CustomerModelPartialType extends Document {
+  id?: string;
+  name: string;
+}
+
+const customerSchema = new Schema<CustomerModelType>(
+  {
+    _id: { type: String, default: uuidv4 },
+    accountType: { type: String, default: AccountType_.CUSTOMER },
+    locationId: { type: String },
+    firstname: { type: String },
+    lastname: { type: String },
+    email: {
+      type: String,
+      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
+    },
+    phone: {
+      countryCode: String,
+      localNumber: String,
+      fullPhone: String,
+    },
+    password: { type: String, select: false },
+    oldPasswords: { type: [String], required: true, select: false },
+
+    // Email verification fields
+    isEmailVerified: { type: Boolean, default: false },
+    emailVerificationCode: { type: String },
+    emailVerificationToken: { type: String },
+    emailVerificationExpiry: { type: Date },
+
+    // Phone verification fields
+    isPhoneVerified: { type: Boolean, default: false },
+    phoneVerificationCode: { type: String },
+    phoneVerificationToken: { type: String },
+    phoneVerificationExpiry: { type: Date },
+
+    // Password reset fields
+    resetPasswordCode: { type: String },
+    resetPasswordToken: { type: String },
+    resetPasswordExpiry: { type: Date },
+
+    // MFA
+    isMFAEnabled: { type: Boolean, default: false },
+    authChannels: {
+      type: [String],
+      enum: AuthChannelEnum,
+      default: [],
+    },
+    mfaVerificationCode: { type: String },
+    mfaVerificationToken: { type: String },
+    mfaVerificationExpiry: { type: Date },
+    mfaActiveMethod: { type: String, enum: AuthChannelEnum },
+
+    // New fields for additional customer info
+    profilePhoto: { type: String },
+    profilePhotoSet: { type: Boolean, default: false },
+    personalInfoSet: { type: Boolean, default: false },
+    deviceTokens: { type: [String], default: [] },
+
+    walletId: { type: String, ref: 'Wallet' },
+
+    savedCards: [
+      {
+        authorizationCode: { type: String, required: true },
+        lastFour: { type: String, required: true },
+        brand: { type: String, required: true },
+        bank: { type: String, required: true },
+        isDefault: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    paymentPreferences: {
+      preferredMethod: {
+        type: String,
+        enum: ['wallet', 'card', 'cash'],
+        default: 'card',
+      },
+      autoTopUp: { type: Boolean, default: false },
+      autoTopUpThreshold: { type: Number, default: 500000 }, // ₦5,000
+      autoTopUpAmount: { type: Number, default: 1000000 }, // ₦10,000
+      preferredCard: { type: String },
+    },
+
+    outstandingBalance: { type: Number, default: 0 }, // in kobo
+    accountStatus: {
+      type: String,
+      enum: CustomerAccountStatusEnum,
+      default: CustomerAccountStatus.Active,
+    },
+
+    totalSpentAllTime: { type: Number, default: 0 },
+    totalWalletTopUps: { type: Number, default: 0 },
+    averageSpendPerTrip: { type: Number, default: 0 },
+    lastPaymentAt: { type: Date },
+
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
+);
+
+customerSchema.virtual('location', {
+  ref: 'Location',
+  localField: 'locationId',
+  foreignField: '_id',
+  justOne: true,
+});
+
+customerSchema.virtual('vehicle', {
+  ref: 'Vehicle',
+  localField: 'vehicleId',
+  foreignField: '_id',
+  justOne: true,
+});
+
+customerSchema.pre(
+  /^find/,
+  function (this: mongoose.Query<any, CustomerModelType>, next) {
+    this.populate('location vehicle');
+    next();
+  }
+);
+
+customerSchema.index({ locationId: 1 });
+customerSchema.index({ walletId: 1 });
+customerSchema.index({ 'savedCards.authorizationCode': 1 });
+customerSchema.index({ lastPaymentAt: -1 });
+
+customerSchema.pre<CustomerModelType>('save', function (next) {
+  if (this.phone && this.phone.fullPhone) {
+    const phoneNumber = parsePhoneNumberFromString(this.phone.fullPhone);
+    if (!phoneNumber || !phoneNumber.isValid()) {
+      return next(new Error('Invalid phone number format'));
+    }
+    // Normalize and update phone fields
+    this.phone.countryCode = '+' + phoneNumber.countryCallingCode;
+    this.phone.localNumber = phoneNumber.nationalNumber;
+    this.phone.fullPhone = phoneNumber.format('E.164');
+  }
+  next();
+});
+
+const Customer = mongoose.model<CustomerModelType>('Customer', customerSchema);
+
+export default Customer;

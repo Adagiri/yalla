@@ -1,0 +1,109 @@
+# Enum for sorting customer results. We now support sorting by firstname, lastname, email, createdAt, and updatedAt.
+enum CustomerSortField {
+  firstname
+  lastname
+  email
+  createdAt
+  updatedAt
+}
+
+"""
+Specify which field to sort by (e.g., firstname, email)
+and in which direction (ASC or DESC).
+"""
+input CustomerSort {
+  field: CustomerSortField!
+  direction: SortDirection = ASC
+}
+
+"""
+Filters for searching customers by various fields.
+All fields are optional; if provided, they constrain the query results.
+"""
+input CustomerFilter {
+  "IDs of customers to match"
+  ids: [ID!]
+  firstname: String
+  lastname: String
+  email: String
+  locationId: ID
+  isMFAEnabled: Boolean
+  authChannels: [AuthChannel!]
+}
+
+"""
+Used when registering a new customer.
+"""
+input RegisterCustomerInput {
+  phone: PhoneInput!
+  password: String!
+  authChannel: AuthChannel!
+}
+
+"""
+Input type for updating personal information.
+"""
+input UpdateCustomerPersonalInfoInput {
+  email: String!
+  firstname: String!
+  lastname: String!
+  locationId: ID!
+}
+
+input UpdateProfilePhotoInput {
+  src: String!
+}
+"""
+A customer as stored in the system.
+Note: the underlying model stores firstname, lastname, email, phone (as an object),
+accountType, locationId, and verification/MFA details.
+"""
+type Customer {
+  id: ID!
+  firstname: String
+  lastname: String
+  email: String
+  phone: Phone
+  accountType: String!
+  locationId: ID
+  isEmailVerified: Boolean!
+  isPhoneVerified: Boolean!
+  isMFAEnabled: Boolean!
+  authChannels: [AuthChannel!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  # Optionally, if you want to expose the populated location:
+  location: Location
+
+  # New fields for profile and customer license status
+  profilePhotoSet: Boolean!
+  profilePhoto: String
+  personalInfoSet: Boolean!
+
+  totalSpentAllTime: Number!
+}
+
+type CustomerPartial {
+  id: ID!
+  firstname: String!
+  lastname: String!
+  phone: Phone
+  email: String
+}
+
+extend type Query {
+  listCustomers(
+    pagination: PaginationInput
+    filter: CustomerFilter
+    sort: CustomerSort
+  ): [Customer!]!
+
+  getCustomer(id: ID!): Customer!
+  loggedInCustomer: Customer!
+}
+
+extend type Mutation {
+  registerCustomer(input: RegisterCustomerInput!): AuthPayload!
+  updateCustomerPersonalInfo(input: UpdateCustomerPersonalInfoInput!): Customer!
+  updateCustomerProfilePhoto(input: UpdateProfilePhotoInput!): Customer!
+}

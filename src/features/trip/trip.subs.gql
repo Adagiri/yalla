@@ -1,0 +1,79 @@
+type NewTripRequestPayload {
+  tripId: ID!
+  customerId: ID!
+  customer: CustomerPartial!
+  pickup: TripLocation!
+  destination: TripLocation!
+  estimatedFare: Float!
+  distance: Float!
+  duration: Int!
+  requestedAt: DateTime!
+  targetDriverId: ID!
+  tripNumber: String!
+  verificationPin: String!
+}
+
+type TripAcceptedPayload {
+  tripId: ID!
+  customerId: ID!
+  driver: DriverPartial!
+  estimatedArrivalTime: Int!
+  acceptedAt: DateTime!
+  tripNumber: String!
+}
+
+type TripStatusChangedPayload {
+  trip: Trip!
+  previousStatus: TripStatus
+  updatedAt: DateTime!
+}
+
+type DriverLocationUpdatePayload {
+  tripId: ID!
+  driverId: ID!
+  location: DriverLocationInfo!
+  timestamp: DateTime!
+}
+
+type TripLifecycleUpdatePayload {
+  tripId: ID!
+  status: TripStatus!
+  message: String
+  timestamp: DateTime!
+
+  # Optional context data
+  driver: DriverPartial
+  customer: CustomerPartial
+
+  # Event-specific data
+  estimatedArrival: DateTime
+  actualArrival: DateTime
+  location: LocationCoordinate
+  searchRadius: Float
+  driversNotified: Int
+  cancellationReason: String
+  error: String
+
+  # Additional metadata
+  metadata: JSON
+}
+
+extend type Subscription {
+  # Driver receives new trip requests
+  newTripRequest(driverId: ID!): NewTripRequestPayload!
+
+  # Customer gets notified when their trip is accepted
+  tripAccepted(customerId: ID!): TripAcceptedPayload!
+
+  # Real-time trip status updates for customers and drivers
+  tripStatusChanged(tripId: ID!): TripStatusChangedPayload!
+
+  # Customer tracks driver location during active trip
+  driverLocationUpdate(tripId: ID!): DriverLocationUpdatePayload!
+
+  # Trip lifecycle updates for real-time frontend updates
+  tripLifecycleUpdate(tripId: ID!): TripLifecycleUpdatePayload!
+
+  # Driver gets notified of new incoming trips
+  incomingTripsUpdated(driverId: ID!): [IncomingTrip!]!
+}

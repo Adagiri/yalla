@@ -1,0 +1,227 @@
+# ===== INPUT TYPES =====
+input AdminLoginInput {
+  email: String!
+  password: String!
+}
+
+input CreateAdminInput {
+  firstname: String!
+  lastname: String!
+  email: String!
+  password: String!
+  role: AdminRole!
+  department: String!
+  employeeId: String
+  phone: String
+  permissions: [String!]
+}
+
+input UpdateAdminInput {
+  firstname: String
+  lastname: String
+  email: String
+  role: AdminRole
+  department: String
+  employeeId: String
+  phone: String
+  permissions: [String!]
+  timezone: String
+  language: String
+  profilePhoto: String
+}
+
+input DateRangeInput {
+  startDate: DateTime!
+  endDate: DateTime!
+}
+
+input NotificationFiltersInput {
+  page: Int = 1
+  limit: Int = 20
+  unreadOnly: Boolean = false
+  category: String
+  priority: NotificationPriority
+}
+
+input CreateNotificationInput {
+  recipientId: ID!
+  title: String!
+  message: String!
+  type: NotificationType = INFO
+  priority: NotificationPriority = MEDIUM
+  category: String!
+  actionRequired: Boolean = false
+  actionUrl: String
+  actionLabel: String
+  metadata: JSON
+}
+
+input BroadcastNotificationInput {
+  title: String!
+  message: String!
+  type: NotificationType = INFO
+  priority: NotificationPriority = MEDIUM
+  category: String!
+  target: BroadcastTarget!
+  targetRole: AdminRole
+  actionRequired: Boolean = false
+  actionUrl: String
+  actionLabel: String
+  metadata: JSON
+}
+
+enum BroadcastTarget {
+  ALL_ADMINS
+  SUPER_ADMINS
+  SPECIFIC_ROLE
+}
+
+input SystemConfigFiltersInput {
+  category: String
+  isPublic: Boolean
+  searchTerm: String
+  page: Int = 1
+  limit: Int = 50
+}
+
+input CreateSystemConfigInput {
+  category: String!
+  key: String!
+  value: JSON!
+  description: String
+  isPublic: Boolean = false
+  isRequired: Boolean = false
+  validationRules: ValidationRulesInput
+  requiredPermission: String
+}
+
+input UpdateSystemConfigInput {
+  value: JSON!
+}
+
+input ValidationRulesInput {
+  min: Float
+  max: Float
+  minLength: Int
+  maxLength: Int
+  allowedValues: [JSON!]
+  regex: String
+  dataType: String
+}
+
+input BulkConfigUpdateInput {
+  configId: String!
+  value: JSON!
+}
+
+input SystemAlertFiltersInput {
+  severity: AlertSeverity
+  resolved: Boolean
+  type: AlertType
+  limit: Int = 20
+}
+
+input AuditLogFiltersInput {
+  adminId: String
+  resource: String
+  action: String
+  success: Boolean
+  startDate: DateTime
+  endDate: DateTime
+  page: Int = 1
+  limit: Int = 50
+}
+
+input EmailTemplateInput {
+  name: String!
+  subject: String!
+  html: String!
+  text: String!
+}
+
+# ===== QUERIES =====
+extend type Query {
+  # ===== AUTHENTICATION & ADMIN MANAGEMENT =====
+  getCurrentAdmin: Admin!
+  getAllAdmins(page: Int = 1, limit: Int = 20): PaginatedAdmins!
+  getAdminById(id: ID!): Admin!
+
+  # ===== DASHBOARD & ANALYTICS =====
+  getDashboardMetrics(dateRange: DateRangeInput): DashboardMetrics!
+  getSystemHealth: SystemHealth!
+  getSystemHealthHistory(hours: Int = 24): SystemHealthHistory!
+  getSystemAlerts(filters: SystemAlertFiltersInput): SystemAlerts!
+
+  # ===== NOTIFICATIONS =====
+  getMyNotifications(filters: NotificationFiltersInput): PaginatedNotifications!
+  getNotificationStats: NotificationStats!
+
+  # ===== SYSTEM CONFIGURATION =====
+  getSystemConfigs(filters: SystemConfigFiltersInput): PaginatedConfigs!
+  getSystemConfig(id: ID!): SystemConfig!
+  getConfigsByCategory(category: String!): [SystemConfig!]!
+  getConfigCategories: [String!]!
+
+  # ===== AUDIT LOGS =====
+  getAuditLogs(filters: AuditLogFiltersInput): PaginatedAuditLogs!
+  getAuditStats(days: Int = 30): AuditStats!
+
+  # ===== EMAIL TEMPLATES =====
+  listEmailTemplates: [EmailTemplate!]!
+}
+
+# ===== MUTATIONS =====
+extend type Mutation {
+  # ===== AUTHENTICATION =====
+  adminLogin(input: AdminLoginInput!): AdminAuthPayload!
+  adminLogout: SuccessResponse!
+
+  # ===== ADMIN MANAGEMENT =====
+  createAdmin(input: CreateAdminInput!): Admin!
+  updateAdmin(id: ID!, input: UpdateAdminInput!): Admin!
+  activateAdmin(id: ID!): Admin!
+  deactivateAdmin(id: ID!): Admin!
+  deleteAdmin(id: ID!): SuccessResponse!
+
+  # ===== NOTIFICATIONS =====
+  createNotification(input: CreateNotificationInput!): AdminNotification!
+  broadcastNotification(input: BroadcastNotificationInput!): BroadcastResult!
+  markNotificationAsRead(id: ID!): AdminNotification!
+  markAllNotificationsAsRead: SuccessResponse!
+  deleteNotification(id: ID!): SuccessResponse!
+
+  # ===== SYSTEM CONFIGURATION =====
+  createSystemConfig(input: CreateSystemConfigInput!): SystemConfig!
+  updateSystemConfig(id: ID!, input: UpdateSystemConfigInput!): SystemConfig!
+  deleteSystemConfig(id: ID!): SuccessResponse!
+  bulkUpdateConfigs(updates: [BulkConfigUpdateInput!]!): [ConfigUpdateResult!]!
+
+  # ===== SYSTEM MANAGEMENT =====
+  resolveSystemAlert(id: ID!, resolution: String!): SystemAlert!
+  triggerSystemHealthCheck: HealthCheckResult!
+  cleanupOldData(type: String!, olderThan: Int!): CleanupResult!
+
+  # ===== EMAIL TEMPLATES =====
+  createEmailTemplate(input: EmailTemplateInput!): EmailTemplate!
+  updateEmailTemplate(input: EmailTemplateInput!): EmailTemplate!
+  deleteEmailTemplate(name: String!): SuccessResponse!
+}
+
+# ===== SUBSCRIPTIONS =====
+extend type Subscription {
+  # ===== REAL-TIME NOTIFICATIONS =====
+  adminNotificationReceived(adminId: ID): AdminNotification!
+
+  # ===== SYSTEM MONITORING =====
+  systemHealthUpdated: SystemHealth!
+  systemAlertCreated: SystemAlert!
+
+  # ===== AUDIT TRAIL =====
+  auditLogCreated(adminId: ID): AuditLog!
+
+  # ===== ADMIN ACTIVITY =====
+  adminStatusChanged: Admin!
+
+  # ===== CONFIGURATION CHANGES =====
+  systemConfigUpdated(category: String): SystemConfig!
+}

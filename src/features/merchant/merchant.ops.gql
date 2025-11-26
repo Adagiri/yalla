@@ -1,0 +1,106 @@
+# Enum for sorting merchant results. We now support sorting by firstname, lastname, email, createdAt, and updatedAt.
+enum MerchantSortField {
+  firstname
+  lastname
+  email
+  createdAt
+  updatedAt
+}
+
+"""
+Specify which field to sort by (e.g., firstname, email)
+and in which direction (ASC or DESC).
+"""
+input MerchantSort {
+  field: MerchantSortField!
+  direction: SortDirection = ASC
+}
+
+"""
+Filters for searching merchants by various fields.
+All fields are optional; if provided, they constrain the query results.
+"""
+input MerchantFilter {
+  "IDs of merchants to match"
+  ids: [ID!]
+  firstname: String
+  lastname: String
+  email: String
+  locationId: ID
+  isMFAEnabled: Boolean
+  authChannels: [AuthChannel!]
+}
+
+
+"""
+Used when registering a new merchant.
+"""
+input RegisterMerchantInput {
+  phone: PhoneInput!
+  password: String!
+  authChannel: AuthChannel!
+}
+
+"""
+Input type for updating personal information.
+"""
+input UpdateMerchantPersonalInfoInput {
+  email: String!
+  firstname: String!
+  lastname: String!
+  locationId: ID!
+}
+
+input UpdateProfilePhotoInput {
+  src: String!
+}
+"""
+A merchant as stored in the system.
+Note: the underlying model stores firstname, lastname, email, phone (as an object),
+accountType, locationId, and verification/MFA details.
+"""
+type Merchant {
+  id: ID!
+  firstname: String
+  lastname: String
+  email: String
+  phone: Phone
+  accountType: String!
+  locationId: ID
+  isEmailVerified: Boolean!
+  isPhoneVerified: Boolean!
+  isMFAEnabled: Boolean!
+  authChannels: [AuthChannel!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  # Optionally, if you want to expose the populated location:
+  location: Location
+
+  # New fields for profile and merchant license status
+  profilePhotoSet: Boolean!
+  profilePhoto: String
+  personalInfoSet: Boolean!
+}
+
+type MerchantPartial {
+  id: ID!
+  firstname: String!
+  lastname: String!
+}
+
+extend type Query {
+  listMerchants(
+    pagination: PaginationInput
+    filter: MerchantFilter
+    sort: MerchantSort
+  ): [Merchant!]!
+
+  getMerchant(id: ID!): Merchant!
+  loggedInMerchant: Merchant!
+}
+
+extend type Mutation {
+  registerMerchant(input: RegisterMerchantInput!): AuthPayload!
+  updateMerchantPersonalInfo(input: UpdateMerchantPersonalInfoInput!): Merchant!
+  updateMerchantProfilePhoto(input: UpdateProfilePhotoInput!): Merchant!
+}

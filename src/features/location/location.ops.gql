@@ -1,0 +1,173 @@
+enum LocationSortField {
+  name
+  createdAt
+  updatedAt
+}
+
+input LocationSort {
+  field: LocationSortField!
+  direction: SortDirection = ASC
+}
+
+input LocationFilter {
+  "IDs of locations to match"
+  ids: [ID!]
+  name: String
+  address: String
+  locationType: LocationType
+  isActive: Boolean
+  search: String
+}
+
+enum LocationType {
+  estate
+  landmark
+  general
+}
+
+"""
+Represents a geographical coordinate in GeoJSON format.
+"""
+type GeoJSONPoint {
+  type: String!
+  coordinates: [Float!]! # [longitude, latitude]
+}
+
+"""
+Represents a GeoJSON Polygon for area boundaries.
+"""
+type GeoJSONPolygon {
+  type: String
+  coordinates: [[[Float!]!]!] # Array of linear rings
+}
+
+"""
+Input type for specifying GeoJSON Point coordinates.
+"""
+input GeoJSONPointInput {
+  type: String! = "Point"
+  coordinates: [Float!]! # [longitude, latitude]
+}
+
+"""
+Input type for specifying GeoJSON Polygon boundaries.
+"""
+input GeoJSONPolygonInput {
+  type: String! = "Polygon"
+  coordinates: [[[Float!]!]!]! # Array of linear rings
+}
+
+"""
+A location with geographical coordinates, optional boundaries, and metadata.
+"""
+type Location {
+  id: ID!
+  name: String!
+  description: String
+  address: String
+  location: GeoJSONPoint!
+  boundary: GeoJSONPolygon
+  locationType: LocationType!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"""
+Response type for listing locations with pagination metadata.
+"""
+type LocationListResponse {
+  data: [Location!]!
+  paginationResult: PaginationResult!
+}
+
+"""
+Pagination metadata for list responses.
+"""
+type PaginationResult {
+  totalDocs: Int!
+  docsRetrieved: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  nextPage: Int
+  previousPage: Int
+}
+
+"""
+Input type for creating a location.
+"""
+input CreateLocationInput {
+  name: String!
+  description: String
+  address: String
+  location: GeoJSONPointInput
+  boundary: GeoJSONPolygonInput
+  locationType: LocationType = general
+  isActive: Boolean = true
+}
+
+"""
+Input type for updating a location.
+"""
+input UpdateLocationInput {
+  name: String
+  description: String
+  address: String
+  location: GeoJSONPointInput
+  boundary: GeoJSONPolygonInput
+  locationType: LocationType
+  isActive: Boolean
+}
+
+extend type Query {
+  """
+  Retrieves a single location by its ID.
+  """
+  getLocation(id: ID!): Location!
+
+  """
+  Retrieves a list of locations with pagination, filtering, and sorting.
+  """
+  listLocations(
+    pagination: PaginationInput
+    filter: LocationFilter
+    sort: LocationSort
+  ): LocationListResponse!
+
+  """
+  Find locations within a certain distance from a point.
+  """
+  findNearbyLocations(
+    longitude: Float!
+    latitude: Float!
+    maxDistance: Float # in meters
+    locationType: LocationType
+  ): [Location!]!
+
+  """
+  Find locations that contain a given point within their boundaries.
+  """
+  findLocationsByPoint(longitude: Float!, latitude: Float!): [Location!]!
+}
+
+extend type Mutation {
+  """
+  Creates a new location.
+  """
+  createLocation(input: CreateLocationInput!): Location!
+
+  """
+  Updates an existing location.
+  """
+  updateLocation(id: ID!, input: UpdateLocationInput!): Location!
+
+  """
+  Deletes a location by its ID.
+  """
+  deleteLocation(id: ID!): Boolean!
+
+  """
+  Toggles the active status of a location.
+  """
+  toggleLocationStatus(id: ID!): Location!
+}
