@@ -38,6 +38,7 @@ input RegisterCustomerInput {
   phone: PhoneInput!
   password: String!
   authChannel: AuthChannel!
+  referralCode: String
 }
 
 """
