@@ -1,0 +1,18 @@
+# Device Token Management GraphQL Types
+
+input RegisterDeviceTokenInput {
+  token: String!
+}
+
+type DeviceTokenResponse {
+  success: Boolean!
+  message: String!
+}
+
+extend type Mutation {
+  # Register a device token for push notifications
+  registerDeviceToken(input: RegisterDeviceTokenInput!): DeviceTokenResponse!
+
+  # Remove a device token (e.g., on logout)
+  removeDeviceToken(input: RegisterDeviceTokenInput!): DeviceTokenResponse!
+}

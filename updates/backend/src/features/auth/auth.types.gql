@@ -1,0 +1,23 @@
+# Logout Endpoint & Auth Types
+
+input LogoutInput {
+  # Optional: Device token to remove (for push notifications)
+  # If not provided, only auth token is invalidated
+  deviceToken: String
+
+  # Optional: Logout from all devices
+  # If true, invalidates all auth tokens and removes all device tokens
+  allDevices: Boolean
+}
+
+type LogoutResponse {
+  success: Boolean!
+  message: String!
+}
+
+extend type Mutation {
+  # Logout user
+  # - Invalidates auth token(s) from Redis cache
+  # - Optionally removes device token(s)
+  logout(input: LogoutInput): LogoutResponse!
+}
