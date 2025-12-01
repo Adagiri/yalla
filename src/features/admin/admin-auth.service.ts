@@ -21,7 +21,11 @@ interface AdminCreateInput {
   role: 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'SUPPORT' | 'ANALYST';
   department: string;
   employeeId?: string;
-  phone?: string;
+  phone?: {
+   countryCode: string;
+    localNumber: string; 
+    fullPhone: string
+   };
   permissions?: string[];
 }
 
@@ -32,7 +36,11 @@ interface AdminUpdateInput {
   role?: 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'SUPPORT' | 'ANALYST';
   department?: string;
   employeeId?: string;
-  phone?: string;
+   phone?: {
+   countryCode: string;
+    localNumber: string; 
+    fullPhone: string
+   };
   permissions?: string[];
   timezone?: string;
   language?: string;
@@ -341,7 +349,6 @@ class AdminAuthService {
 
       admin.updatedAt = new Date();
       await admin.save();
-
       // Log admin update
       const changedFields = Object.keys(input).filter(
         (key) => input[key as keyof AdminUpdateInput] !== undefined
@@ -375,7 +382,7 @@ class AdminAuthService {
     try {
       const admin = await Admin.findById(adminId);
 
-      if (!admin) {
+      if (!admin || admin.deletedAt) {
         throw new ErrorResponse(404, 'Admin not found');
       }
 
@@ -408,9 +415,10 @@ class AdminAuthService {
    * Deactivate admin
    */
   static async deactivateAdmin(adminId: string, deactivatedBy: string) {
+    
     try {
       const admin = await Admin.findById(adminId);
-
+   
       if (!admin) {
         throw new ErrorResponse(404, 'Admin not found');
       }
@@ -463,7 +471,7 @@ class AdminAuthService {
     try {
       const admin = await Admin.findById(adminId);
 
-      if (!admin) {
+      if (!admin || admin.deletedAt) {
         throw new ErrorResponse(404, 'Admin not found');
       }
 
@@ -482,8 +490,9 @@ class AdminAuthService {
 
       // Soft delete by deactivating and marking as deleted
       admin.isActive = false;
-      admin.email = `deleted_${Date.now()}_${admin.email}`;
+      admin.email = admin.email + "__deleted__" + Date.now();
       admin.updatedAt = new Date();
+      admin.deletedAt = new Date();
       await admin.save();
 
       // Log deletion

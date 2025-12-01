@@ -19,6 +19,8 @@ import {
   UpdateProfilePhotoInput,
 } from './driver.type';
 
+// FIXME: UPDATE DRIVER'S DOC WITH VEHICLE ID, INSTEAD OF DRIVER'S ID
+
 class DriverController {
   static async listDrivers(
     _: any,

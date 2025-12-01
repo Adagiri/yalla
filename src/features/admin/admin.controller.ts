@@ -176,6 +176,7 @@ class AdminController {
     { user }: ContextType
   ) {
     try {
+      console.log("starting---")
       const result = await AdminAuthService.deleteAdmin(id, user.id);
 
       await AuditLogService.logAction({
