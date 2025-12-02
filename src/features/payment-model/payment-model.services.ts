@@ -36,7 +36,7 @@ class PaymentModelService {
 
     let effectiveModel = driver.paymentModel;
     let hasActiveSubscription = !!activeSubscription;
-    console.log("driver's payment model: ", effectiveModel);
+    console.log('driver\'s payment model: ', effectiveModel);
     // Handle subscription model logic
     if (driver.paymentModel === PaymentModel.SUBSCRIPTION) {
       if (!activeSubscription) {

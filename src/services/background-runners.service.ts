@@ -1,9 +1,10 @@
-import cron, { ScheduledTask } from "node-cron";
-import Trip from "../features/trip/trip.model";
-import Customer from "../features/customer/customer.model";
-import { cacheService } from "./redis-cache.service";
-import { SubscriptionService } from "./subscription.service";
-import { IncomingTripData } from "../types/trip";
+
+import cron, { ScheduledTask } from 'node-cron';
+import Trip from '../features/trip/trip.model';
+import Customer from '../features/customer/customer.model';
+import { cacheService } from './redis-cache.service';
+import { SubscriptionService } from './subscription.service';
+import { IncomingTripData } from '../types/trip';
 
 export class BackgroundRunnersService {
   private static isRunning = false;
@@ -15,7 +16,7 @@ export class BackgroundRunnersService {
    */
   static start() {
     if (this.isRunning) {
-      console.log("⚠️ Background runners already running");
+      console.log('⚠️ Background runners already running');
       return;
     }
 
@@ -23,24 +24,24 @@ export class BackgroundRunnersService {
 
     // Runner 1: Process searching trips every 1 minute
     // Cron expression: */1 * * * * = Every 1 minute
-    this.driverSearchJob = cron.schedule("*/1 * * * *", async () => {
+    this.driverSearchJob = cron.schedule('*/1 * * * *', async () => {
       try {
         await this.runDriverSearchRunner();
       } catch (error) {
-        console.error("❌ Driver Search Runner error:", error);
+        console.error('❌ Driver Search Runner error:', error);
       }
     });
 
     // Runner 2: Cleanup expired incoming trips every 1 minute
-    this.cleanupJob = cron.schedule("*/1 * * * *", async () => {
+    this.cleanupJob = cron.schedule('*/1 * * * *', async () => {
       try {
         await this.runCleanupRunner();
       } catch (error) {
-        console.error("❌ Cleanup Runner error:", error);
+        console.error('❌ Cleanup Runner error:', error);
       }
     });
 
-    console.log("✅ Background runners started (cron-based, every 1 minute)");
+    console.log('✅ Background runners started (cron-based, every 1 minute)');
   }
 
   /**
@@ -60,7 +61,7 @@ export class BackgroundRunnersService {
     }
 
     this.isRunning = false;
-    console.log("🛑 Background runners stopped");
+    console.log('🛑 Background runners stopped');
   }
 
   /**
@@ -70,7 +71,7 @@ export class BackgroundRunnersService {
     try {
       // Get all trips with status "searching"
       const searchingTrips = await Trip.find({
-        status: "searching",
+        status: 'searching',
       }).limit(50); // Process max 50 at a time
 
       if (searchingTrips.length === 0) {
@@ -83,7 +84,7 @@ export class BackgroundRunnersService {
         await this.processSearchingTrip(trip);
       }
     } catch (error: any) {
-      console.error("❌ Driver Search Runner failed:", error.message);
+      console.error('❌ Driver Search Runner failed:', error.message);
     }
   }
 
@@ -154,7 +155,7 @@ export class BackgroundRunnersService {
 
       // Update trip status to "drivers_found"
       await Trip.findByIdAndUpdate(trip._id, {
-        status: "drivers_found",
+        status: 'drivers_found',
         driversNotified: nearbyDrivers.length,
         driversFoundAt: new Date(),
       });
@@ -162,7 +163,7 @@ export class BackgroundRunnersService {
       // Publish trip lifecycle update
       await SubscriptionService.publishTripLifecycleUpdate({
         tripId: trip._id.toString(),
-        status: "drivers_found",
+        status: 'drivers_found',
         message: `Found ${nearbyDrivers.length} nearby drivers`,
         driversNotified: nearbyDrivers.length,
         timestamp: new Date(),
@@ -205,7 +206,7 @@ export class BackgroundRunnersService {
         );
       }
     } catch (error: any) {
-      console.error("❌ Cleanup Runner failed:", error.message);
+      console.error('❌ Cleanup Runner failed:', error.message);
     }
   }
 
@@ -262,11 +263,10 @@ export class BackgroundRunnersService {
       try {
         // Check if no driver has accepted this trip
         const trip = await Trip.findById(tripId);
-
-        if (trip && trip.status === "drivers_found") {
+        if (trip && trip.status === 'drivers_found') {
           // Reset to searching
           await Trip.findByIdAndUpdate(tripId, {
-            status: "searching",
+            status: 'searching',
             driversNotified: 0,
             driversFoundAt: null,
           });
@@ -274,8 +274,8 @@ export class BackgroundRunnersService {
           // Update Trip Lifecycle Subscription
           await SubscriptionService.publishTripLifecycleUpdate({
             tripId: tripId,
-            status: "searching",
-            message: "No driver accepted, searching again...",
+            status: 'searching',
+            message: 'No driver accepted, searching again...',
             timestamp: new Date(),
           });
 
@@ -320,10 +320,10 @@ export class BackgroundRunnersService {
    */
   static async getStatus() {
     const searchingTripsCount = await Trip.countDocuments({
-      status: "searching",
+      status: 'searching',
     });
     const driversFoundTripsCount = await Trip.countDocuments({
-      status: "drivers_found",
+      status: 'drivers_found',
     });
 
     // Get incoming trips count across all drivers

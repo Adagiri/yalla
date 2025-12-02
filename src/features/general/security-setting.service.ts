@@ -1,9 +1,10 @@
-import { ErrorResponse } from "../../utils/responses";
-import SecuritySetting, { ISecuritySetting } from "./security-setting.model";
+
+import { ErrorResponse } from '../../utils/responses';
+import SecuritySetting, { ISecuritySetting } from './security-setting.model';
 import {
   CreateSecuritySettingInput,
   UpdateSecuritySettingInput,
-} from "./general.types";
+} from './general.types';
 
 export class SecuritySettingService {
   static async createSecuritySetting(
@@ -21,12 +22,12 @@ export class SecuritySettingService {
       if (error.code === 11000) {
         throw new ErrorResponse(
           400,
-          "An active security setting already exists"
+          'An active security setting already exists'
         );
       }
       throw new ErrorResponse(
         500,
-        "Failed to create security settings",
+        'Failed to create security settings',
         error.message
       );
     }
@@ -39,7 +40,7 @@ export class SecuritySettingService {
     try {
       const setting = await SecuritySetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "Security settings not found");
+        throw new ErrorResponse(404, 'Security settings not found');
       }
 
       // If activating this setting, deactivate others
@@ -57,17 +58,17 @@ export class SecuritySettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to update security settings",
+        'Failed to update security settings',
         error.message
       );
     }
   }
 
-  static async activateSecuritySetting(id: string): Promise<ISecuritySetting> {
+ static async activateSecuritySetting(id: string): Promise<ISecuritySetting> {
     try {
       const setting = await SecuritySetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "Security settings not found");
+        throw new ErrorResponse(404, 'Security settings not found');
       }
 
       await SecuritySetting.updateMany(
@@ -82,19 +83,18 @@ export class SecuritySettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to activate security settings",
+        'Failed to activate security settings',
         error.message
       );
     }
   }
-
   static async deactivateSecuritySetting(
     id: string
   ): Promise<ISecuritySetting> {
     try {
       const setting = await SecuritySetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "Security settings not found");
+        throw new ErrorResponse(404, 'Security settings not found');
       }
 
       setting.isActive = false;
@@ -104,7 +104,7 @@ export class SecuritySettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to deactivate security settings",
+        'Failed to deactivate security settings',
         error.message
       );
     }
@@ -116,7 +116,7 @@ export class SecuritySettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch security settings",
+        'Failed to fetch security settings',
         error.message
       );
     }
@@ -134,7 +134,7 @@ export class SecuritySettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch security settings",
+        'Failed to fetch security settings',
         error.message
       );
     }
@@ -160,7 +160,7 @@ export class SecuritySettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch security settings history",
+        'Failed to fetch security settings history',
         error.message
       );
     }

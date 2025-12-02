@@ -5,6 +5,7 @@ export interface RegisterCustomerInput {
   password: string;
   authChannel: AuthChannel;
   referralCode?: string; // Optional referral code
+
 }
 
 export interface AddCustomerInput {

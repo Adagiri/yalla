@@ -1,11 +1,13 @@
+
 import { ErrorResponse } from "../../utils/responses";
 import {
   DataExport,
   DataImport,
   IDataExport,
   IDataImport,
-} from "./data-management.model";
-import { ExportRequestInput, ImportRequestInput } from "./general.types";
+} from './data-management.model';
+import { ExportRequestInput, ImportRequestInput } from './general.types';
+
 
 // NB: All the implementation below are not real, just dummny data and placeholder
 export class DataManagementService {
@@ -163,7 +165,7 @@ export class DataManagementService {
           .skip(skip)
           .limit(limit)
           .exec(),
-        DataImport.countDocuments(query),
+        DataImport.countDocuments(query)
       ]);
 
       return { imports, total };
@@ -181,14 +183,14 @@ export class DataManagementService {
       const exportRecord = await DataExport.findById(exportId);
       if (!exportRecord) return;
 
-      // update status to processing
+      // update status to processing;
       exportRecord.status = "PROCESSING";
       await exportRecord.save();
 
       // simulate export processing time
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      // generate dummy file URL
+      // generate dummy file URL;
       exportRecord.status = "COMPLETED";
       exportRecord.fileUrl = `/exports/${exportId}/data-export-${Date.now()}.csv`;
       // File siz  approximately  1-11 MB
@@ -226,7 +228,6 @@ export class DataManagementService {
         importRecord.recordCount - importRecord.successfulImports;
       importRecord.status = "COMPLETED";
       importRecord.completedAt = new Date();
-
       await importRecord.save();
     } catch (error) {
       await DataImport.findByIdAndUpdate(importId, {

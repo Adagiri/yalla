@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Driver, { DriverModelType } from './driver.model';
 import { ErrorResponse } from '../../utils/responses';
 import {
@@ -5,6 +6,7 @@ import {
   DriverFilter,
   DriverSort,
   UpdateDriverPersonalInfoInput,
+  UpdateDriverVehicleInfo,
   UpdateDriverLicenseInput,
   UpdateProfilePhotoInput,
 } from './driver.type';
@@ -150,7 +152,28 @@ class DriverService {
       );
     }
   }
-
+  static async updateDriverVehicleInfo(input: UpdateDriverVehicleInfo) {
+    try {
+      const { driverId: id, vehicleInfoSet } = input;
+      const updatedDriver = await Driver.findByIdAndUpdate(
+        id,
+        { vehicleInfoSet },
+        {
+          new: true,
+        }
+      );
+      if (!updatedDriver) {
+        throw new ErrorResponse(404, 'Driver not found');
+      }
+      return updatedDriver;
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error updating driver\'s vehicle info',
+        error.message
+      );
+    }
+  }
   static async updateDriverLicense(
     id: string,
     input: UpdateDriverLicenseInput

@@ -38,7 +38,6 @@ export function startScheduledJobs() {
 
   // NEW: Reward expiry job (daily at 3 AM)
   const rewardExpiryJob = startRewardExpiryJob();
-
   // Graceful shutdown handler
   process.on('SIGTERM', () => {
     console.log('🛑 Stopping scheduled jobs...');

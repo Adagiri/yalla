@@ -1,14 +1,15 @@
-import jwt from "jsonwebtoken";
-import { ErrorResponse } from "./responses";
-import Admin, { AdminDocument } from "../features/admin/admin.model";
-import Driver from "../features/driver/driver.model";
-import Customer from "../features/customer/customer.model";
-import { skip } from "graphql-resolvers";
-import { AccountType_ } from "../constants/general";
+
+import jwt from 'jsonwebtoken';
+import { ErrorResponse } from './responses';
+import Admin, { AdminDocument } from '../features/admin/admin.model';
+import Driver from '../features/driver/driver.model';
+import Customer from '../features/customer/customer.model';
+import { skip } from 'graphql-resolvers';
+import { AccountType_ } from '../constants/general';
 import {
   ADMIN_PERMISSIONS,
   ROLE_PERMISSIONS,
-} from "../constants/admin-permissions";
+} from '../constants/admin-permissions';
 
 export const getUserInfo = (token: string) => {
   try {
@@ -26,28 +27,28 @@ export const protectAdmin = async (
   { user }: { user: any }
 ) => {
   if (!user) {
-    throw new ErrorResponse(401, "Please log in to continue");
+    throw new ErrorResponse(401, 'Please log in to continue');
   }
 
   const userRecord: AdminDocument | null = await Admin.findById(user.id);
   if (!userRecord) {
-    throw new ErrorResponse(404, "Admin user does not exist.");
+    throw new ErrorResponse(404, 'Admin user does not exist.');
   }
 
   // Check if admin is active
   if (!userRecord.isActive) {
-    throw new ErrorResponse(403, "Admin account is deactivated.");
+    throw new ErrorResponse(403, 'Admin account is deactivated.');
   }
 
   // Support both old AccountType_ system and new role system
   const isValidAdmin =
     userRecord.accountType === AccountType_.ADMIN ||
-    ["SUPER_ADMIN", "ADMIN", "MANAGER", "SUPPORT", "ANALYST"].includes(
+    ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SUPPORT', 'ANALYST'].includes(
       userRecord.role
     );
 
   if (!isValidAdmin) {
-    throw new ErrorResponse(403, "Not authorized as admin.");
+    throw new ErrorResponse(403, 'Not authorized as admin.');
   }
 
   // Update last active time
@@ -65,20 +66,20 @@ export const protectSuperAdmin = async (
   { user }: { user: any }
 ) => {
   if (!user) {
-    throw new ErrorResponse(401, "Please log in to continue");
+    throw new ErrorResponse(401, 'Please log in to continue');
   }
 
   const userRecord = await Admin.findById(user.id);
   if (!userRecord) {
-    throw new ErrorResponse(404, "Admin user does not exist.");
+    throw new ErrorResponse(404, 'Admin user does not exist.');
   }
 
   if (!userRecord.isActive) {
-    throw new ErrorResponse(403, "Admin account is deactivated.");
+    throw new ErrorResponse(403, 'Admin account is deactivated.');
   }
 
-  if (userRecord.role !== "SUPER_ADMIN") {
-    throw new ErrorResponse(403, "Super admin access required.");
+  if (userRecord.role !== 'SUPER_ADMIN') {
+    throw new ErrorResponse(403, 'Super admin access required.');
   }
 
   // Update last active time
@@ -89,22 +90,23 @@ export const protectSuperAdmin = async (
   return skip;
 };
 
+
 export const protectDriver = async (
   _: unknown,
   __: unknown,
   { user }: { user: any }
 ) => {
   if (!user) {
-    throw new ErrorResponse(401, "Please log in to continue");
+    throw new ErrorResponse(401, 'Please log in to continue');
   }
 
   const userRecord = await Driver.findById(user.id);
   if (!userRecord) {
-    throw new ErrorResponse(404, "User does not exist.");
+    throw new ErrorResponse(404, 'User does not exist.');
   }
 
   if (userRecord.accountType !== AccountType_.DRIVER) {
-    throw new ErrorResponse(403, "Not authorized as a driver.");
+    throw new ErrorResponse(403, 'Not authorized as a driver.');
   }
 
   user = userRecord;
@@ -117,16 +119,16 @@ export const protectCustomer = async (
   { user }: { user: any }
 ) => {
   if (!user) {
-    throw new ErrorResponse(401, "Please log in to continue");
+    throw new ErrorResponse(401, 'Please log in to continue');
   }
 
   const userRecord = await Customer.findById(user.id);
   if (!userRecord) {
-    throw new ErrorResponse(404, "User does not exist.");
+    throw new ErrorResponse(404, 'User does not exist.');
   }
 
   if (userRecord.accountType !== AccountType_.CUSTOMER) {
-    throw new ErrorResponse(403, "Not authorized as a customer.");
+    throw new ErrorResponse(403, 'Not authorized as a customer.');
   }
 
   user = userRecord;
@@ -138,37 +140,37 @@ export const protectEntities = (requiredEntities: string[]) => {
   return async (_: unknown, __: unknown, context: { user: any }) => {
     const user = context.user;
     if (!user) {
-      throw new ErrorResponse(401, "Please log in to continue");
+      throw new ErrorResponse(401, 'Please log in to continue');
     }
 
     let userRecord: any;
 
     // Check Admin (with enhanced role checking)
     if (
-      requiredEntities.includes("ADMIN") ||
-      requiredEntities.includes("SUPER_ADMIN")
+      requiredEntities.includes('ADMIN') ||
+      requiredEntities.includes('SUPER_ADMIN')
     ) {
       userRecord = await Admin.findById(user.id);
       if (userRecord) {
         // Check if admin is active
         if (!userRecord.isActive) {
-          throw new ErrorResponse(403, "Admin account is deactivated.");
+          throw new ErrorResponse(403, 'Admin account is deactivated.');
         }
 
         // Support both old AccountType_ system and new role system
         const isValidAdmin =
           userRecord.accountType === AccountType_.ADMIN ||
-          ["SUPER_ADMIN", "ADMIN", "MANAGER", "SUPPORT", "ANALYST"].includes(
+          ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SUPPORT', 'ANALYST'].includes(
             userRecord.role
           );
 
         if (isValidAdmin) {
           // If SUPER_ADMIN is specifically required, check role
           if (
-            requiredEntities.includes("SUPER_ADMIN") &&
-            userRecord.role !== "SUPER_ADMIN"
+            requiredEntities.includes('SUPER_ADMIN') &&
+            userRecord.role !== 'SUPER_ADMIN'
           ) {
-            throw new ErrorResponse(403, "Super admin access required.");
+            throw new ErrorResponse(403, 'Super admin access required.');
           }
 
           // Update last active time
@@ -183,7 +185,7 @@ export const protectEntities = (requiredEntities: string[]) => {
     console.log(user);
 
     // Check Driver
-    if (requiredEntities.includes("DRIVER")) {
+    if (requiredEntities.includes('DRIVER')) {
       userRecord = await Driver.findById(user.id);
       if (userRecord && userRecord.accountType === AccountType_.DRIVER) {
         context.user = userRecord;
@@ -192,7 +194,7 @@ export const protectEntities = (requiredEntities: string[]) => {
     }
 
     // Check Customer
-    if (requiredEntities.includes("CUSTOMER")) {
+    if (requiredEntities.includes('CUSTOMER')) {
       userRecord = await Customer.findById(user.id);
       if (userRecord && userRecord.accountType === AccountType_.CUSTOMER) {
         context.user = userRecord;
@@ -201,12 +203,12 @@ export const protectEntities = (requiredEntities: string[]) => {
     }
 
     if (!userRecord) {
-      throw new ErrorResponse(404, "User record not found.");
+      throw new ErrorResponse(404, 'User record not found.');
     }
 
     throw new ErrorResponse(
       403,
-      `User is not authorized. Required roles: ${requiredEntities.join(", ")}`
+      `User is not authorized. Required roles: ${requiredEntities.join(', ')}`
     );
   };
 };
@@ -217,17 +219,17 @@ export const requirePermission = (permission: string) => {
     const user = context.user;
 
     if (!user) {
-      throw new ErrorResponse(401, "Authentication required");
+      throw new ErrorResponse(401, 'Authentication required');
     }
 
     // Get admin record to check permissions
     const adminRecord = await Admin.findById(user.id);
     if (!adminRecord) {
-      throw new ErrorResponse(404, "Admin user not found");
+      throw new ErrorResponse(404, 'Admin user not found');
     }
 
     if (!adminRecord.isActive) {
-      throw new ErrorResponse(403, "Admin account is deactivated.");
+      throw new ErrorResponse(403, 'Admin account is deactivated.');
     }
 
     const userPermissions: string[] = adminRecord.permissions || [];
@@ -239,7 +241,7 @@ export const requirePermission = (permission: string) => {
     const hasPermission =
       userPermissions.includes(permission) ||
       rolePermissions.includes(permission) ||
-      adminRecord.role === "SUPER_ADMIN";
+      adminRecord.role === 'SUPER_ADMIN';
 
     if (!hasPermission) {
       throw new ErrorResponse(403, `Permission required: ${permission}`);
@@ -260,20 +262,20 @@ export const requireAllPermissions = (permissions: string[]) => {
     const user = context.user;
 
     if (!user) {
-      throw new ErrorResponse(401, "Authentication required");
+      throw new ErrorResponse(401, 'Authentication required');
     }
 
     const adminRecord = await Admin.findById(user.id);
     if (!adminRecord) {
-      throw new ErrorResponse(404, "Admin user not found");
+      throw new ErrorResponse(404, 'Admin user not found');
     }
 
     if (!adminRecord.isActive) {
-      throw new ErrorResponse(403, "Admin account is deactivated.");
+      throw new ErrorResponse(403, 'Admin account is deactivated.');
     }
 
     // Super admin has all permissions
-    if (adminRecord.role === "SUPER_ADMIN") {
+    if (adminRecord.role === 'SUPER_ADMIN') {
       context.user = adminRecord;
       return skip;
     }
@@ -295,7 +297,7 @@ export const requireAllPermissions = (permissions: string[]) => {
       );
       throw new ErrorResponse(
         403,
-        `Missing required permissions: ${missingPermissions.join(", ")}`
+        `Missing required permissions: ${missingPermissions.join(', ')}`
       );
     }
 
@@ -314,20 +316,20 @@ export const requireAnyPermission = (permissions: string[]) => {
     const user = context.user;
 
     if (!user) {
-      throw new ErrorResponse(401, "Authentication required");
+      throw new ErrorResponse(401, 'Authentication required');
     }
 
     const adminRecord = await Admin.findById(user.id);
     if (!adminRecord) {
-      throw new ErrorResponse(404, "Admin user not found");
+      throw new ErrorResponse(404, 'Admin user not found');
     }
 
     if (!adminRecord.isActive) {
-      throw new ErrorResponse(403, "Admin account is deactivated.");
+      throw new ErrorResponse(403, 'Admin account is deactivated.');
     }
 
     // Super admin has all permissions
-    if (adminRecord.role === "SUPER_ADMIN") {
+    if (adminRecord.role === 'SUPER_ADMIN') {
       context.user = adminRecord;
       return skip;
     }
@@ -344,7 +346,7 @@ export const requireAnyPermission = (permissions: string[]) => {
     if (!hasAnyPermission) {
       throw new ErrorResponse(
         403,
-        `At least one of these permissions required: ${permissions.join(", ")}`
+        `At least one of these permissions required: ${permissions.join(', ')}`
       );
     }
 
@@ -363,22 +365,22 @@ export const requireRole = (roles: string[]) => {
     const user = context.user;
 
     if (!user) {
-      throw new ErrorResponse(401, "Authentication required");
+      throw new ErrorResponse(401, 'Authentication required');
     }
 
     const adminRecord = await Admin.findById(user.id);
     if (!adminRecord) {
-      throw new ErrorResponse(404, "Admin user not found");
+      throw new ErrorResponse(404, 'Admin user not found');
     }
 
     if (!adminRecord.isActive) {
-      throw new ErrorResponse(403, "Admin account is deactivated.");
+      throw new ErrorResponse(403, 'Admin account is deactivated.');
     }
 
     if (!roles.includes(adminRecord.role)) {
       throw new ErrorResponse(
         403,
-        `Required role: ${roles.join(" or ")}. Current role: ${adminRecord.role}`
+        `Required role: ${roles.join(' or ')}. Current role: ${adminRecord.role}`
       );
     }
 
@@ -390,6 +392,7 @@ export const requireRole = (roles: string[]) => {
     return skip;
   };
 };
+
 
 // Helper function to check if user has permission (for use in resolvers)
 export function hasPermission(

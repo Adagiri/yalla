@@ -2,29 +2,29 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { ENV } from "../config/env";
-import { ErrorResponse } from "../utils/responses";
-import { generateRandomString } from "../utils/general";
-import Driver from "../features/driver/driver.model";
-import Admin from "../features/admin/admin.model";
-import Customer from "../features/customer/customer.model";
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { ENV } from '../config/env';
+import { ErrorResponse } from '../utils/responses';
+import { generateRandomString } from '../utils/general';
+import Driver from '../features/driver/driver.model';
+import Admin from '../features/admin/admin.model';
+import Customer from '../features/customer/customer.model';
 
 export enum FileAccessLevel {
-  PUBLIC = "PUBLIC",
-  PRIVATE = "PRIVATE",
+  PUBLIC = 'PUBLIC',
+  PRIVATE = 'PRIVATE',
 }
 
 export enum FileCategory {
-  PROFILE_PHOTO = "PROFILE_PHOTO",          
-  DOCUMENTS = "DOCUMENTS",                
-  DRIVER_LICENSE_FRONT = "DRIVER_LICENSE_FRONT",  
-  DRIVER_LICENSE_BACK = "DRIVER_LICENSE_BACK", 
-  VEHICLE_PHOTOS = "VEHICLE_PHOTOS",
-  COMPLAINTS = "COMPLAINTS",
-  COMMUNICATION = "COMMUNICATION",
-  PRODUCTS = "PRODUCTS"
+  PROFILE_PHOTO = 'PROFILE_PHOTO',          
+  DOCUMENTS = 'DOCUMENTS',                
+  DRIVER_LICENSE_FRONT = 'DRIVER_LICENSE_FRONT',  
+  DRIVER_LICENSE_BACK = 'DRIVER_LICENSE_BACK', 
+  VEHICLE_PHOTOS = 'VEHICLE_PHOTOS',
+  COMPLAINTS = 'COMPLAINTS',
+  COMMUNICATION = 'COMMUNICATION',
+  PRODUCTS = 'PRODUCTS'
 }
 
 interface GenerateUploadUrlOptions {
@@ -57,18 +57,18 @@ class FileUploadService {
   });
 
   private static readonly ALLOWED_IMAGE_TYPES = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/webp",
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
   ];
 
   private static readonly ALLOWED_DOCUMENT_TYPES = [
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   ];
 
   private static readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -217,7 +217,7 @@ private static readonly ALLOWED_CATEGORIES = {
     const isDocument = this.ALLOWED_DOCUMENT_TYPES.includes(contentType);
 
     if (!isImage && !isDocument) {
-      throw new ErrorResponse(400, "Unsupported file type");
+      throw new ErrorResponse(400, 'Unsupported file type');
     }
 
     // Certain categories only allow images
@@ -241,12 +241,12 @@ private static readonly ALLOWED_CATEGORIES = {
     contentType: string,
     userId?: string
   ): string {
-    const extension = contentType.split("/")[1];
+    const extension = contentType.split('/')[1];
     const randomString = generateRandomString(20);
     const timestamp = Date.now();
 
     // Structure: access-level/category/userId/timestamp-random.ext
-    const userPath = userId ? `${userId}/` : "";
+    const userPath = userId ? `${userId}/` : '';
     return `${accessLevel}/${category}/${userPath}${timestamp}-${randomString}.${extension}`;
   }
 
@@ -266,7 +266,7 @@ private static readonly ALLOWED_CATEGORIES = {
     };
 
     if (accessLevel === FileAccessLevel.PUBLIC) {
-      commandParams.ACL = "public-read";
+      commandParams.ACL = 'public-read';
     }
 
     const command = new PutObjectCommand(commandParams);
@@ -329,7 +329,7 @@ private static readonly ALLOWED_CATEGORIES = {
 
     // Generate thumbnail URLs if requested and file is an image
     if (generateThumbnail && this.ALLOWED_IMAGE_TYPES.includes(contentType)) {
-      const thumbnailKey = key.replace(/(\.[^.]+)$/, "-thumb$1");
+      const thumbnailKey = key.replace(/(\.[^.]+)$/, '-thumb$1');
       const thumbnailUploadUrl = await this.generatePresignedUploadUrl(
         thumbnailKey,
         contentType,
@@ -354,14 +354,14 @@ private static readonly ALLOWED_CATEGORIES = {
   static async generateThumbnail(sourceKey: string): Promise<string> {
     // This would typically be handled by AWS Lambda on S3 upload trigger
     // For now, return the thumbnail key that should be created
-    return sourceKey.replace(/(\.[^.]+)$/, "-thumb$1");
+    return sourceKey.replace(/(\.[^.]+)$/, '-thumb$1');
   }
 
   /**
    * Delete file from S3
    */
   static async deleteFile(key: string): Promise<void> {
-    const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+    const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
     const command = new DeleteObjectCommand({
       Bucket: ENV.AWS_S3_ASSET_BUCKET,
       Key: key,

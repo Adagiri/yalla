@@ -1,5 +1,5 @@
-import mongoose, { Schema, Document } from "mongoose";
-const validator = require("validator");
+import mongoose, { Schema, Document } from 'mongoose';
+const validator = require('validator');
 
 export interface IGeneralSetting extends Document {
   applicationName: string;
@@ -17,54 +17,55 @@ const GeneralSettingSchema = new Schema<IGeneralSetting>(
   {
     applicationName: {
       type: String,
-      required: [true, "Application name is required"],
+      required: [true, 'Application name is required'],
       trim: true,
-      minlength: [2, "Application name must be at least 2 characters"],
-      maxlength: [50, "Application name cannot exceed 100 characters"],
+      minlength: [2, 'Application name must be at least 2 characters'],
+      maxlength: [50, 'Application name cannot exceed 100 characters'],
     },
     supportPhone: {
       type: String,
-      required: [true, "Support phone is required"],
+      required: [true, 'Support phone is required'],
       trim: true,
-      match: [/^\+?[\d\s-()]+$/, "Please enter a valid phone number"],
+      match: [/^\+?[\d\s-()]+$/, 'Please enter a valid phone number'],
     },
     defaultCurrency: {
       type: String,
-      required: [true, "Default currency is required"],
+      required: [true, 'Default currency is required'],
       enum: {
-        values: ["NGN", "USD"],
-        message: "Currency must be either NGN or USD",
+        values: ['NGN', 'USD'],
+        message: 'Currency must be either NGN or USD',
       },
-      default: "NGN",
+      default: 'NGN',
     },
     supportEmail: {
       type: String,
-      required: [true, "Support email is required"],
+      required: [true, 'Support email is required'],
+
       trim: true,
       lowercase: true,
       //   match: [
       //     /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
       //     'Please enter a valid email address',
       //   ],
-      validate: [validator.isEmail, "Please enter a valid email address"],
+      validate: [validator.isEmail, 'Please enter a valid email address'],
     },
     timeZone: {
       type: String,
-      required: [true, "Time zone is required"],
+      required: [true, 'Time zone is required'],
       enum: {
-        values: ["WAT", "UTC"],
-        message: "Time zone must be either WAT or UTC",
+        values: ['WAT', 'UTC'],
+        message: 'Time zone must be either WAT or UTC',
       },
-      default: "WAT",
+      default: 'WAT',
     },
     defaultLanguage: {
       type: String,
-      required: [true, "Default language is required"],
+      required: [true, 'Default language is required'],
       enum: {
-        values: ["en", "ha", "ig", "yo"],
-        message: "Language must be English, Hausa, Igbo, or Yoruba",
+        values: ['en', 'ha', 'ig', 'yo'],
+        message: 'Language must be English, Hausa, Igbo, or Yoruba',
       },
-      default: "en",
+      default: 'en',
     },
     isActive: {
       type: Boolean,
@@ -88,7 +89,8 @@ GeneralSettingSchema.index(
 );
 
 // pre-save middleware to ensure only one active setting
-GeneralSettingSchema.pre("save", async function (next) {
+GeneralSettingSchema.pre('save', async function (next) {
+
   if (this.isActive) {
     try {
       // Deactivate all other settings

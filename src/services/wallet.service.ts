@@ -1,9 +1,9 @@
-import mongoose, { ClientSession } from "mongoose";
-import Wallet from "../models/wallet.model";
-import { ErrorResponse } from "../utils/responses";
-import PaystackService from "../services/paystack.services";
-import Transaction from "../features/transaction/transaction.model";
-import { AccountType, AccountType_ } from "../constants/general";
+import mongoose, { ClientSession } from 'mongoose';
+import Wallet from '../models/wallet.model';
+import { ErrorResponse } from '../utils/responses';
+import PaystackService from '../services/paystack.services';
+import Transaction from '../features/transaction/transaction.model';
+import { AccountType, AccountType_ } from '../constants/general';
 
 interface CreateWalletInput {
   userId: string;
@@ -13,7 +13,7 @@ interface CreateWalletInput {
 interface TopUpWalletInput {
   userId: string;
   amount: number; // In Naira
-  paymentMethod: "card" | "bank_transfer";
+  paymentMethod: 'card' | 'bank_transfer';
   paymentReference?: string;
   saveCard?: boolean;
 }
@@ -21,7 +21,7 @@ interface TopUpWalletInput {
 interface WalletTransactionInput {
   userId: string;
   amount: number; // In Naira
-  type: "credit" | "debit";
+  type: 'credit' | 'debit';
   purpose: string;
   description: string;
   tripId?: string;
@@ -60,7 +60,7 @@ class WalletService {
       return wallet;
     } catch (error: any) {
       // console.log("error-creating-wallet", error);
-      throw new ErrorResponse(500, "Error creating wallet", error.message);
+      throw new ErrorResponse(500, 'Error creating wallet', error.message);
     }
   }
 
@@ -79,7 +79,7 @@ class WalletService {
 
       return wallet;
     } catch (error: any) {
-      throw new ErrorResponse(500, "Error fetching wallet", error.message);
+      throw new ErrorResponse(500, 'Error fetching wallet', error.message);
     }
   }
 
@@ -95,7 +95,7 @@ class WalletService {
       const wallet = await this.getUserWallet(input.userId);
 
       if (!wallet.isActive) {
-        throw new ErrorResponse(400, "Wallet is inactive");
+        throw new ErrorResponse(400, 'Wallet is inactive');
       }
 
       // Convert amount to kobo
@@ -107,10 +107,10 @@ class WalletService {
         amount: input.amount, // Paystack expects Naira amount
         metadata: {
           userId: input.userId,
-          purpose: "wallet_topup",
+          purpose: 'wallet_topup',
           walletId: wallet._id,
         },
-        channels: input.paymentMethod === "card" ? ["card"] : ["bank"],
+        channels: input.paymentMethod === 'card' ? ['card'] : ['bank'],
         reference: input.paymentReference,
       });
 
@@ -118,12 +118,12 @@ class WalletService {
       const transaction = new Transaction({
         userId: input.userId,
         userType: wallet.userType,
-        type: "credit",
+        type: 'credit',
         amount: amountInKobo,
         paymentMethod: input.paymentMethod,
         paymentReference: paystackResponse.reference,
-        purpose: "wallet_topup",
-        status: "pending",
+        purpose: 'wallet_topup',
+        status: 'pending',
         balanceBefore: wallet.balance,
         balanceAfter: wallet.balance, // Will be updated when payment is confirmed
         description: `Wallet top-up via ${input.paymentMethod}`,
@@ -148,7 +148,7 @@ class WalletService {
       await session.abortTransaction();
       throw new ErrorResponse(
         500,
-        "Error initiating wallet top-up",
+        'Error initiating wallet top-up',
         error.message
       );
     } finally {
@@ -170,17 +170,17 @@ class WalletService {
       // Find pending transaction
       const transaction = await Transaction.findOne({
         paymentReference: reference,
-        status: "pending",
+        status: 'pending',
       });
 
       if (!transaction) {
-        throw new ErrorResponse(404, "Transaction not found");
+        throw new ErrorResponse(404, 'Transaction not found');
       }
 
       // Get wallet
       const wallet = await Wallet.findOne({ userId: transaction.userId });
       if (!wallet) {
-        throw new ErrorResponse(404, "Wallet not found");
+        throw new ErrorResponse(404, 'Wallet not found');
       }
 
       // Update wallet balance
@@ -192,7 +192,7 @@ class WalletService {
       wallet.lastTransactionAt = new Date();
 
       // Update transaction
-      transaction.status = "completed";
+      transaction.status = 'completed';
       transaction.balanceAfter = newBalance;
       transaction.completedAt = new Date();
 
@@ -215,7 +215,7 @@ class WalletService {
       return { wallet, transaction };
     } catch (error: any) {
       await session.abortTransaction();
-      throw new ErrorResponse(500, "Error processing payment", error.message);
+      throw new ErrorResponse(500, 'Error processing payment', error.message);
     } finally {
       session.endSession();
     }
@@ -239,7 +239,7 @@ class WalletService {
 
       const wallet = await this.getUserWallet(input.userId);
       if (!wallet.isActive) {
-        throw new ErrorResponse(400, "Wallet is inactive");
+        throw new ErrorResponse(400, 'Wallet is inactive');
       }
 
       const amountInKobo = Math.round(input.amount * 100);
@@ -254,11 +254,11 @@ class WalletService {
       const transaction = new Transaction({
         userId: input.userId,
         userType: wallet.userType,
-        type: "credit",
+        type: 'credit',
         amount: amountInKobo,
-        paymentMethod: input.paymentMethod || "system",
+        paymentMethod: input.paymentMethod || 'system',
         purpose: input.purpose,
-        status: "completed",
+        status: 'completed',
         balanceBefore: wallet.balance - amountInKobo,
         balanceAfter: newBalance,
         description: input.description,
@@ -281,7 +281,7 @@ class WalletService {
         // ✅ Only abort if we created it
         await useSession.abortTransaction();
       }
-      throw new ErrorResponse(500, "Error crediting wallet", error.message);
+      throw new ErrorResponse(500, 'Error crediting wallet', error.message);
     } finally {
       if (createdSession) {
         // ✅ Only end if we created it
@@ -307,14 +307,14 @@ class WalletService {
 
       const wallet = await this.getUserWallet(input.userId);
       if (!wallet.isActive) {
-        throw new ErrorResponse(400, "Wallet is inactive");
+        throw new ErrorResponse(400, 'Wallet is inactive');
       }
 
       const amountInKobo = Math.round(input.amount * 100);
 
       // Check sufficient balance
       if (wallet.balance < amountInKobo) {
-        throw new ErrorResponse(400, "Insufficient wallet balance");
+        throw new ErrorResponse(400, 'Insufficient wallet balance');
       }
 
       // Update wallet
@@ -327,11 +327,11 @@ class WalletService {
       const transaction = new Transaction({
         userId: input.userId,
         userType: wallet.userType,
-        type: "debit",
+        type: 'debit',
         amount: amountInKobo,
-        paymentMethod: input.paymentMethod || "wallet",
+        paymentMethod: input.paymentMethod || 'wallet',
         purpose: input.purpose,
-        status: "completed",
+        status: 'completed',
         balanceBefore: wallet.balance + amountInKobo,
         balanceAfter: newBalance,
         description: input.description,
@@ -352,7 +352,7 @@ class WalletService {
       if (createdSession) {
         await useSession.abortTransaction();
       }
-      throw new ErrorResponse(500, "Error debiting wallet", error.message);
+      throw new ErrorResponse(500, 'Error debiting wallet', error.message);
     } finally {
       useSession.endSession();
     }
@@ -373,14 +373,14 @@ class WalletService {
       ]);
 
       if (!fromWallet.isActive || !toWallet.isActive) {
-        throw new ErrorResponse(400, "One or both wallets are inactive");
+        throw new ErrorResponse(400, 'One or both wallets are inactive');
       }
 
       const amountInKobo = Math.round(input.amount * 100);
 
       // Check sufficient balance
       if (fromWallet.balance < amountInKobo) {
-        throw new ErrorResponse(400, "Insufficient balance for transfer");
+        throw new ErrorResponse(400, 'Insufficient balance for transfer');
       }
 
       // Update balances
@@ -396,11 +396,11 @@ class WalletService {
       const debitTransaction = new Transaction({
         userId: input.fromUserId,
         userType: fromWallet.userType,
-        type: "debit",
+        type: 'debit',
         amount: amountInKobo,
-        paymentMethod: "wallet",
-        purpose: "trip_payment",
-        status: "completed",
+        paymentMethod: 'wallet',
+        purpose: 'trip_payment',
+        status: 'completed',
         balanceBefore: fromWallet.balance + amountInKobo,
         balanceAfter: fromWallet.balance,
         description: input.description,
@@ -412,11 +412,11 @@ class WalletService {
       const creditTransaction = new Transaction({
         userId: input.toUserId,
         userType: toWallet.userType,
-        type: "credit",
+        type: 'credit',
         amount: amountInKobo,
-        paymentMethod: "wallet",
-        purpose: "driver_earnings",
-        status: "completed",
+        paymentMethod: 'wallet',
+        purpose: 'driver_earnings',
+        status: 'completed',
         balanceBefore: toWallet.balance - amountInKobo,
         balanceAfter: toWallet.balance,
         description: `Earnings: ${input.description}`,
@@ -443,7 +443,7 @@ class WalletService {
       };
     } catch (error: any) {
       await session.abortTransaction();
-      throw new ErrorResponse(500, "Error transferring funds", error.message);
+      throw new ErrorResponse(500, 'Error transferring funds', error.message);
     } finally {
       session.endSession();
     }
@@ -455,7 +455,7 @@ class WalletService {
   static async getTransactionHistory(
     userId: string,
     pagination: { page: number; limit: number },
-    filter?: { type?: "credit" | "debit"; purpose?: string; status?: string }
+    filter?: { type?: 'credit' | 'debit'; purpose?: string; status?: string }
   ) {
     try {
       const query: any = { userId };
@@ -468,7 +468,7 @@ class WalletService {
         .sort({ createdAt: -1 })
         .limit(pagination.limit)
         .skip((pagination.page - 1) * pagination.limit)
-        .populate("tripId", "tripNumber pickup destination");
+        .populate('tripId', 'tripNumber pickup destination');
 
       const total = await Transaction.countDocuments(query);
 
@@ -481,7 +481,7 @@ class WalletService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Error fetching transaction history",
+        'Error fetching transaction history',
         error.message
       );
     }
@@ -493,24 +493,23 @@ class WalletService {
   private static async getUserType(userId: string): Promise<AccountType> {
     // This would typically check the user's account type from the user model
     // For now, we'll implement a basic check
-    const Driver = mongoose.model("Driver");
-    const Customer = mongoose.model("Customer");
+    const Driver = mongoose.model('Driver');
+    const Customer = mongoose.model('Customer');
 
     const driver = await Driver.findById(userId);
     if (driver) return AccountType_.DRIVER;
 
     const customer = await Customer.findById(userId);
     if (customer) return AccountType_.CUSTOMER;
-
-    throw new ErrorResponse(404, "User not found");
+    throw new ErrorResponse(404, 'User not found');
   }
 
   /**
    * Helper: Get user email
    */
   private static async getUserEmail(userId: string): Promise<string> {
-    const Driver = mongoose.model("Driver");
-    const Customer = mongoose.model("Customer");
+    const Driver = mongoose.model('Driver');
+    const Customer = mongoose.model('Customer');
 
     const driver = await Driver.findById(userId);
     if (driver) return driver.email;
@@ -518,7 +517,7 @@ class WalletService {
     const customer = await Customer.findById(userId);
     if (customer) return customer.email;
 
-    throw new ErrorResponse(404, "User email not found");
+    throw new ErrorResponse(404, 'User email not found');
   }
 }
 

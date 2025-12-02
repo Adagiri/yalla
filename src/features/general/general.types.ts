@@ -1,19 +1,19 @@
 export interface CreateGeneralSettingInput {
   applicationName: string;
   supportPhone: string;
-  defaultCurrency: "NGN" | "USD";
+  defaultCurrency: 'NGN' | 'USD';
   supportEmail: string;
-  timeZone: "WAT" | "UTC";
-  defaultLanguage: "en" | "ha" | "ig" | "yo";
+  timeZone: 'WAT' | 'UTC';
+  defaultLanguage: 'en' | 'ha' | 'ig' | 'yo';
 }
 
 export interface UpdateGeneralSettingInput {
   applicationName?: string;
   supportPhone?: string;
-  defaultCurrency?: "NGN" | "USD";
+  defaultCurrency?: 'NGN' | 'USD';
   supportEmail?: string;
-  timeZone?: "WAT" | "UTC";
-  defaultLanguage?: "en" | "ha" | "ig" | "yo";
+  timeZone?: 'WAT' | 'UTC';
+  defaultLanguage?: 'en' | 'ha' | 'ig' | 'yo';
   isActive?: boolean;
 }
 
@@ -21,10 +21,10 @@ export interface GeneralSettingType {
   id: string;
   applicationName: string;
   supportPhone: string;
-  defaultCurrency: "NGN" | "USD";
+  defaultCurrency: 'NGN' | 'USD';
   supportEmail: string;
-  timeZone: "WAT" | "UTC";
-  defaultLanguage: "en" | "ha" | "ig" | "yo";
+  timeZone: 'WAT' | 'UTC';
+  defaultLanguage: 'en' | 'ha' | 'ig' | 'yo';
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -190,12 +190,12 @@ export interface SystemHealthType extends SystemHealthData {
 }
 
 export interface ExportRequestInput {
-  exportType: "TRIP_REPORTS" | "USERS_DATA" | "PAYMENT_RECORDS" | "ALL_DATA";
+  exportType: 'TRIP_REPORTS' | 'USERS_DATA' | 'PAYMENT_RECORDS' | 'ALL_DATA';
   filters?: any;
 }
 
 export interface ImportRequestInput {
-  importType: "DRIVER_DATA" | "CUSTOMER_DATA" | "VEHICLE_DATA";
+  importType: 'DRIVER_DATA' | 'CUSTOMER_DATA' | 'VEHICLE_DATA';
   fileName: string;
   fileSizeMB: number;
   recordCount: number;

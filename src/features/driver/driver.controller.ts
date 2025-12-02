@@ -14,9 +14,13 @@ import {
   DriverFilter,
   DriverSort,
   UpdateDriverPersonalInfoInput,
+
+  UpdateDriverVehicleInfo,
   UpdateDriverLicenseInput,
   UpdateProfilePhotoInput,
 } from './driver.type';
+
+// FIXME: UPDATE DRIVER'S DOC WITH VEHICLE ID, INSTEAD OF DRIVER'S ID
 
 class DriverController {
   static async listDrivers(
@@ -69,6 +73,14 @@ class DriverController {
   ) {
     const response = await DriverService.registerDriver(input);
     return new AuthPayload(response.entity, response.token);
+  }
+
+  static async updateDriverVehicleInfo(
+    _: any,
+    { input }: { input: UpdateDriverVehicleInfo }
+  ) {
+    const updatedDriver = await DriverService.updateDriverVehicleInfo(input);
+    return updatedDriver;
   }
 
   static async updateDriverPersonalInfo(

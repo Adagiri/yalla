@@ -2,6 +2,9 @@ import { v4 as uuidv4 } from 'uuid';
 import mongoose, { Schema, Document } from 'mongoose';
 import { AccountType, AccountType_ } from '../../constants/general';
 
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+
+
 export interface AdminDocument extends Document {
   _id: string;
   firstname: string;
@@ -29,7 +32,11 @@ export interface AdminDocument extends Document {
 
   // Profile
   profilePhoto?: string;
-  phone?: string;
+ phone?: {
+   countryCode: string;
+    localNumber: string; 
+    fullPhone: string
+   };
   timezone: string;
   language: string;
 
@@ -39,11 +46,10 @@ export interface AdminDocument extends Document {
 
   // Session Management
   sessionTimeoutMinutes: number;
-
+  deletedAt?: Date;
   createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
-
   // Methods
   toSafeObject(): any;
 }
@@ -106,7 +112,11 @@ const adminSchema = new Schema(
 
     // Profile
     profilePhoto: { type: String },
-    phone: { type: String, trim: true },
+    phone: {
+      countryCode: String,
+      localNumber: String,
+      fullPhone: String,
+    },
     timezone: { type: String, default: 'UTC' },
     language: { type: String, default: 'en' },
 
@@ -118,6 +128,7 @@ const adminSchema = new Schema(
     sessionTimeoutMinutes: { type: Number, default: 480 }, // 8 hours
 
     createdBy: { type: String },
+    deletedAt: {type: Date},
   },
   {
     timestamps: true,
@@ -196,6 +207,19 @@ adminSchema.statics.countByRole = function () {
   ]);
 };
 
+adminSchema.pre<AdminDocument>('save', function (next) {
+  if (this.phone && this.phone.fullPhone) {
+    const phoneNumber = parsePhoneNumberFromString(this.phone.fullPhone);
+    if (!phoneNumber || !phoneNumber.isValid()) {
+      return next(new Error('Invalid phone number format'));
+    }
+    // Normalize and update phone fields
+    this.phone.countryCode = '+' + phoneNumber.countryCallingCode;
+    this.phone.localNumber = phoneNumber.nationalNumber;
+    this.phone.fullPhone = phoneNumber.format('E.164');
+  }
+  next();
+});
 // Create model
 const Admin = mongoose.model<AdminDocument>('Admin', adminSchema);
 

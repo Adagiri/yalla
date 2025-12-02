@@ -1,6 +1,7 @@
-import { combineResolvers } from "graphql-resolvers";
-import LocationController from "./location.controller";
-import { protectEntities } from "../../utils/auth-middleware";
+
+import { combineResolvers } from 'graphql-resolvers';
+import LocationController from './location.controller';
+import { protectEntities } from '../../utils/auth-middleware';
 
 const locationResolvers = {
   Query: {
@@ -11,19 +12,19 @@ const locationResolvers = {
   },
   Mutation: {
     createLocation: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       LocationController.createLocation
     ),
     updateLocation: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       LocationController.updateLocation
     ),
     deleteLocation: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       LocationController.deleteLocation
     ),
     toggleLocationStatus: combineResolvers(
-      protectEntities(["ADMIN"]),
+      protectEntities(['ADMIN']),
       LocationController.toggleLocationStatus
     ),
   },

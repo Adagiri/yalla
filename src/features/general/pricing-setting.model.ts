@@ -1,4 +1,5 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
+
 
 export interface IPricingSetting extends Document {
   baseFare: number;
@@ -15,6 +16,8 @@ export interface IPricingSetting extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+
 
 const PricingSettingSchema = new Schema<IPricingSetting>(
   {
@@ -96,6 +99,6 @@ PricingSettingSchema.index(
 );
 
 export default mongoose.model<IPricingSetting>(
-  "PricingSetting",
+  'PricingSetting',
   PricingSettingSchema
 );

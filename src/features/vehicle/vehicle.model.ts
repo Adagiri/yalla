@@ -1,6 +1,5 @@
-import mongoose, { Schema, Document } from "mongoose";
-import { v4 as uuidv4 } from "uuid";
-
+import mongoose, { Schema, Document } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 export interface VehicleDocument extends Document {
   _id: string;
   brand: string;
@@ -13,7 +12,7 @@ export interface VehicleDocument extends Document {
   plateNumber: string;
 
   // ONLY INSPECTION FIELDS
-  inspectionStatus: "pending" | "approved" | "rejected" | "expired";
+  inspectionStatus: 'pending' | 'approved' | 'rejected' | 'expired';
   lastInspectionDate?: Date;
   nextInspectionDue?: Date;
 
@@ -33,11 +32,11 @@ const VehicleSchema = new Schema<VehicleDocument>(
     plateNumber: { type: String, required: true, unique: true },
 
     // INSPECTION FIELDS
-    driverId: { type: String, ref: "Driver" },
+    driverId: { type: String, ref: 'Driver' },
     inspectionStatus: {
       type: String,
-      enum: ["pending", "approved", "rejected", "expired"],
-      default: "pending",
+      enum: ['pending', 'approved', 'rejected', 'expired'],
+      default: 'pending',
     },
     lastInspectionDate: { type: Date },
     nextInspectionDue: { type: Date },
@@ -56,10 +55,10 @@ VehicleSchema.index({ driverId: 1 });
 VehicleSchema.index({ inspectionStatus: 1 });
 
 // Auto-expire inspection if due date passed
-VehicleSchema.pre<VehicleDocument>("save", function (next) {
+VehicleSchema.pre<VehicleDocument>('save', function (next) {
   if (this.nextInspectionDue && this.nextInspectionDue < new Date()) {
-    if (this.inspectionStatus === "approved") {
-      this.inspectionStatus = "expired";
+    if (this.inspectionStatus === 'approved') {
+      this.inspectionStatus = 'expired';
     }
   }
   next();
@@ -71,15 +70,15 @@ VehicleSchema.index({ driverId: 1 });
 VehicleSchema.index({ inspectionStatus: 1 });
 
 // Auto-expire inspection if due date passed
-VehicleSchema.pre<VehicleDocument>("save", function (next) {
+VehicleSchema.pre<VehicleDocument>('save', function (next) {
   if (this.nextInspectionDue && this.nextInspectionDue < new Date()) {
-    if (this.inspectionStatus === "approved") {
-      this.inspectionStatus = "expired";
+    if (this.inspectionStatus === 'approved') {
+      this.inspectionStatus = 'expired';
     }
   }
   next();
 });
 
-const Vehicle = mongoose.model<VehicleDocument>("Vehicle", VehicleSchema);
+const Vehicle = mongoose.model<VehicleDocument>('Vehicle', VehicleSchema);
 
 export default Vehicle;

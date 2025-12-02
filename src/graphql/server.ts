@@ -1,25 +1,24 @@
-const { useServer } = require("graphql-ws/use/ws");
-import { ApolloServer } from "@apollo/server";
-import { expressMiddleware } from "@apollo/server/express4";
-import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
-import { WebSocketServer } from "ws";
-import express from "express";
-import http from "http";
-import cors from "cors";
-import schema from "./schema";
-import { context } from "./context";
-import { formatError } from "../utils/error-handler";
-import { corsConfig } from "./cors";
-import { getUserInfo } from "../utils/auth-middleware";
-import rateLimit from "express-rate-limit";
-import { ServiceManager } from "../services/service-manager";
-import { BackgroundRunnersService } from "../services/background-runners.service";
-import { startCommissionSettlementJob } from "../jobs/commission-settlement.job";
-
+const { useServer } = require('graphql-ws/use/ws');
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@apollo/server/express4';
+import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
+import { WebSocketServer } from 'ws';
+import express from 'express';
+import http from 'http';
+import cors from 'cors';
+import schema from './schema';
+import { context } from './context';
+import { formatError } from '../utils/error-handler';
+import { corsConfig } from './cors';
+import { getUserInfo } from '../utils/auth-middleware';
+import rateLimit from 'express-rate-limit';
+import { ServiceManager } from '../services/service-manager';
+import { BackgroundRunnersService } from '../services/background-runners.service';
+import { startCommissionSettlementJob } from '../jobs/commission-settlement.job';
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: "Too many login attempts, please try again later.",
+  message: 'Too many login attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -28,15 +27,15 @@ export const startApolloServer = async (app: express.Application) => {
   await ServiceManager.initialize();
   await BackgroundRunnersService.start();
   await startCommissionSettlementJob();
-  process.on("SIGTERM", async () => {
-    console.log("SIGTERM received, shutting down gracefully");
+  process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, shutting down gracefully');
     BackgroundRunnersService.stop();
     await ServiceManager.shutdown();
     process.exit(0);
   });
 
-  process.on("SIGINT", async () => {
-    console.log("SIGINT received, shutting down gracefully");
+  process.on('SIGINT', async () => {
+    console.log('SIGINT received, shutting down gracefully');
     BackgroundRunnersService.stop();
     await ServiceManager.shutdown();
     process.exit(0);
@@ -47,7 +46,7 @@ export const startApolloServer = async (app: express.Application) => {
   // Create WebSocket server for subscriptions
   const wsServer = new WebSocketServer({
     server: httpServer,
-    path: "/graphql",
+    path: '/graphql',
   });
 
   // Set up WebSocket server
@@ -59,8 +58,8 @@ export const startApolloServer = async (app: express.Application) => {
 
         const token =
           ctx.connectionParams?.authToken ||
-          ctx.connectionParams?.Authorization?.replace("Bearer ", "") ||
-          ctx.connectionParams?.authorization?.replace("Bearer ", "");
+          ctx.connectionParams?.Authorization?.replace('Bearer ', '') ||
+          ctx.connectionParams?.authorization?.replace('Bearer ', '');
         if (token) {
           const user = getUserInfo(token);
           return { user };
@@ -97,7 +96,7 @@ export const startApolloServer = async (app: express.Application) => {
   }) as unknown as express.RequestHandler;
 
   app.use(
-    "/graphql",
+    '/graphql',
     cors(corsConfig),
     express.json(),
     apolloMiddleware,

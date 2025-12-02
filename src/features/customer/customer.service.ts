@@ -54,6 +54,7 @@ class CustomerService {
 
   static async registerCustomer(input: RegisterCustomerInput) {
     try {
+
       const { phone, password, referralCode } = input;
 
       if (!phone) {
@@ -101,7 +102,6 @@ class CustomerService {
 
       // Create the customer record
       const customer = await Customer.create(customerData);
-
       // Create referral transaction if referral code was provided
       if (referralCode) {
         try {
@@ -120,7 +120,6 @@ class CustomerService {
           console.error('Failed to create referral transaction:', error);
         }
       }
-
       // Send phone verification SMS
       await NotificationService.sendSMS({
         to: phone.fullPhone,

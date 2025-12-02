@@ -21,7 +21,8 @@ Filters for searching drivers by various fields.
 All fields are optional; if provided, they constrain the query results.
 """
 input DriverFilter {
-  "IDs of drivers to match"
+  # IDs of drivers to match
+
   ids: [ID!]
   firstname: String
   lastname: String
@@ -49,6 +50,11 @@ input UpdateDriverPersonalInfoInput {
   firstname: String!
   lastname: String!
   locationId: ID!
+}
+# update driver's vehicle information;
+input UpdateDriverVehicleInfo {
+  driverId: String!
+  vehicleInfoSet: Boolean
 }
 
 """
@@ -145,6 +151,7 @@ extend type Mutation {
   updateDriverPersonalInfo(input: UpdateDriverPersonalInfoInput!): Driver!
   updateDriverProfilePhoto(input: UpdateProfilePhotoInput!): Driver!
   updateDriverLicense(input: UpdateDriverLicenseInput!): Driver!
+  updateDriverVehicleInfo(input: UpdateDriverVehicleInfo): Driver!
 }
 
 type DriverLocationResponse {

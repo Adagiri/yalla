@@ -1,4 +1,5 @@
-import { ENV } from "../config/env";
+
+import { ENV } from '../config/env';
 
 interface Coordinates {
   lat: number;

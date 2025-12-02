@@ -12,7 +12,7 @@ input CreateAdminInput {
   role: AdminRole!
   department: String!
   employeeId: String
-  phone: String
+  phone: PhoneInput
   permissions: [String!]
 }
 
@@ -23,7 +23,7 @@ input UpdateAdminInput {
   role: AdminRole
   department: String
   employeeId: String
-  phone: String
+  phone: PhoneInput
   permissions: [String!]
   timezone: String
   language: String

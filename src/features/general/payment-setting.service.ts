@@ -1,10 +1,9 @@
-import { ErrorResponse } from "../../utils/responses";
-import PaymentSetting, { IPaymentSetting } from "./payment-setting.model";
+import { ErrorResponse } from '../../utils/responses';
+import PaymentSetting, { IPaymentSetting } from './payment-setting.model';
 import {
   CreatePaymentSettingInput,
   UpdatePaymentSettingInput,
-} from "./general.types";
-
+} from './general.types';
 export class PaymentSettingService {
   static async createPaymentSetting(
     input: CreatePaymentSettingInput
@@ -12,7 +11,7 @@ export class PaymentSettingService {
     try {
       const setting = new PaymentSetting({
         ...input,
-        currency: "NGN",
+        currency: 'NGN',
         isActive: false,
       });
 
@@ -22,12 +21,12 @@ export class PaymentSettingService {
       if (error.code === 11000) {
         throw new ErrorResponse(
           400,
-          "An active payment setting already exists"
+          'An active payment setting already exists'
         );
       }
       throw new ErrorResponse(
         500,
-        "Failed to create payment settings",
+        'Failed to create payment settings',
         error.message
       );
     }
@@ -40,7 +39,7 @@ export class PaymentSettingService {
     try {
       const setting = await PaymentSetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "Payment settings not found");
+        throw new ErrorResponse(404, 'Payment settings not found');
       }
 
       // if activating this setting, deactivate others
@@ -58,7 +57,7 @@ export class PaymentSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to update payment settings",
+        'Failed to update payment settings',
         error.message
       );
     }
@@ -68,7 +67,7 @@ export class PaymentSettingService {
     try {
       const setting = await PaymentSetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "Payment settings not found");
+        throw new ErrorResponse(404, 'Payment settings not found');
       }
 
       await PaymentSetting.updateMany(
@@ -83,7 +82,7 @@ export class PaymentSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to activate payment settings",
+        'Failed to activate payment settings',
         error.message
       );
     }
@@ -93,7 +92,7 @@ export class PaymentSettingService {
     try {
       const setting = await PaymentSetting.findById(id);
       if (!setting) {
-        throw new ErrorResponse(404, "Payment settings not found");
+        throw new ErrorResponse(404, 'Payment settings not found');
       }
 
       setting.isActive = false;
@@ -103,7 +102,7 @@ export class PaymentSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to deactivate payment settings",
+        'Failed to deactivate payment settings',
         error.message
       );
     }
@@ -115,7 +114,7 @@ export class PaymentSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch payment settings",
+        'Failed to fetch payment settings',
         error.message
       );
     }
@@ -133,7 +132,7 @@ export class PaymentSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch payment settings",
+        'Failed to fetch payment settings',
         error.message
       );
     }
@@ -159,7 +158,7 @@ export class PaymentSettingService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch payment settings history",
+        'Failed to fetch payment settings history',
         error.message
       );
     }
@@ -174,7 +173,7 @@ export class PaymentSettingService {
       minimumWalletBalance: 100,
       processingFeeRate: 2.5,
       autoTopupEnabled: false,
-      currency: "NGN",
+      currency: 'NGN',
       isActive: true,
     });
 

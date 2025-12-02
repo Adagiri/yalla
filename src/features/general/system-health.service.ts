@@ -1,9 +1,10 @@
-import { ErrorResponse } from "../../utils/responses";
+
+import { ErrorResponse } from '../../utils/responses';
 import SystemHealth, {
   ISystemHealthDocument,
   ISystemHealth,
-} from "./system-health.model";
-import { UpdateSystemHealthInput } from "./general.types";
+} from './system-health.model';
+import { UpdateSystemHealthInput } from './general.types';
 
 // NB: All the implementation below are not real, just dummny data and placeholder
 export class SystemHealthService {
@@ -19,7 +20,7 @@ export class SystemHealthService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch system health",
+        'Failed to fetch system health',
         error.message
       );
     }
@@ -45,7 +46,7 @@ export class SystemHealthService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to refresh system health",
+        'Failed to refresh system health',
         error.message
       );
     }
@@ -74,7 +75,7 @@ export class SystemHealthService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to update system health",
+        'Failed to update system health',
         error.message
       );
     }
@@ -116,7 +117,7 @@ export class SystemHealthService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        "Failed to fetch system health stats",
+        'Failed to fetch system health stats',
         error.message
       );
     }
