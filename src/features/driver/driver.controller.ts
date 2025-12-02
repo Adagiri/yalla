@@ -14,6 +14,7 @@ import {
   DriverFilter,
   DriverSort,
   UpdateDriverPersonalInfoInput,
+
   UpdateDriverVehicleInfo,
   UpdateDriverLicenseInput,
   UpdateProfilePhotoInput,
@@ -180,6 +181,12 @@ class DriverController {
     if (!input.isOnline) {
       await cacheService.removeDriverLocation(user.id);
     }
+
+    // Update MongoDB directly
+    await DriverService.updateDriverStatus(user.id, {
+      isOnline: input.isOnline,
+      isAvailable,
+    });
 
     return {
       success: true,

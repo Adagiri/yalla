@@ -381,7 +381,6 @@ class AdminAuthService {
   static async activateAdmin(adminId: string, activatedBy: string) {
     try {
       const admin = await Admin.findById(adminId);
-
       if (!admin || admin.deletedAt) {
         throw new ErrorResponse(404, 'Admin not found');
       }
@@ -414,11 +413,9 @@ class AdminAuthService {
   /**
    * Deactivate admin
    */
-  static async deactivateAdmin(adminId: string, deactivatedBy: string) {
-    
+  static async deactivateAdmin(adminId: string, deactivatedBy: string) {    
     try {
       const admin = await Admin.findById(adminId);
-   
       if (!admin) {
         throw new ErrorResponse(404, 'Admin not found');
       }
@@ -470,8 +467,8 @@ class AdminAuthService {
   static async deleteAdmin(adminId: string, deletedBy: string) {
     try {
       const admin = await Admin.findById(adminId);
-
       if (!admin || admin.deletedAt) {
+
         throw new ErrorResponse(404, 'Admin not found');
       }
 
@@ -490,9 +487,10 @@ class AdminAuthService {
 
       // Soft delete by deactivating and marking as deleted
       admin.isActive = false;
-      admin.email = admin.email + "__deleted__" + Date.now();
+      admin.email = admin.email + '__deleted__' + Date.now();
       admin.updatedAt = new Date();
       admin.deletedAt = new Date();
+
       await admin.save();
 
       // Log deletion

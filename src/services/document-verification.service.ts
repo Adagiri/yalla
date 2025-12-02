@@ -47,7 +47,6 @@ export class DocumentVerificationService {
           updateData.profilePhotoSet = action.status === VerificationStatus.APPROVED;
           message = `Profile photo ${action.status.toLowerCase()}`;
           break;
-
         case 'VEHICLE_INSPECTION':
           if (userType !== 'DRIVER') {
             throw new ErrorResponse(400, 'Vehicle inspection is only for drivers');

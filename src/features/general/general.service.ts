@@ -7,6 +7,7 @@ import {
 } from '../../utils/auth';
 import { ErrorResponse } from '../../utils/responses';
 import Driver, { DriverModelType } from '../driver/driver.model';
+
 import {
   AccountType,
   AccountType_,
@@ -17,6 +18,7 @@ import {
   UploadUrlPurposeEnum,
 } from '../../constants/general';
 import NotificationService from '../../services/notification.services';
+
 import {
   loginAccessCodeTemplate,
   mfaEnabledTemplate,
@@ -104,16 +106,13 @@ class GeneralService {
       // Extract file extension from the MIME type (e.g., "image/png" => "png")
       const extension = contentType.slice(6);
       const key = `${purpose.toLowerCase().replace('_', '-')}/${randomString}.${extension}`;
-
       // Generate the pre-signed URL for upload.
       const uploadUrl = await AWSServices.generateS3SignedUrl(key, contentType);
       if (!uploadUrl) {
         throw new ErrorResponse(500, 'Could not generate S3 signed URL');
       }
-
       // Construct the public URL for accessing the file after upload.
       const url = `https://${process.env.AWS_S3_ASSET_HOSTNAME}/${key}`;
-
       return {
         uploadUrl,
         url,
@@ -140,8 +139,8 @@ class GeneralService {
 
     if (!entity) {
       throw new ErrorResponse(404, 'Invalid token');
-    }
 
+    }
     const isEmailVerification =
       entity.emailVerificationToken === dbEncryptedToken;
     const isPhoneVerification =
@@ -151,11 +150,9 @@ class GeneralService {
     if (isEmailVerification && entity.isEmailVerified) {
       throw new ErrorResponse(400, 'Email is already verified');
     }
-
     if (isPhoneVerification && entity.isPhoneVerified) {
       throw new ErrorResponse(400, 'Phone is already verified');
     }
-
     const code = generateRandomNumbers(4);
     const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
@@ -251,6 +248,7 @@ class GeneralService {
 
       const isValidPassword = await verifyPassword(password, entity.password);
       if (!isValidPassword) throw new ErrorResponse(400, 'Invalid credentials');
+
       if (entity.isMFAEnabled) {
         const { code, encryptedToken, token, tokenExpiry } =
           generateVerificationCode(32, 10);
@@ -296,7 +294,7 @@ class GeneralService {
       return response;
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error logging in', error.message);
-    }
+     }
   }
 
   static async verifyCode({ code, model, token }: VerifyCodeInput) {
@@ -314,8 +312,7 @@ class GeneralService {
       });
 
       if (!entity) throw new ErrorResponse(404, 'Invalid token');
-
-      const isEmailVerification =
+   const isEmailVerification =
         entity.emailVerificationToken === encryptedToken;
       const isPhoneVerification =
         entity.phoneVerificationToken === encryptedToken;
@@ -410,6 +407,7 @@ class GeneralService {
           entity.mfaVerificationExpiry.getTime() < now
         ) {
           throw new ErrorResponse(400, 'Verification code has expired');
+
         }
 
         entity.mfaVerificationCode = null;
@@ -427,7 +425,9 @@ class GeneralService {
       });
       return response;
     } catch (error: any) {
+
       throw new ErrorResponse(500, 'Error verifying the code', error.message);
+
     }
   }
 
@@ -443,6 +443,7 @@ class GeneralService {
 
       if (authChannel === AuthChannel.SMS && !entity.isPhoneVerified) {
         throw new ErrorResponse(400, 'Phone verification is required for MFA');
+
       }
 
       entity.isMFAEnabled = true;
@@ -467,21 +468,25 @@ class GeneralService {
       return entity;
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error enabling MFA', error.message);
+
     }
   }
 
   static async disableMfa({ id, model }: DisableMfaInput) {
     try {
       const entity: any = await model.findOne({ id: id });
+
       if (!entity) throw new ErrorResponse(404, 'User not found');
+
 
       entity.isMFAEnabled = false;
       await entity.save();
 
       return entity;
     } catch (error: any) {
+
       throw new ErrorResponse(500, 'Error disabling MFA', error.message);
-    }
+  }
   }
 
   static async requestResetPassword({
@@ -492,16 +497,21 @@ class GeneralService {
   }: RequestResetPasswordInput): Promise<String> {
     try {
       let entity: DriverModelType | CustomerModelType | null;
+
       let resetToken = '';
+
       if (
         !authChannel ||
         (authChannel !== AuthChannelEMAIL && authChannel !== AuthChannelSMS)
       ) {
+
         throw new ErrorResponse(400, 'Invalid or missing authChannel');
+
       }
 
       if (authChannel === AuthChannelEMAIL) {
         if (!email) {
+
           throw new ErrorResponse(400, 'Email must be provided');
         }
 
@@ -536,6 +546,7 @@ class GeneralService {
         });
         if (!entity) {
           throw new ErrorResponse(404, 'Phone number not registered');
+
         }
 
         const { code, encryptedToken, token, tokenExpiry } =
@@ -578,7 +589,6 @@ class GeneralService {
         await model.findOne({
           resetPasswordToken: encryptedToken,
         });
-
       if (!entity) throw new ErrorResponse(404, 'Invalid token');
 
       if (
@@ -672,7 +682,7 @@ class GeneralService {
       throw new ErrorResponse(
         error.statusCode || 500,
         error.message || 'Error generating upload URL'
-      );
+      )
     }
   }
 
@@ -690,6 +700,7 @@ class GeneralService {
       throw new ErrorResponse(
         error.statusCode || 500,
         error.message || 'Error generating download URL'
+
       );
     }
   }
@@ -715,6 +726,7 @@ class GeneralService {
       throw new ErrorResponse(
         error.statusCode || 500,
         error.message || 'Failed to verify document'
+
       );
     }
   }
@@ -726,6 +738,7 @@ class GeneralService {
       throw new ErrorResponse(
         error.statusCode || 500,
         error.message || 'Failed to get verification status'
+
       );
     }
   }
@@ -748,6 +761,7 @@ class GeneralService {
       throw new ErrorResponse(
         error.statusCode || 500,
         error.message || 'Failed to toggle license verification'
+
       );
     }
   }

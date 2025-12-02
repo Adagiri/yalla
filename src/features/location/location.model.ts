@@ -99,6 +99,7 @@ const LocationSchema = new Schema<LocationDocument>(
 );
 
 // Create geospatial indexes
+
 LocationSchema.index({ location: '2dsphere' });
 LocationSchema.index({ boundary: '2dsphere' });
 

@@ -4,10 +4,10 @@ const validator = require('validator');
 export interface IGeneralSetting extends Document {
   applicationName: string;
   supportPhone: string;
-  defaultCurrency: 'NGN' | 'USD';
+  defaultCurrency: "NGN" | "USD";
   supportEmail: string;
-  timeZone: 'WAT' | 'UTC';
-  defaultLanguage: 'en' | 'ha' | 'ig' | 'yo';
+  timeZone: "WAT" | "UTC";
+  defaultLanguage: "en" | "ha" | "ig" | "yo";
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -40,6 +40,7 @@ const GeneralSettingSchema = new Schema<IGeneralSetting>(
     supportEmail: {
       type: String,
       required: [true, 'Support email is required'],
+
       trim: true,
       lowercase: true,
       //   match: [
@@ -89,11 +90,12 @@ GeneralSettingSchema.index(
 
 // pre-save middleware to ensure only one active setting
 GeneralSettingSchema.pre('save', async function (next) {
+
   if (this.isActive) {
     try {
       // Deactivate all other settings
       await mongoose
-        .model('GeneralSetting')
+        .model("GeneralSetting")
         .updateMany(
           { _id: { $ne: this._id }, isActive: true },
           { $set: { isActive: false } }
@@ -106,6 +108,6 @@ GeneralSettingSchema.pre('save', async function (next) {
 });
 
 export default mongoose.model<IGeneralSetting>(
-  'GeneralSetting',
+  "GeneralSetting",
   GeneralSettingSchema
 );

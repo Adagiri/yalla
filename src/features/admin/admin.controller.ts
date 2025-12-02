@@ -176,7 +176,6 @@ class AdminController {
     { user }: ContextType
   ) {
     try {
-      console.log("starting---")
       const result = await AdminAuthService.deleteAdmin(id, user.id);
 
       await AuditLogService.logAction({
@@ -350,7 +349,9 @@ class AdminController {
 
       return result;
     } catch (error: any) {
+
       console.log(error, 'Error from broadcasting notification')
+
       throw new ErrorResponse(
         500,
         'Error broadcasting notification',

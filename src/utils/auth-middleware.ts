@@ -1,3 +1,4 @@
+
 import jwt from 'jsonwebtoken';
 import { ErrorResponse } from './responses';
 import Admin, { AdminDocument } from '../features/admin/admin.model';
@@ -88,6 +89,7 @@ export const protectSuperAdmin = async (
   user = userRecord;
   return skip;
 };
+
 
 export const protectDriver = async (
   _: unknown,
@@ -390,6 +392,7 @@ export const requireRole = (roles: string[]) => {
     return skip;
   };
 };
+
 
 // Helper function to check if user has permission (for use in resolvers)
 export function hasPermission(

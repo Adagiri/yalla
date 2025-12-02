@@ -54,7 +54,8 @@ class CustomerService {
 
   static async registerCustomer(input: RegisterCustomerInput) {
     try {
-      const { phone, password } = input;
+
+      const { phone, password, referralCode } = input;
 
       if (!phone) {
         throw new ErrorResponse(400, 'Phone are required');
@@ -68,6 +69,19 @@ class CustomerService {
 
       if (existingCustomer) {
         throw new ErrorResponse(400, 'Phone number already registered');
+      }
+
+      // Validate referral code if provided
+      if (referralCode) {
+        const referralService = (await import('../referral/referral.service'))
+          .default;
+        const validation = await referralService.validateReferralCode(
+          referralCode
+        );
+
+        if (!validation.isValid) {
+          throw new ErrorResponse(400, validation.error || 'Invalid referral code');
+        }
       }
 
       const hashedPassword = await hashPassword(password);
@@ -88,7 +102,24 @@ class CustomerService {
 
       // Create the customer record
       const customer = await Customer.create(customerData);
-
+      // Create referral transaction if referral code was provided
+      if (referralCode) {
+        try {
+          const referralService = (await import('../referral/referral.service'))
+            .default;
+          await referralService.createReferralTransaction(
+            referralCode,
+            customer._id,
+            customer.accountType,
+            {
+              signupDevice: 'mobile', // You can enhance this with actual device info
+            }
+          );
+        } catch (error: any) {
+          // Log error but don't fail registration
+          console.error('Failed to create referral transaction:', error);
+        }
+      }
       // Send phone verification SMS
       await NotificationService.sendSMS({
         to: phone.fullPhone,

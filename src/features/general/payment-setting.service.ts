@@ -4,7 +4,6 @@ import {
   CreatePaymentSettingInput,
   UpdatePaymentSettingInput,
 } from './general.types';
-
 export class PaymentSettingService {
   static async createPaymentSetting(
     input: CreatePaymentSettingInput

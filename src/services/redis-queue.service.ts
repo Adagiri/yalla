@@ -112,7 +112,7 @@ export class RedisQueueService {
         if (!result) continue;
 
         const jobData = JSON.parse(result[1]);
-        console.log(jobData, 'job data')
+        console.log(jobData, 'job data');
         const job: Job = {
           ...jobData,
           createdAt: new Date(jobData.createdAt),

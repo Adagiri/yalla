@@ -51,7 +51,6 @@ export class PricingSettingService {
       if (!setting) {
         throw new ErrorResponse(404, 'Pricing settings not found');
       }
-
       if (
         input.maximumFare &&
         input.minimumFare &&
@@ -84,6 +83,8 @@ export class PricingSettingService {
     }
   }
 
+
+  
   static async activatePricingSetting(id: string): Promise<IPricingSetting> {
     try {
       const setting = await PricingSetting.findById(id);

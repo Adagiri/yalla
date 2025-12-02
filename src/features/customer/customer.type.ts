@@ -4,6 +4,8 @@ export interface RegisterCustomerInput {
   phone: { countryCode: string; localNumber: string; fullPhone: string };
   password: string;
   authChannel: AuthChannel;
+  referralCode?: string; // Optional referral code
+
 }
 
 export interface AddCustomerInput {

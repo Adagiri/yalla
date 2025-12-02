@@ -1,7 +1,9 @@
+
 import { combineResolvers } from 'graphql-resolvers';
 import GeneralController from './general.controller';
 import { protectEntities } from '../../utils/auth-middleware';
 import { AccountType, AccountType_ } from '../../constants/general';
+
 
 const generalResolvers = {
   AuthEntity: {
@@ -22,6 +24,7 @@ const generalResolvers = {
   AccountEntity: {
     __resolveType(obj: any) {
       if (obj.accountType === AccountType_.ADMIN) {
+
         return 'Admin';
       }
       if (obj.accountType === AccountType_.DRIVER) {
@@ -29,6 +32,7 @@ const generalResolvers = {
       }
       if (obj.accountType === AccountType_.CUSTOMER) {
         return 'Customer';
+
       }
       return null;
     },
@@ -77,6 +81,7 @@ const generalResolvers = {
     ),
     getDataImports: combineResolvers(
       protectEntities(['ADMIN']),
+
       GeneralController.getDataImports
     ),
   },
@@ -146,6 +151,7 @@ const generalResolvers = {
 
     // Payment Settings Mutations
     createPaymentSetting: combineResolvers(
+
       protectEntities(['ADMIN']),
       GeneralController.createPaymentSetting
     ),
@@ -192,6 +198,7 @@ const generalResolvers = {
 
     // Data Management Mutations
     requestDataExport: combineResolvers(
+
       protectEntities(['ADMIN']),
       GeneralController.requestDataExport
     ),

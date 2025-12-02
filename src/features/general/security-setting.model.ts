@@ -31,6 +31,7 @@ const SecuritySettingSchema = new Schema<ISecuritySetting>(
       required: [true, 'Session timeout is required'],
       min: [1, 'Session timeout must be at least 1 hour'],
       max: [720, 'Session timeout cannot exceed 720 hours (30 days)'],
+
       default: 24,
     },
     maxLoginAttempts: {

@@ -15,7 +15,6 @@ import rateLimit from 'express-rate-limit';
 import { ServiceManager } from '../services/service-manager';
 import { BackgroundRunnersService } from '../services/background-runners.service';
 import { startCommissionSettlementJob } from '../jobs/commission-settlement.job';
-
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,

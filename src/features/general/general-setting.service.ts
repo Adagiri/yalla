@@ -41,7 +41,6 @@ export class GeneralSettingService {
       );
     }
   }
-
   /**
    * Update existing general settings
    */
@@ -205,6 +204,7 @@ export class GeneralSettingService {
       supportEmail: 'support@yallaride.com',
       timeZone: 'WAT',
       defaultLanguage: 'en',
+
       isActive: true,
     });
 

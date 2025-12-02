@@ -1,3 +1,4 @@
+
 import { combineResolvers } from 'graphql-resolvers';
 import LocationController from './location.controller';
 import { protectEntities } from '../../utils/auth-middleware';

@@ -1,8 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
-
 export interface IDataExport extends Document {
   exportType: 'TRIP_REPORTS' | 'USERS_DATA' | 'PAYMENT_RECORDS' | 'ALL_DATA';
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
   fileUrl?: string;
   fileSizeMB?: number;
   recordCount: number;

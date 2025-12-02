@@ -1,6 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-
 export interface VehicleDocument extends Document {
   _id: string;
   brand: string;
@@ -9,7 +8,7 @@ export interface VehicleDocument extends Document {
   color: string;
   identificationNumber: string;
   vehicleInspectionDone: boolean;
-  driverId: string;
+  driverId?: string;
   plateNumber: string;
 
   // ONLY INSPECTION FIELDS

@@ -1,3 +1,4 @@
+
 import { combineResolvers } from 'graphql-resolvers';
 import DriverController from './driver.controller';
 import { protectEntities } from '../../utils/auth-middleware';
@@ -6,14 +7,18 @@ import { pubsub } from '../../graphql/pubsub';
 import { SUBSCRIPTION_EVENTS } from '../../graphql/subscription-events';
 import Driver from './driver.model';
 
+
 const driverResolvers = {
   Query: {
     listDrivers: combineResolvers(
+
       protectEntities(['ADMIN']),
+
       DriverController.listDrivers
     ),
 
     getDriver: combineResolvers(
+
       protectEntities(['ADMIN']),
       DriverController.getDriver
     ),
@@ -59,7 +64,6 @@ const driverResolvers = {
       DriverController.updateDriverStatus
     ),
   },
-
   Subscription: {
     // Driver status changes (online/offline/busy)
     driverStatusChanged: {
@@ -72,7 +76,6 @@ const driverResolvers = {
           const user = context.user;
           const isOwnStatus = statusUpdate.driverId === variables.driverId;
           const isAdmin = user && ['SUPER_ADMIN', 'admin'].includes(user.role);
-
           return isOwnStatus || isAdmin;
         }
       ),

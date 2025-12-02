@@ -1,7 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import mongoose, { Schema, Document } from 'mongoose';
 import { AccountType, AccountType_ } from '../../constants/general';
+
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
+
 
 export interface AdminDocument extends Document {
   _id: string;
@@ -44,7 +46,6 @@ export interface AdminDocument extends Document {
 
   // Session Management
   sessionTimeoutMinutes: number;
-
   deletedAt?: Date;
   createdBy?: string;
   createdAt: Date;
@@ -219,7 +220,6 @@ adminSchema.pre<AdminDocument>('save', function (next) {
   }
   next();
 });
-
 // Create model
 const Admin = mongoose.model<AdminDocument>('Admin', adminSchema);
 

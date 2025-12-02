@@ -1,3 +1,4 @@
+
 import { ErrorResponse } from '../../utils/responses';
 import SecuritySetting, { ISecuritySetting } from './security-setting.model';
 import {
@@ -63,7 +64,7 @@ export class SecuritySettingService {
     }
   }
 
-  static async activateSecuritySetting(id: string): Promise<ISecuritySetting> {
+ static async activateSecuritySetting(id: string): Promise<ISecuritySetting> {
     try {
       const setting = await SecuritySetting.findById(id);
       if (!setting) {
@@ -87,7 +88,6 @@ export class SecuritySettingService {
       );
     }
   }
-
   static async deactivateSecuritySetting(
     id: string
   ): Promise<ISecuritySetting> {

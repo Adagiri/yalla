@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 import Vehicle from './vehicle.model';
 import { ErrorResponse } from '../../utils/responses';

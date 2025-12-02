@@ -501,7 +501,6 @@ class WalletService {
 
     const customer = await Customer.findById(userId);
     if (customer) return AccountType_.CUSTOMER;
-
     throw new ErrorResponse(404, 'User not found');
   }
 

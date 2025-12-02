@@ -1,5 +1,4 @@
 import mongoose, { Schema, Document } from 'mongoose';
-
 export interface IPaymentSetting extends Document {
   // Payment Methods
   cashPaymentsEnabled: boolean;

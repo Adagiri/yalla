@@ -62,7 +62,6 @@ export async function listResourcesPagination<T extends Document>(
   }
 
   const totalDocs = await model.countDocuments(filter);
-
   const field = sortParam?.field || 'createdAt';
   const direction = sortParam?.direction === 'ASC' ? 1 : -1;
 

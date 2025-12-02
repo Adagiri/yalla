@@ -174,7 +174,6 @@ class DriverService {
       );
     }
   }
-
   static async updateDriverLicense(
     id: string,
     input: UpdateDriverLicenseInput

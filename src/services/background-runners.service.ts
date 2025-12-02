@@ -1,3 +1,4 @@
+
 import cron, { ScheduledTask } from 'node-cron';
 import Trip from '../features/trip/trip.model';
 import Customer from '../features/customer/customer.model';
@@ -262,7 +263,6 @@ export class BackgroundRunnersService {
       try {
         // Check if no driver has accepted this trip
         const trip = await Trip.findById(tripId);
-
         if (trip && trip.status === 'drivers_found') {
           // Reset to searching
           await Trip.findByIdAndUpdate(tripId, {

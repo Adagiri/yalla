@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+
 // NB: this needs model need to align with  system health data (realtime); this is just placeholder
 export interface ISystemHealth {
   // Database Metrics
