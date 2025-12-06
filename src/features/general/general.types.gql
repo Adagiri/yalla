@@ -8,7 +8,7 @@ scalar Any
 scalar Number
 scalar AnyObject
 scalar Odd
-scalar JSON # Added for admin system
+scalar JSON
 # Enums
 enum AuthChannel {
   SMS
