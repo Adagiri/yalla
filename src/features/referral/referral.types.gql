@@ -16,10 +16,13 @@ enum RewardStatusEnum {
 }
 
 enum RewardTypeEnum {
+  NONE
   FREE_RIDE
   WALLET_CREDIT
   DISCOUNT_PERCENTAGE
   DISCOUNT_FIXED
+  SUBSCRIPTION_DISCOUNT
+  BONUS_POINTS
 }
 
 enum CampaignTypeEnum {
@@ -106,16 +109,23 @@ type ReferralCampaign {
   startDate: DateTime!
   endDate: DateTime
   isActive: Boolean!
-  minWalletBalance: Number!
 
-  # Referrer rewards
-  referrerRewardType: RewardTypeEnum!
-  referrerRewardValue: Number!
+  # NEW: Modular constraints and rewards
+  constraints: [CampaignConstraint!]
+  referrerRewards: [CampaignReward!]
+  refereeRewards: [CampaignReward!]
+
+  # OLD: Kept for backward compatibility (deprecated)
+  minWalletBalance: Number
+
+  # Referrer rewards (OLD - deprecated)
+  referrerRewardType: RewardTypeEnum
+  referrerRewardValue: Number
   referrerRewardMaxValue: Number
 
-  # Referee rewards
-  refereeRewardType: RewardTypeEnum!
-  refereeRewardValue: Number!
+  # Referee rewards (OLD - deprecated)
+  refereeRewardType: RewardTypeEnum
+  refereeRewardValue: Number
   refereeRewardMaxValue: Number
 
   # Limits
