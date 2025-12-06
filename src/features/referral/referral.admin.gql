@@ -1,3 +1,42 @@
+# NEW: Constraint and Reward Definition Inputs
+input CreateConstraintDefinitionInput {
+  type: String!
+  name: String!
+  description: String!
+  valueType: String!
+  defaultValue: JSON
+  appliesTo: String!
+  unit: String
+  minValue: Float
+  maxValue: Float
+}
+
+input CreateRewardDefinitionInput {
+  type: String!
+  name: String!
+  description: String!
+  valueType: String!
+  defaultValue: Float
+  unit: String
+  minValue: Float
+  maxValue: Float
+  requiresMaxValue: Boolean
+}
+
+# NEW: Campaign Constraint and Reward Inputs
+input CampaignConstraintInput {
+  constraintType: String!
+  appliesTo: String!
+  value: JSON
+  userTypes: [String!]
+}
+
+input CampaignRewardInput {
+  rewardType: String!
+  value: Float!
+  maxValue: Float
+}
+
 # Admin Inputs
 input CreateCampaignInput {
   name: String!
@@ -6,16 +45,22 @@ input CreateCampaignInput {
   startDate: DateTime!
   endDate: DateTime
 
-  minWalletBalance: Number!
+  # NEW: Arrays of constraints and rewards
+  constraints: [CampaignConstraintInput!]!
+  referrerRewards: [CampaignRewardInput!]!
+  refereeRewards: [CampaignRewardInput!]!
 
-  # Referrer rewards
-  referrerRewardType: RewardTypeEnum!
-  referrerRewardValue: Number!
+  # OLD: Kept for backward compatibility (deprecated)
+  minWalletBalance: Number
+
+  # Referrer rewards (OLD - deprecated)
+  referrerRewardType: RewardTypeEnum
+  referrerRewardValue: Number
   referrerRewardMaxValue: Number
 
-  # Referee rewards
-  refereeRewardType: RewardTypeEnum!
-  refereeRewardValue: Number!
+  # Referee rewards (OLD - deprecated)
+  refereeRewardType: RewardTypeEnum
+  refereeRewardValue: Number
   refereeRewardMaxValue: Number
 
   # Limits
@@ -41,14 +86,20 @@ input UpdateCampaignInput {
   isActive: Boolean
   status: CampaignStatusEnum
 
+  # NEW: Arrays of constraints and rewards
+  constraints: [CampaignConstraintInput!]
+  referrerRewards: [CampaignRewardInput!]
+  refereeRewards: [CampaignRewardInput!]
+
+  # OLD: Kept for backward compatibility (deprecated)
   minWalletBalance: Number
 
-  # Referrer rewards
+  # Referrer rewards (OLD - deprecated)
   referrerRewardType: RewardTypeEnum
   referrerRewardValue: Number
   referrerRewardMaxValue: Number
 
-  # Referee rewards
+  # Referee rewards (OLD - deprecated)
   refereeRewardType: RewardTypeEnum
   refereeRewardValue: Number
   refereeRewardMaxValue: Number
@@ -83,6 +134,59 @@ input RewardFilterInput {
   rewardType: RewardTypeEnum
 }
 
+# NEW: Constraint and Reward Definition Types
+type ConstraintDefinition {
+  id: ID!
+  type: String!
+  name: String!
+  description: String!
+  valueType: String!
+  defaultValue: JSON
+  appliesTo: String!
+  isActive: Boolean!
+  isSystemDefined: Boolean!
+  unit: String
+  minValue: Float
+  maxValue: Float
+  createdBy: String!
+  lastModifiedBy: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type RewardDefinition {
+  id: ID!
+  type: String!
+  name: String!
+  description: String!
+  valueType: String!
+  defaultValue: Float
+  isActive: Boolean!
+  isSystemDefined: Boolean!
+  unit: String
+  minValue: Float
+  maxValue: Float
+  requiresMaxValue: Boolean!
+  createdBy: String!
+  lastModifiedBy: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# NEW: Campaign Constraint and Reward Instance Types
+type CampaignConstraint {
+  constraintType: String!
+  appliesTo: String!
+  value: JSON
+  userTypes: [String!]
+}
+
+type CampaignReward {
+  rewardType: String!
+  value: Float!
+  maxValue: Float
+}
+
 # Admin Types
 type ReferralAnalytics {
   totalReferrals: Int!
@@ -106,6 +210,12 @@ type CampaignAnalytics {
 
 # Extend Query
 extend type Query {
+  # NEW: Constraint and Reward Definition Queries
+  listConstraintDefinitions(activeOnly: Boolean): [ConstraintDefinition!]!
+  listRewardDefinitions(activeOnly: Boolean): [RewardDefinition!]!
+  getConstraintDefinition(id: ID!): ConstraintDefinition!
+  getRewardDefinition(id: ID!): RewardDefinition!
+
   # Admin: List all campaigns
   listReferralCampaigns(
     filter: CampaignStatusEnum
@@ -145,6 +255,21 @@ extend type Query {
 
 # Extend Mutation
 extend type Mutation {
+  # NEW: Constraint Definition Management
+  createConstraintDefinition(input: CreateConstraintDefinitionInput!): ConstraintDefinition!
+  updateConstraintDefinition(id: ID!, input: CreateConstraintDefinitionInput!): ConstraintDefinition!
+  toggleConstraintDefinition(id: ID!, isActive: Boolean!): ConstraintDefinition!
+  deleteConstraintDefinition(id: ID!): Boolean!
+
+  # NEW: Reward Definition Management
+  createRewardDefinition(input: CreateRewardDefinitionInput!): RewardDefinition!
+  updateRewardDefinition(id: ID!, input: CreateRewardDefinitionInput!): RewardDefinition!
+  toggleRewardDefinition(id: ID!, isActive: Boolean!): RewardDefinition!
+  deleteRewardDefinition(id: ID!): Boolean!
+
+  # NEW: Seed initial data
+  seedReferralDefinitions: Boolean!
+
   # Admin: Create a new campaign
   createReferralCampaign(input: CreateCampaignInput!): ReferralCampaign!
 

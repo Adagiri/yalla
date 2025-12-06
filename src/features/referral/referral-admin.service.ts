@@ -8,6 +8,13 @@ import ReferralTransaction, {
 import ReferralReward, { RewardStatus } from './referral-reward.model';
 import SystemConfig from '../admin/system-config.model';
 import referralService from './referral.service';
+import ConstraintDefinition, {
+  ConstraintDefinitionDocument,
+} from './constraint-definition.model';
+import RewardDefinition, {
+  RewardDefinitionDocument,
+} from './reward-definition.model';
+import { seedReferralDefinitions } from './seed-referral-definitions';
 
 class ReferralAdminService {
   /**
@@ -17,29 +24,111 @@ class ReferralAdminService {
     input: any,
     adminId: string
   ): Promise<ReferralCampaignDocument> {
-    // Convert naira to kobo for monetary values
-    const campaignData = {
+    // Validate constraint types exist in ConstraintDefinition
+    if (input.constraints && input.constraints.length > 0) {
+      for (const constraint of input.constraints) {
+        const definition = await ConstraintDefinition.findOne({
+          type: constraint.constraintType,
+          isActive: true,
+        });
+        if (!definition) {
+          throw new Error(`Invalid constraint type: ${constraint.constraintType}`);
+        }
+      }
+    }
+
+    // Validate reward types exist in RewardDefinition
+    if (input.referrerRewards && input.referrerRewards.length > 0) {
+      for (const reward of input.referrerRewards) {
+        const definition = await RewardDefinition.findOne({
+          type: reward.rewardType,
+          isActive: true,
+        });
+        if (!definition) {
+          throw new Error(`Invalid reward type: ${reward.rewardType}`);
+        }
+      }
+    }
+
+    if (input.refereeRewards && input.refereeRewards.length > 0) {
+      for (const reward of input.refereeRewards) {
+        const definition = await RewardDefinition.findOne({
+          type: reward.rewardType,
+          isActive: true,
+        });
+        if (!definition) {
+          throw new Error(`Invalid reward type: ${reward.rewardType}`);
+        }
+      }
+    }
+
+    // Convert naira to kobo for NEW constraint values
+    const constraints = input.constraints?.map((constraint: any) => {
+      if (constraint.constraintType === 'MIN_WALLET_BALANCE' && constraint.value) {
+        return { ...constraint, value: Math.round(constraint.value * 100) };
+      }
+      return constraint;
+    }) || [];
+
+    // Convert naira to kobo for NEW reward values
+    const referrerRewards = input.referrerRewards?.map((reward: any) => {
+      const convertedReward = { ...reward };
+      if (reward.rewardType === 'WALLET_CREDIT' || reward.rewardType === 'DISCOUNT_FIXED') {
+        convertedReward.value = Math.round(reward.value * 100);
+      }
+      if (reward.maxValue) {
+        convertedReward.maxValue = Math.round(reward.maxValue * 100);
+      }
+      return convertedReward;
+    }) || [];
+
+    const refereeRewards = input.refereeRewards?.map((reward: any) => {
+      const convertedReward = { ...reward };
+      if (reward.rewardType === 'WALLET_CREDIT' || reward.rewardType === 'DISCOUNT_FIXED') {
+        convertedReward.value = Math.round(reward.value * 100);
+      }
+      if (reward.maxValue) {
+        convertedReward.maxValue = Math.round(reward.maxValue * 100);
+      }
+      return convertedReward;
+    }) || [];
+
+    const campaignData: any = {
       ...input,
-      minWalletBalance: Math.round(input.minWalletBalance * 100),
+      constraints,
+      referrerRewards,
+      refereeRewards,
       createdBy: adminId,
       lastModifiedBy: adminId,
     };
 
-    // Convert reward values if they're monetary
-    if (
-      input.referrerRewardType === 'WALLET_CREDIT' ||
-      input.referrerRewardType === 'DISCOUNT_FIXED'
-    ) {
-      campaignData.referrerRewardValue = Math.round(
-        input.referrerRewardValue * 100
-      );
+    // OLD: Convert naira to kobo for backward compatibility (if old fields are provided)
+    if (input.minWalletBalance !== undefined) {
+      campaignData.minWalletBalance = Math.round(input.minWalletBalance * 100);
     }
 
-    if (
-      input.refereeRewardType === 'WALLET_CREDIT' ||
-      input.refereeRewardType === 'DISCOUNT_FIXED'
-    ) {
-      campaignData.refereeRewardValue = Math.round(input.refereeRewardValue * 100);
+    if (input.referrerRewardValue !== undefined) {
+      if (
+        input.referrerRewardType === 'WALLET_CREDIT' ||
+        input.referrerRewardType === 'DISCOUNT_FIXED'
+      ) {
+        campaignData.referrerRewardValue = Math.round(
+          input.referrerRewardValue * 100
+        );
+      } else {
+        campaignData.referrerRewardValue = input.referrerRewardValue;
+      }
+    }
+
+    if (input.refereeRewardValue !== undefined) {
+      if (
+        input.refereeRewardType === 'WALLET_CREDIT' ||
+        input.refereeRewardType === 'DISCOUNT_FIXED'
+      ) {
+        campaignData.refereeRewardValue = Math.round(input.refereeRewardValue * 100);
+      } else {
+        campaignData.refereeRewardValue = input.refereeRewardValue;
+      }
     }
 
     if (input.referrerRewardMaxValue) {
@@ -565,6 +654,284 @@ class ReferralAdminService {
     );
 
     return config;
+  }
+
+  // ==================== NEW: Constraint Definition Management ====================
+
+  /**
+   * Create a new constraint definition
+   */
+  async createConstraintDefinition(
+    input: any,
+    adminId: string
+  ): Promise<ConstraintDefinitionDocument> {
+    // Check for duplicate type
+    const existing = await ConstraintDefinition.findOne({ type: input.type });
+    if (existing) {
+      throw new Error(`Constraint type ${input.type} already exists`);
+    }
+
+    const definition = new ConstraintDefinition({
+      ...input,
+      createdBy: adminId,
+      lastModifiedBy: adminId,
+      isSystemDefined: false,
+    });
+
+    await definition.save();
+    return definition;
+  }
+
+  /**
+   * Update a constraint definition
+   */
+  async updateConstraintDefinition(
+    id: string,
+    input: any,
+    adminId: string
+  ): Promise<ConstraintDefinitionDocument> {
+    const definition = await ConstraintDefinition.findById(id);
+
+    if (!definition) {
+      throw new Error('Constraint definition not found');
+    }
+
+    // Allow updates but protect certain fields for system-defined
+    const updateData = {
+      ...input,
+      lastModifiedBy: adminId,
+    };
+
+    // Don't allow changing type or isSystemDefined
+    delete updateData.type;
+    delete updateData.isSystemDefined;
+
+    Object.assign(definition, updateData);
+    await definition.save();
+
+    return definition;
+  }
+
+  /**
+   * Toggle constraint definition active status
+   */
+  async toggleConstraintDefinition(
+    id: string,
+    isActive: boolean
+  ): Promise<ConstraintDefinitionDocument> {
+    const definition = await ConstraintDefinition.findById(id);
+
+    if (!definition) {
+      throw new Error('Constraint definition not found');
+    }
+
+    definition.isActive = isActive;
+    await definition.save();
+
+    return definition;
+  }
+
+  /**
+   * Delete a constraint definition
+   */
+  async deleteConstraintDefinition(id: string): Promise<boolean> {
+    const definition = await ConstraintDefinition.findById(id);
+
+    if (!definition) {
+      throw new Error('Constraint definition not found');
+    }
+
+    if (definition.isSystemDefined) {
+      throw new Error('Cannot delete system-defined constraint');
+    }
+
+    // Check if used in any active campaigns
+    const campaignsUsingConstraint = await ReferralCampaign.countDocuments({
+      'constraints.constraintType': definition.type,
+      status: CampaignStatus.ACTIVE,
+    });
+
+    if (campaignsUsingConstraint > 0) {
+      throw new Error(
+        `Cannot delete constraint type ${definition.type} as it is used in ${campaignsUsingConstraint} active campaign(s)`
+      );
+    }
+
+    await ConstraintDefinition.findByIdAndDelete(id);
+    return true;
+  }
+
+  /**
+   * List constraint definitions
+   */
+  async listConstraintDefinitions(
+    activeOnly?: boolean
+  ): Promise<ConstraintDefinitionDocument[]> {
+    const filter: any = {};
+    if (activeOnly) {
+      filter.isActive = true;
+    }
+
+    return ConstraintDefinition.find(filter).sort({ name: 1 });
+  }
+
+  /**
+   * Get constraint definition by ID
+   */
+  async getConstraintDefinition(
+    id: string
+  ): Promise<ConstraintDefinitionDocument> {
+    const definition = await ConstraintDefinition.findById(id);
+
+    if (!definition) {
+      throw new Error('Constraint definition not found');
+    }
+
+    return definition;
+  }
+
+  // ==================== NEW: Reward Definition Management ====================
+
+  /**
+   * Create a new reward definition
+   */
+  async createRewardDefinition(
+    input: any,
+    adminId: string
+  ): Promise<RewardDefinitionDocument> {
+    // Check for duplicate type
+    const existing = await RewardDefinition.findOne({ type: input.type });
+    if (existing) {
+      throw new Error(`Reward type ${input.type} already exists`);
+    }
+
+    const definition = new RewardDefinition({
+      ...input,
+      createdBy: adminId,
+      lastModifiedBy: adminId,
+      isSystemDefined: false,
+    });
+
+    await definition.save();
+    return definition;
+  }
+
+  /**
+   * Update a reward definition
+   */
+  async updateRewardDefinition(
+    id: string,
+    input: any,
+    adminId: string
+  ): Promise<RewardDefinitionDocument> {
+    const definition = await RewardDefinition.findById(id);
+
+    if (!definition) {
+      throw new Error('Reward definition not found');
+    }
+
+    // Allow updates but protect certain fields for system-defined
+    const updateData = {
+      ...input,
+      lastModifiedBy: adminId,
+    };
+
+    // Don't allow changing type or isSystemDefined
+    delete updateData.type;
+    delete updateData.isSystemDefined;
+
+    Object.assign(definition, updateData);
+    await definition.save();
+
+    return definition;
+  }
+
+  /**
+   * Toggle reward definition active status
+   */
+  async toggleRewardDefinition(
+    id: string,
+    isActive: boolean
+  ): Promise<RewardDefinitionDocument> {
+    const definition = await RewardDefinition.findById(id);
+
+    if (!definition) {
+      throw new Error('Reward definition not found');
+    }
+
+    definition.isActive = isActive;
+    await definition.save();
+
+    return definition;
+  }
+
+  /**
+   * Delete a reward definition
+   */
+  async deleteRewardDefinition(id: string): Promise<boolean> {
+    const definition = await RewardDefinition.findById(id);
+
+    if (!definition) {
+      throw new Error('Reward definition not found');
+    }
+
+    if (definition.isSystemDefined) {
+      throw new Error('Cannot delete system-defined reward');
+    }
+
+    // Check if used in any active campaigns
+    const campaignsUsingReward = await ReferralCampaign.countDocuments({
+      $or: [
+        { 'referrerRewards.rewardType': definition.type },
+        { 'refereeRewards.rewardType': definition.type },
+      ],
+      status: CampaignStatus.ACTIVE,
+    });
+
+    if (campaignsUsingReward > 0) {
+      throw new Error(
+        `Cannot delete reward type ${definition.type} as it is used in ${campaignsUsingReward} active campaign(s)`
+      );
+    }
+
+    await RewardDefinition.findByIdAndDelete(id);
+    return true;
+  }
+
+  /**
+   * List reward definitions
+   */
+  async listRewardDefinitions(
+    activeOnly?: boolean
+  ): Promise<RewardDefinitionDocument[]> {
+    const filter: any = {};
+    if (activeOnly) {
+      filter.isActive = true;
+    }
+
+    return RewardDefinition.find(filter).sort({ name: 1 });
+  }
+
+  /**
+   * Get reward definition by ID
+   */
+  async getRewardDefinition(id: string): Promise<RewardDefinitionDocument> {
+    const definition = await RewardDefinition.findById(id);
+
+    if (!definition) {
+      throw new Error('Reward definition not found');
+    }
+
+    return definition;
+  }
+
+  // ==================== NEW: Seed Definitions ====================
+
+  /**
+   * Seed initial constraint and reward definitions
+   */
+  async seedReferralDefinitions(): Promise<boolean> {
+    return seedReferralDefinitions();
   }
 }
 

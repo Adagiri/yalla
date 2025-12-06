@@ -21,13 +21,30 @@ export enum CampaignStatus {
 export const CampaignStatusEnum = Object.values(CampaignStatus);
 
 export enum RewardType {
+  NONE = 'NONE',
   FREE_RIDE = 'FREE_RIDE',
   WALLET_CREDIT = 'WALLET_CREDIT',
   DISCOUNT_PERCENTAGE = 'DISCOUNT_PERCENTAGE',
   DISCOUNT_FIXED = 'DISCOUNT_FIXED',
+  SUBSCRIPTION_DISCOUNT = 'SUBSCRIPTION_DISCOUNT',
+  BONUS_POINTS = 'BONUS_POINTS',
 }
 
 export const RewardTypeEnum = Object.values(RewardType);
+
+// New constraint and reward structures
+export interface CampaignConstraint {
+  constraintType: string;
+  appliesTo: string; // REFERRER, REFEREE, BOTH
+  value?: number | boolean;
+  userTypes?: string[]; // Optional: ['CUSTOMER', 'DRIVER']
+}
+
+export interface CampaignReward {
+  rewardType: string;
+  value: number;
+  maxValue?: number; // Optional: for DISCOUNT_PERCENTAGE
+}
 
 export interface ReferralCampaignDocument extends Document {
   _id: string;
@@ -41,17 +58,22 @@ export interface ReferralCampaignDocument extends Document {
   endDate?: Date; // null means no end date
   isActive: boolean;
 
-  // Conditions
-  minWalletBalance: number; // in kobo - minimum wallet balance required to qualify
+  // NEW: Modular constraints and rewards
+  constraints?: CampaignConstraint[];
+  referrerRewards?: CampaignReward[];
+  refereeRewards?: CampaignReward[];
 
-  // Reward configuration for referrer
-  referrerRewardType: RewardType;
-  referrerRewardValue: number; // Value depends on type (e.g., 1 for 1 free ride, 50000 for ₦500)
+  // OLD: Kept for backward compatibility during migration
+  minWalletBalance?: number; // in kobo - minimum wallet balance required to qualify
+
+  // Reward configuration for referrer (OLD - deprecated)
+  referrerRewardType?: RewardType;
+  referrerRewardValue?: number; // Value depends on type (e.g., 1 for 1 free ride, 50000 for ₦500)
   referrerRewardMaxValue?: number; // For percentage discounts, max amount
 
-  // Reward configuration for referee
-  refereeRewardType: RewardType;
-  refereeRewardValue: number;
+  // Reward configuration for referee (OLD - deprecated)
+  refereeRewardType?: RewardType;
+  refereeRewardValue?: number;
   refereeRewardMaxValue?: number;
 
   // Usage limits
@@ -104,24 +126,58 @@ const referralCampaignSchema = new Schema<ReferralCampaignDocument>(
     endDate: { type: Date },
     isActive: { type: Boolean, default: true },
 
-    minWalletBalance: { type: Number, required: true, default: 200000 }, // ₦2,000
+    // NEW: Modular constraints and rewards
+    constraints: {
+      type: [
+        {
+          constraintType: { type: String, required: true },
+          appliesTo: { type: String, required: true },
+          value: { type: Schema.Types.Mixed },
+          userTypes: { type: [String] },
+        },
+      ],
+      default: [],
+    },
+    referrerRewards: {
+      type: [
+        {
+          rewardType: { type: String, required: true },
+          value: { type: Number, required: true },
+          maxValue: { type: Number },
+        },
+      ],
+      default: [],
+    },
+    refereeRewards: {
+      type: [
+        {
+          rewardType: { type: String, required: true },
+          value: { type: Number, required: true },
+          maxValue: { type: Number },
+        },
+      ],
+      default: [],
+    },
 
-    // Referrer rewards
+    // OLD: Kept for backward compatibility during migration
+    minWalletBalance: { type: Number, default: 200000 }, // ₦2,000
+
+    // Referrer rewards (OLD - deprecated)
     referrerRewardType: {
       type: String,
       enum: RewardTypeEnum,
       default: RewardType.FREE_RIDE,
     },
-    referrerRewardValue: { type: Number, required: true, default: 1 },
+    referrerRewardValue: { type: Number, default: 1 },
     referrerRewardMaxValue: { type: Number },
 
-    // Referee rewards
+    // Referee rewards (OLD - deprecated)
     refereeRewardType: {
       type: String,
       enum: RewardTypeEnum,
       default: RewardType.FREE_RIDE,
     },
-    refereeRewardValue: { type: Number, required: true, default: 1 },
+    refereeRewardValue: { type: Number, default: 1 },
     refereeRewardMaxValue: { type: Number },
 
     // Limits
@@ -157,8 +213,10 @@ const referralCampaignSchema = new Schema<ReferralCampaignDocument>(
     toJSON: {
       virtuals: true,
       transform: function (doc, ret) {
-        // Convert kobo to naira for JSON output
-        ret.minWalletBalance = ret.minWalletBalance / 100;
+        // Convert kobo to naira for JSON output (OLD fields - backward compatibility)
+        if (ret.minWalletBalance) {
+          ret.minWalletBalance = ret.minWalletBalance / 100;
+        }
         if (ret.referrerRewardType === 'WALLET_CREDIT' || ret.referrerRewardType === 'DISCOUNT_FIXED') {
           ret.referrerRewardValue = ret.referrerRewardValue / 100;
         }
@@ -171,6 +229,44 @@ const referralCampaignSchema = new Schema<ReferralCampaignDocument>(
         if (ret.refereeRewardMaxValue) {
           ret.refereeRewardMaxValue = ret.refereeRewardMaxValue / 100;
         }
+
+        // Convert kobo to naira for NEW constraint values
+        if (ret.constraints && Array.isArray(ret.constraints)) {
+          ret.constraints = ret.constraints.map((constraint: any) => {
+            if (constraint.constraintType === 'MIN_WALLET_BALANCE' && constraint.value) {
+              return { ...constraint, value: constraint.value / 100 };
+            }
+            return constraint;
+          });
+        }
+
+        // Convert kobo to naira for NEW reward values
+        if (ret.referrerRewards && Array.isArray(ret.referrerRewards)) {
+          ret.referrerRewards = ret.referrerRewards.map((reward: any) => {
+            const convertedReward = { ...reward };
+            if (reward.rewardType === 'WALLET_CREDIT' || reward.rewardType === 'DISCOUNT_FIXED') {
+              convertedReward.value = reward.value / 100;
+            }
+            if (reward.maxValue) {
+              convertedReward.maxValue = reward.maxValue / 100;
+            }
+            return convertedReward;
+          });
+        }
+
+        if (ret.refereeRewards && Array.isArray(ret.refereeRewards)) {
+          ret.refereeRewards = ret.refereeRewards.map((reward: any) => {
+            const convertedReward = { ...reward };
+            if (reward.rewardType === 'WALLET_CREDIT' || reward.rewardType === 'DISCOUNT_FIXED') {
+              convertedReward.value = reward.value / 100;
+            }
+            if (reward.maxValue) {
+              convertedReward.maxValue = reward.maxValue / 100;
+            }
+            return convertedReward;
+          });
+        }
+
         return ret;
       },
     },
