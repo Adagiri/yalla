@@ -7,6 +7,7 @@ import {
   UpdateVehicleInput,
   VehicleFilter,
   VehicleSort,
+  UpdateVehicleInspectionInput,
 } from './vehicle.types';
 
 class VehicleController {
@@ -67,6 +68,15 @@ class VehicleController {
   static async deleteVehicle(_: any, { id }: { id: string }) {
     const response = await VehicleService.deleteVehicle(id);
     return response;
+  }
+
+  static async updateVehicleInspection(
+    _: any,
+    { input }: { input: UpdateVehicleInspectionInput }
+  ) {
+    const updatedVehicle = await VehicleService.updateVehicleInspection(input);
+
+    return updatedVehicle;
   }
 }
 

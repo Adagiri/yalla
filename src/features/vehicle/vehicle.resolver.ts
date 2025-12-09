@@ -20,6 +20,10 @@ const vehicleResolvers = {
       protectEntities(['ADMIN', 'DRIVER']),
       VehicleController.deleteVehicle
     ),
+    updateVehicleInspection: combineResolvers(
+      protectEntities(['ADMIN', 'DRIVER']),
+      VehicleController.updateVehicleInspection
+    )
   },
 };
 
