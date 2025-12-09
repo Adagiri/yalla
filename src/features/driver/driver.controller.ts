@@ -16,6 +16,7 @@ import {
   UpdateDriverPersonalInfoInput,
 
   UpdateDriverVehicleInfo,
+  UpdateDriverInspection,
   UpdateDriverLicenseInput,
   UpdateProfilePhotoInput,
 } from './driver.type';
@@ -81,6 +82,14 @@ class DriverController {
   ) {
     const updatedDriver = await DriverService.updateDriverVehicleInfo(input);
     return updatedDriver;
+  }
+
+  static async updateDriverInspection(
+    _:any,
+    {input}: {input: UpdateDriverInspection}
+  ){
+const updatedDriver = await DriverService.updateDriverInspection(input);
+return updatedDriver;
   }
 
   static async updateDriverPersonalInfo(

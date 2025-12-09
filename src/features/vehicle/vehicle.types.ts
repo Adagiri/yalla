@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 /**
  * Represents a geographical coordinate.
  */
@@ -61,4 +63,10 @@ export interface UpdateVehicleInput extends Partial<BaseVehicleInput> {
   identificationNumber: string;
   plateNumber: string;
   driverId: string;
+}
+
+export interface UpdateVehicleInspectionInput {
+  driverId: mongoose.Types.ObjectId;
+  vehicleId: mongoose.Types.ObjectId;
+  inspectionStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
 }

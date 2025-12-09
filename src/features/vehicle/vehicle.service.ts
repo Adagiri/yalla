@@ -1,6 +1,6 @@
-
 import mongoose from 'mongoose';
 import Vehicle from './vehicle.model';
+import Driver from '../driver/driver.model';
 import { ErrorResponse } from '../../utils/responses';
 import { filterNullAndUndefined } from '../../utils/general';
 import {
@@ -8,11 +8,11 @@ import {
   UpdateVehicleInput,
   VehicleFilter,
   VehicleSort,
+  UpdateVehicleInspectionInput,
 } from './vehicle.types';
 import GoogleServices from '../../services/google.services';
 import { Pagination } from '../../types/list-resources';
 import { listResourcesPagination } from '../../helpers/list-resources-pagination.helper';
-import Driver from '../driver/driver.model';
 
 class VehicleService {
   /**
@@ -32,6 +32,7 @@ class VehicleService {
         additionalFilter: filter,
         sortParam: sort,
         pagination,
+        populate: 'driver',
       });
 
       return data;
@@ -115,6 +116,44 @@ class VehicleService {
       return true;
     } catch (error: any) {
       throw new ErrorResponse(500, 'Error deleting vehicle', error.message);
+    }
+  }
+
+  static async updateVehicleInspection(input: UpdateVehicleInspectionInput) {
+    const { driverId, vehicleId, inspectionStatus } = input;
+    const inspectionStatusLower = inspectionStatus.toLowerCase();
+    console.log(driverId, vehicleId, inspectionStatus, 'updating...');
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      await Driver.findByIdAndUpdate(
+        driverId,
+        { vehicleInfoSet: inspectionStatusLower === 'approved' },
+        { session }
+      );
+
+      const vehicle = await Vehicle.findByIdAndUpdate(
+        vehicleId,
+        {
+          vehicleInspectionDone: true,
+          inspectionStatus: inspectionStatusLower,
+        },
+        { new: true, session }
+      );
+
+      await session.commitTransaction();
+      return vehicle;
+    } catch (error: any) {
+      await session.abortTransaction();
+      throw new ErrorResponse(
+        500,
+        'Error updating inspection status',
+        error?.message
+      );
+    } finally {
+      session.endSession();
     }
   }
 }

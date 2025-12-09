@@ -30,6 +30,7 @@ export interface ListPaginationOptions<T extends Document> {
   additionalFilter?: Record<string, any>; // Additional filter to apply to the query
   sortParam?: SortParam; // Sorting parameter (field and direction)
   pagination?: Pagination; // Pagination options (limit and page)
+  populate?: string | string[];
 }
 
 export interface KeysetCursor {

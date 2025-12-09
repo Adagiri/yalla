@@ -422,7 +422,9 @@ driverSchema.virtual('id').get(function (this: DriverModelType) {
 driverSchema.pre(
   /^find/,
   function (this: mongoose.Query<any, DriverModelType>, next) {
+    // if (!this.options.skipPopulate) {
     this.populate('location vehicle');
+    // }
     next();
   }
 );
@@ -439,7 +441,10 @@ driverSchema.index({ lastCashoutAt: -1 });
 driverSchema.pre(
   /^find/,
   function (this: mongoose.Query<any, DriverModelType>, next) {
+    // if (!this.options.skipPopulate){
+
     this.populate('vehicle');
+    // }
     next();
   }
 );

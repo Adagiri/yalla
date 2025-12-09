@@ -1,4 +1,3 @@
-
 import mongoose from 'mongoose';
 import { AccountLevel, AuthChannel } from '../../constants/general';
 
@@ -49,6 +48,11 @@ export interface UpdateDriverPersonalInfoInput {
 export interface UpdateDriverVehicleInfo {
   driverId: string | mongoose.Types.ObjectId;
   vehicleInfoSet: boolean;
+}
+export interface UpdateDriverInspection {
+  driverId: mongoose.Types.ObjectId;
+  vehicleInfoSet: boolean;
+  vehicleId: mongoose.Types.ObjectId;
 }
 
 /**
