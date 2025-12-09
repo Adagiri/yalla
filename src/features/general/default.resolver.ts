@@ -1,3 +1,5 @@
+import { GraphQLJSON } from 'graphql-scalars';
+
 const {
   DateScalar,
   TimeScalar,
@@ -7,8 +9,9 @@ const defaultResolvers = {
   DateTime: DateTimeScalar,
   Date: DateScalar,
   Time: TimeScalar,
-//   Query: {},
-//   Mutation: {},
+  JSON: GraphQLJSON,
+  //   Query: {},
+  //   Mutation: {},
 };
 
-export default defaultResolvers
+export default defaultResolvers;

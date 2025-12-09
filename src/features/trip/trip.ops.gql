@@ -70,7 +70,7 @@ type TripPricing {
 type TimelineEvent {
   event: TimelineEventType!
   timestamp: DateTime!
-  metadata: String
+  metadata: JSON
 }
 
 type PathPoint {
