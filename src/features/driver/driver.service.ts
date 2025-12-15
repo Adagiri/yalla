@@ -7,6 +7,7 @@ import {
   DriverSort,
   UpdateDriverPersonalInfoInput,
   UpdateDriverVehicleInfo,
+  UpdateDriverInspection,
   UpdateDriverLicenseInput,
   UpdateProfilePhotoInput,
 } from './driver.type';
@@ -173,6 +174,11 @@ class DriverService {
         error.message
       );
     }
+  }
+
+  static async updateDriverInspection(input: UpdateDriverInspection){
+   
+    return true;
   }
   static async updateDriverLicense(
     id: string,

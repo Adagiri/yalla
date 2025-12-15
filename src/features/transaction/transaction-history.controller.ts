@@ -32,8 +32,10 @@ class TransactionHistoryController {
     { user, res }: ContextType
   ) {
     try {
-      const periodDates = this.calculatePeriodDates(period, customRange);
-
+      const periodDates = TransactionHistoryController.calculatePeriodDates(
+        period,
+        customRange
+      );
       // Query earnings transactions
       const query: any = {
         userId: user.id,
@@ -381,7 +383,6 @@ class TransactionHistoryController {
         startDate = new Date(now.setHours(0, 0, 0, 0));
         label = 'Today';
     }
-
     return { startDate, endDate, label };
   }
 }

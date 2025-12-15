@@ -10,7 +10,7 @@ export interface VehicleDocument extends Document {
   vehicleInspectionDone: boolean;
   driverId?: string;
   plateNumber: string;
-
+  driver?: any;
   // ONLY INSPECTION FIELDS
   inspectionStatus: 'pending' | 'approved' | 'rejected' | 'expired';
   lastInspectionDate?: Date;
@@ -49,21 +49,12 @@ const VehicleSchema = new Schema<VehicleDocument>(
 );
 
 // FIXME: Index already created inplicitly with unique
-// Indexes
-VehicleSchema.index({ plateNumber: 1 });
-VehicleSchema.index({ driverId: 1 });
-VehicleSchema.index({ inspectionStatus: 1 });
-
-// Auto-expire inspection if due date passed
-VehicleSchema.pre<VehicleDocument>('save', function (next) {
-  if (this.nextInspectionDue && this.nextInspectionDue < new Date()) {
-    if (this.inspectionStatus === 'approved') {
-      this.inspectionStatus = 'expired';
-    }
-  }
-  next();
+VehicleSchema.virtual('driver', {
+  ref: 'Driver',
+  foreignField: 'vehicleId',
+  localField: '_id',
+  justOne: true,
 });
-
 // Indexes
 VehicleSchema.index({ plateNumber: 1 });
 VehicleSchema.index({ driverId: 1 });

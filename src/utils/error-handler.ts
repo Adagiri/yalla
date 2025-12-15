@@ -11,7 +11,7 @@ export const formatError = (
     error.originalError instanceof ErrorResponse
   ) {
     const customError = error.originalError as ErrorResponse;
-    console.log('custom error');
+
     console.log(customError.details);
     const response = {
       ...formattedError,

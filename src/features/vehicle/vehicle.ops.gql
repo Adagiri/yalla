@@ -26,6 +26,25 @@ input VehicleFilter {
   search: String
   vehicleInspectionDone: Boolean
 }
+enum InspectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+enum InspectionStatusLower {
+  pending
+  approved
+  rejected
+  expired
+}
+
+input UpdateVehicleInspectionInput {
+  driverId: String!
+  vehicleId: String!
+  inspectionStatus: InspectionStatus!
+}
+
 
 type Vehicle {
   id: ID!
@@ -36,7 +55,9 @@ type Vehicle {
   identificationNumber: String!
   plateNumber: String!
   vehicleInspectionDone: Boolean!
+  inspectionStatus: InspectionStatusLower
   driverId: String
+  driver: Driver
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -86,4 +107,10 @@ extend type Mutation {
   Deletes a vehicle by its ID.
   """
   deleteVehicle(id: ID!): Boolean!
+
+  """
+  Updates Vehicle Inspection status
+  """
+  updateVehicleInspection(input: UpdateVehicleInspectionInput): Vehicle!
+
 }

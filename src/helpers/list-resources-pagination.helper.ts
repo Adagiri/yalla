@@ -13,6 +13,7 @@ export async function listResourcesPagination<T extends Document>(
     additionalFilter = {},
     sortParam,
     pagination = {},
+    populate,
   } = options;
 
   const filter: any = { ...baseFilter };
@@ -75,12 +76,13 @@ export async function listResourcesPagination<T extends Document>(
 
   const skip = (page - 1) * limit;
 
-  const docs = await model
-    .find(filter)
-    .sort(sortObject)
-    .skip(skip)
-    .limit(limit);
+  let query = model.find(filter).sort(sortObject).skip(skip).limit(limit);
 
+  if (populate) {
+    query = query.populate(populate);
+  }
+
+  const docs = await query;
   const docsRetrieved = docs.length;
 
   const hasNextPage = docsRetrieved === limit && totalDocs > page * limit;
