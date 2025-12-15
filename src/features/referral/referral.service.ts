@@ -18,7 +18,7 @@ import Customer from '../customer/customer.model';
 import Driver from '../driver/driver.model';
 import Trip from '../trip/trip.model';
 import SystemConfig from '../admin/system-config.model';
-import { AccountType } from '../../constants/general';
+import { AccountType, AccountType_ } from '../../constants/general';
 
 class ReferralService {
   /**
@@ -171,7 +171,7 @@ class ReferralService {
     let minWalletBalance = 200000; // Default ₦2,000 in kobo
 
     if (validation.campaign) {
-      minWalletBalance = validation.campaign.minWalletBalance;
+      minWalletBalance = validation.campaign.minWalletBalance || 0;
     } else {
       // Get from system config
       const config = await SystemConfig.findOne({
@@ -347,11 +347,11 @@ class ReferralService {
     }
 
     // Get referrer and referee user objects
-    const referrer = transaction.referrerType === AccountType.CUSTOMER
+    const referrer = transaction.referrerType === AccountType_.CUSTOMER
       ? await Customer.findById(transaction.referrerId)
       : await Driver.findById(transaction.referrerId);
 
-    const referee = transaction.refereeType === AccountType.CUSTOMER
+    const referee = transaction.refereeType === AccountType_.CUSTOMER
       ? await Customer.findById(transaction.refereeId)
       : await Driver.findById(transaction.refereeId);
 
@@ -472,11 +472,11 @@ class ReferralService {
     }
 
     // Get referee and referrer names for descriptions
-    const referee = transaction.refereeType === AccountType.CUSTOMER
+    const referee = transaction.refereeType === AccountType_.CUSTOMER
       ? await Customer.findById(transaction.refereeId).select('firstname lastname')
       : await Driver.findById(transaction.refereeId).select('firstname lastname');
 
-    const referrer = transaction.referrerType === AccountType.CUSTOMER
+    const referrer = transaction.referrerType === AccountType_.CUSTOMER
       ? await Customer.findById(transaction.referrerId).select('firstname lastname')
       : await Driver.findById(transaction.referrerId).select('firstname lastname');
 

@@ -288,7 +288,7 @@ extend type Query {
   # Get bank codes for cashout
   getBankCodes: [BankCode!]!
 
-    getMyEarnings(
+  getMyEarnings(
     period: EarningsPeriod!
     customRange: DateRangeInput
     page: Int = 1
@@ -299,6 +299,8 @@ extend type Query {
     page: Int = 1
     limit: Int = 20
     status: TransactionStatus
+    dateFrom: DateTime
+    dateTo: DateTime
   ): PayoutSummary!
 
   getMyWalletSummary(limit: Int = 10): WalletSummary!

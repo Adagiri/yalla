@@ -103,10 +103,14 @@ class TransactionHistoryController {
       page = 1,
       limit = 20,
       status,
+      dateFrom,
+      dateTo,
     }: {
       page?: number;
       limit?: number;
       status?: string;
+      dateFrom?: Date;
+      dateTo?: Date;
     },
     { user, res }: ContextType
   ) {
@@ -120,6 +124,17 @@ class TransactionHistoryController {
         query.status = status;
       }
 
+      // Add date filters
+      if (dateFrom || dateTo) {
+        query.createdAt = {};
+        if (dateFrom) {
+          query.createdAt.$gte = new Date(dateFrom);
+        }
+        if (dateTo) {
+          query.createdAt.$lte = new Date(dateTo);
+        }
+      }
+
       const transactions = await Transaction.find(query)
         .sort({ createdAt: -1 })
         .limit(limit)
@@ -127,10 +142,11 @@ class TransactionHistoryController {
 
       const total = await Transaction.countDocuments(query);
 
-      // Calculate summary stats
+      // Calculate summary stats (use same query for consistency)
       const allPayouts = await Transaction.find({
         userId: user.id,
         purpose: 'cashout',
+        ...(dateFrom || dateTo ? { createdAt: query.createdAt } : {}),
       });
 
       const totalPayouts = allPayouts.reduce(
