@@ -14,14 +14,11 @@ import {
   DriverFilter,
   DriverSort,
   UpdateDriverPersonalInfoInput,
-
   UpdateDriverVehicleInfo,
   UpdateDriverInspection,
   UpdateDriverLicenseInput,
   UpdateProfilePhotoInput,
 } from './driver.type';
-
-// FIXME: UPDATE DRIVER'S DOC WITH VEHICLE ID, INSTEAD OF DRIVER'S ID
 
 class DriverController {
   static async listDrivers(
@@ -85,11 +82,11 @@ class DriverController {
   }
 
   static async updateDriverInspection(
-    _:any,
-    {input}: {input: UpdateDriverInspection}
-  ){
-const updatedDriver = await DriverService.updateDriverInspection(input);
-return updatedDriver;
+    _: any,
+    { input }: { input: UpdateDriverInspection }
+  ) {
+    const updatedDriver = await DriverService.updateDriverInspection(input);
+    return updatedDriver;
   }
 
   static async updateDriverPersonalInfo(
@@ -98,8 +95,9 @@ return updatedDriver;
     { user }: ContextType
   ) {
     // Use the logged in driver's id for the update
+    const driverId = input?.id || user.id;
     const updatedDriver = await DriverService.updateDriverPersonalInfo(
-      user.id,
+      driverId,
       input
     );
     return updatedDriver;
@@ -225,7 +223,6 @@ return updatedDriver;
     // Get from Redis cache
     const driverIds = await cacheService.findNearbyDrivers(coordinates, radius);
 
-    console.log(driverIds);
     // Get full driver details from database
     const drivers = await DriverService.getDriversByIds(driverIds);
 

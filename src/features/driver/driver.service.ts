@@ -121,6 +121,7 @@ class DriverService {
     id: string,
     input: UpdateDriverPersonalInfoInput
   ) {
+
     try {
       const updateData = filterNullAndUndefined({
         firstname: input.firstname,
@@ -137,7 +138,7 @@ class DriverService {
           `Location with id ${updateData.locationId} not found`
         );
       }
-
+      const currentDriver = await Driver.findById(id);
       const updatedDriver = await Driver.findByIdAndUpdate(id, updateData, {
         new: true,
       });
@@ -170,14 +171,13 @@ class DriverService {
     } catch (error: any) {
       throw new ErrorResponse(
         500,
-        'Error updating driver\'s vehicle info',
+        'Error updating driver vehicle info',
         error.message
       );
     }
   }
 
-  static async updateDriverInspection(input: UpdateDriverInspection){
-   
+  static async updateDriverInspection(input: UpdateDriverInspection) {
     return true;
   }
   static async updateDriverLicense(
