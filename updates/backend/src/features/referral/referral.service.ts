@@ -7,7 +7,6 @@ import ReferralCampaign, {
   ReferralCampaignDocument,
   CampaignStatus,
   CampaignType,
-  CampaignConstraint,
 } from './referral-campaign.model';
 import ReferralReward, {
   ReferralRewardDocument,
@@ -15,10 +14,8 @@ import ReferralReward, {
 } from './referral-reward.model';
 import Wallet from '../../models/wallet.model';
 import Customer from '../customer/customer.model';
-import Driver from '../driver/driver.model';
-import Trip from '../trip/trip.model';
 import SystemConfig from '../admin/system-config.model';
-import { AccountType, AccountType_ } from '../../constants/general';
+import { AccountType } from '../../constants/general';
 
 class ReferralService {
   /**
@@ -171,7 +168,7 @@ class ReferralService {
     let minWalletBalance = 200000; // Default ₦2,000 in kobo
 
     if (validation.campaign) {
-      minWalletBalance = validation.campaign.minWalletBalance || 0;
+      minWalletBalance = validation.campaign.minWalletBalance;
     } else {
       // Get from system config
       const config = await SystemConfig.findOne({
@@ -214,116 +211,7 @@ class ReferralService {
   }
 
   /**
-   * Check if a specific constraint is met
-   */
-  async checkConstraint(
-    constraint: CampaignConstraint,
-    referrer: any,
-    referee: any
-  ): Promise<boolean> {
-    // Skip NONE constraint
-    if (constraint.constraintType === 'NONE') {
-      return true;
-    }
-
-    // Determine which users to check
-    const usersToCheck =
-      constraint.appliesTo === 'REFERRER' ? [referrer] :
-      constraint.appliesTo === 'REFEREE' ? [referee] :
-      [referrer, referee];
-
-    for (const user of usersToCheck) {
-      // User type filter
-      if (constraint.userTypes?.length &&
-          !constraint.userTypes.includes(user.accountType)) {
-        continue;
-      }
-
-      // Check based on constraintType
-      switch (constraint.constraintType) {
-        case 'MIN_WALLET_BALANCE': {
-          const wallet = await Wallet.findOne({ userId: user._id });
-          if (!wallet || wallet.balance < (constraint.value as number)) {
-            return false;
-          }
-          break;
-        }
-
-        case 'MIN_TRIP_COUNT': {
-          const tripCount = await Trip.countDocuments({
-            [user.accountType === 'DRIVER' ? 'driverId' : 'customerId']: user._id,
-            status: 'COMPLETED',
-          });
-          if (tripCount < (constraint.value as number)) {
-            return false;
-          }
-          break;
-        }
-
-        case 'ACCOUNT_AGE_DAYS': {
-          const accountAge = (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-          if (accountAge < (constraint.value as number)) {
-            return false;
-          }
-          break;
-        }
-
-        case 'VERIFIED_ACCOUNT': {
-          if (!user.isEmailVerified && !user.isPhoneVerified) {
-            return false;
-          }
-          break;
-        }
-
-        case 'COMPLETED_PROFILE': {
-          // Check if user has completed all required profile fields
-          if (!this.isProfileComplete(user)) {
-            return false;
-          }
-          break;
-        }
-
-        case 'FIRST_TRIP_COMPLETED': {
-          const hasCompletedTrip = await Trip.exists({
-            [user.accountType === 'DRIVER' ? 'driverId' : 'customerId']: user._id,
-            status: 'COMPLETED',
-          });
-          if (!hasCompletedTrip) {
-            return false;
-          }
-          break;
-        }
-
-        case 'MIN_RATING': {
-          if (!user.rating || user.rating < (constraint.value as number)) {
-            return false;
-          }
-          break;
-        }
-
-        default:
-          throw new Error(`Unknown constraint type: ${constraint.constraintType}`);
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * Check if user profile is complete
-   */
-  private isProfileComplete(user: any): boolean {
-    // Basic profile completeness check
-    return !!(
-      user.firstname &&
-      user.lastname &&
-      user.email &&
-      user.phoneNumber
-    );
-  }
-
-  /**
-   * Check if a referral transaction qualifies for rewards (NEW: supports constraints array)
+   * Check if a referral transaction qualifies for rewards
    */
   async checkQualification(
     transactionId: string
@@ -340,59 +228,7 @@ class ReferralService {
       };
     }
 
-    // Get campaign if available
-    let campaign: ReferralCampaignDocument | null = null;
-    if (transaction.campaignId) {
-      campaign = await ReferralCampaign.findById(transaction.campaignId);
-    }
-
-    // Get referrer and referee user objects
-    const referrer = transaction.referrerType === AccountType_.CUSTOMER
-      ? await Customer.findById(transaction.referrerId)
-      : await Driver.findById(transaction.referrerId);
-
-    const referee = transaction.refereeType === AccountType_.CUSTOMER
-      ? await Customer.findById(transaction.refereeId)
-      : await Driver.findById(transaction.refereeId);
-
-    if (!referrer || !referee) {
-      return {
-        qualified: false,
-        message: 'One or both users not found',
-      };
-    }
-
-    // NEW: Check campaign constraints if available
-    if (campaign?.constraints && campaign.constraints.length > 0) {
-      for (const constraint of campaign.constraints) {
-        const passes = await this.checkConstraint(constraint, referrer, referee);
-        if (!passes) {
-          return {
-            qualified: false,
-            message: `Failed constraint: ${constraint.constraintType}`,
-          };
-        }
-      }
-
-      // All constraints passed
-      transaction.status = ReferralStatus.QUALIFIED;
-      transaction.qualifiedAt = new Date();
-      await transaction.save();
-
-      // Update campaign stats
-      if (transaction.campaignId) {
-        await ReferralCampaign.findByIdAndUpdate(transaction.campaignId, {
-          $inc: { qualifiedReferrals: 1 },
-        });
-      }
-
-      return {
-        qualified: true,
-        message: 'All constraints met',
-      };
-    }
-
-    // OLD: Fallback to wallet balance check for backward compatibility
+    // Get wallet balances
     const referrerWallet = await Wallet.findOne({ userId: transaction.referrerId });
     const refereeWallet = await Wallet.findOne({ userId: transaction.refereeId });
 
@@ -440,13 +276,11 @@ class ReferralService {
   }
 
   /**
-   * Issue rewards for a qualified referral (NEW: supports rewards arrays)
+   * Issue rewards for a qualified referral
    */
   async issueRewards(transactionId: string): Promise<{
-    referrerReward: ReferralRewardDocument | null;
-    refereeReward: ReferralRewardDocument | null;
-    referrerRewards?: ReferralRewardDocument[];
-    refereeRewards?: ReferralRewardDocument[];
+    referrerReward: ReferralRewardDocument;
+    refereeReward: ReferralRewardDocument;
   }> {
     const transaction = await ReferralTransaction.findById(transactionId);
     if (!transaction) {
@@ -463,141 +297,75 @@ class ReferralService {
       campaign = await ReferralCampaign.findById(transaction.campaignId);
     }
 
-    // Calculate expiry date
+    // Default reward settings (1 free ride each)
+    const referrerRewardType = campaign?.referrerRewardType || 'FREE_RIDE';
+    const referrerRewardValue = campaign?.referrerRewardValue || 1;
+    const refereeRewardType = campaign?.refereeRewardType || 'FREE_RIDE';
+    const refereeRewardValue = campaign?.refereeRewardValue || 1;
     const rewardExpiryDays = campaign?.rewardExpiryDays;
+
+    // Calculate expiry date
     let expiresAt: Date | undefined;
     if (rewardExpiryDays) {
       expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + rewardExpiryDays);
     }
 
-    // Get referee and referrer names for descriptions
-    const referee = transaction.refereeType === AccountType_.CUSTOMER
-      ? await Customer.findById(transaction.refereeId).select('firstname lastname')
-      : await Driver.findById(transaction.refereeId).select('firstname lastname');
-
-    const referrer = transaction.referrerType === AccountType_.CUSTOMER
-      ? await Customer.findById(transaction.referrerId).select('firstname lastname')
-      : await Driver.findById(transaction.referrerId).select('firstname lastname');
-
+    // Get referee name for description
+    const referee = await Customer.findById(transaction.refereeId).select(
+      'firstname lastname'
+    );
     const refereeName = referee
       ? `${referee.firstname} ${referee.lastname}`
       : 'a friend';
 
+    // Create referrer reward
+    const referrerReward = new ReferralReward({
+      userId: transaction.referrerId,
+      userType: transaction.referrerType,
+      rewardType: referrerRewardType,
+      rewardValue: referrerRewardValue,
+      referralTransactionId: transaction._id,
+      campaignId: transaction.campaignId,
+      isReferrer: true,
+      status: RewardStatus.AVAILABLE,
+      availableFrom: new Date(),
+      expiresAt,
+      description: `Referral reward for inviting ${refereeName}`,
+    });
+
+    await referrerReward.save();
+
+    // Get referrer name for description
+    const referrer = await Customer.findById(transaction.referrerId).select(
+      'firstname lastname'
+    );
     const referrerName = referrer
       ? `${referrer.firstname} ${referrer.lastname}`
       : 'a friend';
 
-    const createdReferrerRewards: ReferralRewardDocument[] = [];
-    const createdRefereeRewards: ReferralRewardDocument[] = [];
+    // Create referee reward
+    const refereeReward = new ReferralReward({
+      userId: transaction.refereeId,
+      userType: transaction.refereeType,
+      rewardType: refereeRewardType,
+      rewardValue: refereeRewardValue,
+      referralTransactionId: transaction._id,
+      campaignId: transaction.campaignId,
+      isReferrer: false,
+      status: RewardStatus.AVAILABLE,
+      availableFrom: new Date(),
+      expiresAt,
+      description: `Welcome reward for joining via ${referrerName}'s referral`,
+    });
 
-    // NEW: Issue multiple referrer rewards if campaign uses new structure
-    if (campaign?.referrerRewards && campaign.referrerRewards.length > 0) {
-      for (const rewardConfig of campaign.referrerRewards) {
-        if (rewardConfig.rewardType === 'NONE') {
-          continue;
-        }
-
-        const reward = new ReferralReward({
-          userId: transaction.referrerId,
-          userType: transaction.referrerType,
-          rewardType: rewardConfig.rewardType,
-          rewardValue: rewardConfig.value,
-          maxValue: rewardConfig.maxValue,
-          referralTransactionId: transaction._id,
-          campaignId: transaction.campaignId,
-          isReferrer: true,
-          status: RewardStatus.AVAILABLE,
-          availableFrom: new Date(),
-          expiresAt,
-          description: `Referral reward for inviting ${refereeName}`,
-        });
-
-        await reward.save();
-        createdReferrerRewards.push(reward);
-      }
-    }
-
-    // NEW: Issue multiple referee rewards if campaign uses new structure
-    if (campaign?.refereeRewards && campaign.refereeRewards.length > 0) {
-      for (const rewardConfig of campaign.refereeRewards) {
-        if (rewardConfig.rewardType === 'NONE') {
-          continue;
-        }
-
-        const reward = new ReferralReward({
-          userId: transaction.refereeId,
-          userType: transaction.refereeType,
-          rewardType: rewardConfig.rewardType,
-          rewardValue: rewardConfig.value,
-          maxValue: rewardConfig.maxValue,
-          referralTransactionId: transaction._id,
-          campaignId: transaction.campaignId,
-          isReferrer: false,
-          status: RewardStatus.AVAILABLE,
-          availableFrom: new Date(),
-          expiresAt,
-          description: `Welcome reward for joining via ${referrerName}'s referral`,
-        });
-
-        await reward.save();
-        createdRefereeRewards.push(reward);
-      }
-    }
-
-    // OLD: Fallback to old single reward structure for backward compatibility
-    let referrerReward: ReferralRewardDocument | null = null;
-    let refereeReward: ReferralRewardDocument | null = null;
-
-    if (createdReferrerRewards.length === 0 && campaign?.referrerRewardType && campaign.referrerRewardType !== 'NONE') {
-      referrerReward = new ReferralReward({
-        userId: transaction.referrerId,
-        userType: transaction.referrerType,
-        rewardType: campaign.referrerRewardType,
-        rewardValue: campaign.referrerRewardValue || 1,
-        maxValue: campaign.referrerRewardMaxValue,
-        referralTransactionId: transaction._id,
-        campaignId: transaction.campaignId,
-        isReferrer: true,
-        status: RewardStatus.AVAILABLE,
-        availableFrom: new Date(),
-        expiresAt,
-        description: `Referral reward for inviting ${refereeName}`,
-      });
-
-      await referrerReward.save();
-      createdReferrerRewards.push(referrerReward);
-    } else if (createdReferrerRewards.length > 0) {
-      referrerReward = createdReferrerRewards[0];
-    }
-
-    if (createdRefereeRewards.length === 0 && campaign?.refereeRewardType && campaign.refereeRewardType !== 'NONE') {
-      refereeReward = new ReferralReward({
-        userId: transaction.refereeId,
-        userType: transaction.refereeType,
-        rewardType: campaign.refereeRewardType,
-        rewardValue: campaign.refereeRewardValue || 1,
-        maxValue: campaign.refereeRewardMaxValue,
-        referralTransactionId: transaction._id,
-        campaignId: transaction.campaignId,
-        isReferrer: false,
-        status: RewardStatus.AVAILABLE,
-        availableFrom: new Date(),
-        expiresAt,
-        description: `Welcome reward for joining via ${referrerName}'s referral`,
-      });
-
-      await refereeReward.save();
-      createdRefereeRewards.push(refereeReward);
-    } else if (createdRefereeRewards.length > 0) {
-      refereeReward = createdRefereeRewards[0];
-    }
+    await refereeReward.save();
 
     // Update transaction
     transaction.status = ReferralStatus.COMPLETED;
     transaction.completedAt = new Date();
-    transaction.referrerRewardId = referrerReward?._id;
-    transaction.refereeRewardId = refereeReward?._id;
+    transaction.referrerRewardId = referrerReward._id;
+    transaction.refereeRewardId = refereeReward._id;
     await transaction.save();
 
     // Update campaign stats
@@ -607,12 +375,7 @@ class ReferralService {
       });
     }
 
-    return {
-      referrerReward,
-      refereeReward,
-      referrerRewards: createdReferrerRewards,
-      refereeRewards: createdRefereeRewards,
-    };
+    return { referrerReward, refereeReward };
   }
 
   /**
