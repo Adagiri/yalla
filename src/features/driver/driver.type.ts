@@ -40,6 +40,7 @@ export interface UpdateDriverPersonalInfoInput {
   firstname: string;
   lastname: string;
   locationId: string;
+  id: string;
 }
 
 /**

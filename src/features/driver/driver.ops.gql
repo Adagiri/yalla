@@ -50,6 +50,7 @@ input UpdateDriverPersonalInfoInput {
   firstname: String!
   lastname: String!
   locationId: ID!
+  id: ID!
 }
 # update driver's vehicle information;
 input UpdateDriverVehicleInfo {

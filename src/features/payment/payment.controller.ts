@@ -16,7 +16,7 @@ import {
 } from './payment.types';
 import WithdrawalLimitService from '../../services/withdrawal-limit.service';
 import PaymentSystemConfigService from '../general/payment-system-config.service';
-
+import Transaction from "../transaction/transaction.model"
 class PaymentController {
   /**
    * List all payments (Admin only)
@@ -112,50 +112,56 @@ class PaymentController {
   /**
    * Get current user's transactions
    */
-  static async getMyTransactions(
-    _: any,
-    {
-      page = 1,
-      limit = 20,
+
+static async getMyTransactions(
+  _: any,
+  {
+    page = 1,
+    limit = 20,
+    filter,
+    sort,
+  }: {
+    page?: number;
+    limit?: number;
+    filter?: TransactionFilter;
+    sort?: TransactionSort;
+  },
+  { user, res }: ContextType
+) {
+  try {
+    // Validate pagination parameters
+    const validPage = Math.max(1, page);
+    const validLimit = Math.min(Math.max(1, limit), 100); // Max 100 items per page
+
+    const result = await WalletService.getTransactionHistory(
+      user.id,
+      { page: validPage, limit: validLimit },
       filter,
-      sort,
-    }: {
-      page?: number;
-      limit?: number;
-      filter?: TransactionFilter;
-      sort?: TransactionSort;
-    },
-    { user, res }: ContextType
-  ) {
-    try {
-      const result = await WalletService.getTransactionHistory(
-        user.id,
-        { page, limit },
-        filter
-      );
+      sort
+    );
 
-      // Set pagination headers
-      if (res) {
-        setPagePaginationHeaders(res, {
-          totalDocs: result.total,
-          docsRetrieved: result.transactions.length,
-          hasNextPage: result.page < result.totalPages,
-          hasPreviousPage: result.page > 1,
-          nextPage:
-            result.page < result.totalPages ? result.page + 1 : undefined,
-          previousPage: result.page > 1 ? result.page - 1 : undefined,
-        });
-      }
-
-      return result.transactions;
-    } catch (error: any) {
-      throw new ErrorResponse(
-        500,
-        'Error fetching transactions',
-        error.message
-      );
+    // Set pagination headers
+    if (res) {
+      setPagePaginationHeaders(res, {
+        totalDocs: result.total,
+        docsRetrieved: result.transactions.length,
+        hasNextPage: result.page < result.totalPages,
+        hasPreviousPage: result.page > 1,
+        nextPage:
+          result.page < result.totalPages ? result.page + 1 : undefined,
+        previousPage: result.page > 1 ? result.page - 1 : undefined,
+      });
     }
+
+    return result.transactions;
+  } catch (error: any) {
+    throw new ErrorResponse(
+      500,
+      'Error fetching transactions',
+      error.message
+    );
   }
+}
 
   /**
    * Get user transactions (admin only)
@@ -211,8 +217,11 @@ class PaymentController {
    */
   static async getTransaction(_: any, { id }: { id: string }) {
     try {
-      const Transaction = require('../../models/transaction.model').default;
-      const transaction = await Transaction.findById(id).populate('tripId');
+      const transaction = await Transaction.findOne({
+  $or: [
+    { _id: id },
+    { transactionId: id }
+  ]}).populate('tripId');
 
       if (!transaction) {
         throw new ErrorResponse(404, 'Transaction not found');

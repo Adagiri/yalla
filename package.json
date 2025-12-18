@@ -6,7 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc && npm run copy:gql",
     "copy:gql": "node scripts/copy-gql.js",
-    "start": "NODE_ENV=production node dist/index.js",
+    "start": "set NODE_ENV=production&&node dist/index.js",
     "test": "jest --coverage",
     "lint": "eslint \"src/**/*.{ts,js}\" --fix",
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
