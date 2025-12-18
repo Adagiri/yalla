@@ -493,7 +493,7 @@ static async getTransactionHistory(
         query.createdAt = {};
         
         if (filter.dateFrom) {
-          // Ensure we create a valid Date object from string or Date
+          // ensure there is a valid Date object from string or Date
           const fromDate = filter.dateFrom instanceof Date 
             ? filter.dateFrom 
             : new Date(filter.dateFrom);
@@ -505,10 +505,7 @@ static async getTransactionHistory(
             // check if dateFrom is before user's first transaction
          if (userFirstDate && fromDate < userFirstDate) {
               // Option A: Auto-adjust to user's first date
-              // query.createdAt.$gte = userFirstDate;
-              
-              // Option B: Keep as-is but document the behavior
-              query.createdAt.$gte = fromDate;
+              query.createdAt.$gte = userFirstDate;
             } else {
               query.createdAt.$gte = fromDate;
             }
@@ -516,19 +513,19 @@ static async getTransactionHistory(
         }
         
         if (filter.dateTo) {
-          // Ensure we create a valid Date object from string or Date
+          // ensure valid Date object from string or Date
           const toDate = filter.dateTo instanceof Date 
             ? filter.dateTo 
             : new Date(filter.dateTo);
           
-          // Validate the date is valid
+          // validate the date is valid
           if (!isNaN(toDate.getTime())) {
             // Set to end of day for inclusive date range
             toDate.setHours(23, 59, 59, 999);
          
             // check if dateTo is after user's last transaction
             if (userLastDate && toDate > userLastDate) {
-              // Auto-adjust to user's last date
+              // auto-adjust to user's last date
               query.createdAt.$lte = userLastDate;
             } else {
               query.createdAt.$lte = toDate;
@@ -537,11 +534,9 @@ static async getTransactionHistory(
         }
       }
     }
-
-    // Apply sorting
     const sortOptions: any = {};
     if (sort && sort.field) {
-      // Whitelist allowed sort fields for security
+      // Whitelists asort field
       const allowedSortFields = [
         'createdAt',
         'amount',
@@ -558,7 +553,7 @@ static async getTransactionHistory(
         sortOptions.createdAt = -1;
       }
     } else {
-      // Default sort: newest first
+      // default sort- newest first
       sortOptions.createdAt = -1;
     }
 
