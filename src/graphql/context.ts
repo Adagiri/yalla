@@ -4,6 +4,7 @@ import Admin from '../features/admin/admin.model';
 import { getUserInfo } from '../utils/auth-middleware';
 import { ExpressContextFunctionArgument } from '@apollo/server/express4';
 import { pubsub } from './pubsub';
+import { createTripLoader } from '../dataloaders/trip.dataloader';
 
 export const context = async ({ req, res }: ExpressContextFunctionArgument) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -18,6 +19,9 @@ export const context = async ({ req, res }: ExpressContextFunctionArgument) => {
       Customer,
       Admin,
     },
-    pubsub
+    pubsub,
+    loaders: {
+      trip: createTripLoader(),
+    },
   };
 };

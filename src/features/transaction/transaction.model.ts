@@ -177,6 +177,13 @@ TransactionSchema.virtual('formattedAmount').get(function () {
   return `₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
 });
 
+TransactionSchema.virtual('trip', {
+  ref: 'Trip',
+  localField: 'tripId',
+  foreignField: '_id',
+  justOne: true,
+});
+
 const Transaction = mongoose.model<TransactionDocument>(
   'Transaction',
   TransactionSchema

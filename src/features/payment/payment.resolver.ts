@@ -1,6 +1,11 @@
 import { combineResolvers } from 'graphql-resolvers';
 import PaymentController from './payment.controller';
 import { protectEntities } from '../../utils/auth-middleware';
+import {
+  getRequestedFields,
+  toMongooseSelect,
+} from '../../utils/graphql-field-selection.util';
+import { GraphQLResolveInfo } from 'graphql';
 
 const paymentResolvers = {
   // ===== QUERIES =====
@@ -84,11 +89,25 @@ const paymentResolvers = {
 
   // ===== FIELD RESOLVERS =====
   Transaction: {
-    trip: async (parent: any) => {
+    trip: async (
+      parent: any,
+      _args: any,
+      context: any,
+      info: GraphQLResolveInfo
+    ) => {
+      if (parent.trip) {
+        return parent.trip;
+      }
+
       if (!parent.tripId) return null;
 
-      const Trip = require('../../features/trip/trip.model').default;
-      return await Trip.findById(parent.tripId);
+      const requestedFields = getRequestedFields(info);
+      const selectString = toMongooseSelect(requestedFields);
+
+      return context.loaders.trip.load({
+        id: parent.tripId,
+        fields: selectString,
+      });
     },
   },
 

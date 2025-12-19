@@ -50,8 +50,7 @@ class TransactionHistoryController {
       const transactions = await Transaction.find(query)
         .sort({ createdAt: -1 })
         .limit(limit)
-        .skip((page - 1) * limit)
-        // .populate('tripId', 'tripNumber pickup destination fare createdAt');
+        .skip((page - 1) * limit);
 
       const total = await Transaction.countDocuments(query);
 

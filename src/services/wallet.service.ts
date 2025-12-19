@@ -4,7 +4,10 @@ import { ErrorResponse } from '../utils/responses';
 import PaystackService from '../services/paystack.services';
 import Transaction from '../features/transaction/transaction.model';
 import { AccountType, AccountType_ } from '../constants/general';
-import {  TransactionFilter, TransactionSort } from "../features/payment/payment.types"
+import {
+  TransactionFilter,
+  TransactionSort,
+} from '../features/payment/payment.types';
 interface CreateWalletInput {
   userId: string;
   userType: AccountType;
@@ -453,137 +456,139 @@ class WalletService {
    * Get wallet transaction history
    */
 
+  static async getTransactionHistory(
+    userId: string,
+    pagination: { page: number; limit: number },
+    filter?: TransactionFilter,
+    sort?: TransactionSort
+  ) {
+    try {
+      const query: any = { userId };
 
-static async getTransactionHistory(
-  userId: string,
-  pagination: { page: number; limit: number },
-  filter?: TransactionFilter,
-  sort?: TransactionSort
-) {
-  try {
-    const query: any = { userId };
+      const [firstTransaction, lastTransaction] = await Promise.all([
+        Transaction.findOne({ userId })
+          .sort({ createdAt: 1 })
+          .select('createdAt')
+          .lean(),
+        Transaction.findOne({ userId })
+          .sort({ createdAt: -1 })
+          .select('createdAt')
+          .lean(),
+      ]);
 
- const [firstTransaction, lastTransaction] = await Promise.all([
-      Transaction.findOne({ userId }).sort({ createdAt: 1 }).select('createdAt').lean(),
-      Transaction.findOne({ userId }).sort({ createdAt: -1 }).select('createdAt').lean()
-    ]);
+      const userFirstDate = firstTransaction?.createdAt;
+      const userLastDate = lastTransaction?.createdAt;
 
-    const userFirstDate = firstTransaction?.createdAt;
-    const userLastDate = lastTransaction?.createdAt;
+      if (filter) {
+        if (filter.type) {
+          query.type = filter.type;
+        }
 
-    if (filter) {
-      if (filter.type) {
-        query.type = filter.type;
-      }
+        if (filter.purpose) {
+          query.purpose = filter.purpose;
+        }
 
-      if (filter.purpose) {
-        query.purpose = filter.purpose;
-      }
+        if (filter.status) {
+          query.status = filter.status;
+        }
 
-      if (filter.status) {
-        query.status = filter.status;
-      }
+        if (filter.paymentMethod) {
+          query.paymentMethod = filter.paymentMethod;
+        }
 
-      if (filter.paymentMethod) {
-        query.paymentMethod = filter.paymentMethod;
-      }
+        // date range filtering
+        if (filter.dateFrom || filter.dateTo) {
+          query.createdAt = {};
 
-      // date range filtering
-      if (filter.dateFrom || filter.dateTo) {
-        query.createdAt = {};
-        
-        if (filter.dateFrom) {
-          // ensure there is a valid Date object from string or Date
-          const fromDate = filter.dateFrom instanceof Date 
-            ? filter.dateFrom 
-            : new Date(filter.dateFrom);
-          
-          // Validate the date is valid
-          if (!isNaN(fromDate.getTime())) {
-            // Set to start of day for inclusive range
-            fromDate.setHours(0, 0, 0, 0);
-            // check if dateFrom is before user's first transaction
-         if (userFirstDate && fromDate < userFirstDate) {
-              // Option A: Auto-adjust to user's first date
-              query.createdAt.$gte = userFirstDate;
-            } else {
-              query.createdAt.$gte = fromDate;
+          if (filter.dateFrom) {
+            // ensure there is a valid Date object from string or Date
+            const fromDate =
+              filter.dateFrom instanceof Date
+                ? filter.dateFrom
+                : new Date(filter.dateFrom);
+
+            // Validate the date is valid
+            if (!isNaN(fromDate.getTime())) {
+              // Set to start of day for inclusive range
+              fromDate.setHours(0, 0, 0, 0);
+              // check if dateFrom is before user's first transaction
+              if (userFirstDate && fromDate < userFirstDate) {
+                // Option A: Auto-adjust to user's first date
+                query.createdAt.$gte = userFirstDate;
+              } else {
+                query.createdAt.$gte = fromDate;
+              }
+            }
+          }
+
+          if (filter.dateTo) {
+            // ensure valid Date object from string or Date
+            const toDate =
+              filter.dateTo instanceof Date
+                ? filter.dateTo
+                : new Date(filter.dateTo);
+
+            // validate the date is valid
+            if (!isNaN(toDate.getTime())) {
+              // Set to end of day for inclusive date range
+              toDate.setHours(23, 59, 59, 999);
+
+              // check if dateTo is after user's last transaction
+              if (userLastDate && toDate > userLastDate) {
+                // auto-adjust to user's last date
+                query.createdAt.$lte = userLastDate;
+              } else {
+                query.createdAt.$lte = toDate;
+              }
             }
           }
         }
-        
-        if (filter.dateTo) {
-          // ensure valid Date object from string or Date
-          const toDate = filter.dateTo instanceof Date 
-            ? filter.dateTo 
-            : new Date(filter.dateTo);
-          
-          // validate the date is valid
-          if (!isNaN(toDate.getTime())) {
-            // Set to end of day for inclusive date range
-            toDate.setHours(23, 59, 59, 999);
-         
-            // check if dateTo is after user's last transaction
-            if (userLastDate && toDate > userLastDate) {
-              // auto-adjust to user's last date
-              query.createdAt.$lte = userLastDate;
-            } else {
-              query.createdAt.$lte = toDate;
-            }
-          }
-        }
       }
-    }
-    const sortOptions: any = {};
-    if (sort && sort.field) {
-      // Whitelists asort field
-      const allowedSortFields = [
-        'createdAt',
-        'amount',
-        'type',
-        'status',
-        'purpose',
-        'paymentMethod'
-      ];
-      
-      if (allowedSortFields.includes(sort.field)) {
-        sortOptions[sort.field] = sort.direction === 'ASC' ? 1 : -1;
+      const sortOptions: any = {};
+      if (sort && sort.field) {
+        // Whitelists asort field
+        const allowedSortFields = [
+          'createdAt',
+          'amount',
+          'type',
+          'status',
+          'purpose',
+          'paymentMethod',
+        ];
+
+        if (allowedSortFields.includes(sort.field)) {
+          sortOptions[sort.field] = sort.direction === 'ASC' ? 1 : -1;
+        } else {
+          // Default sort if invalid field provided
+          sortOptions.createdAt = -1;
+        }
       } else {
-        // Default sort if invalid field provided
+        // default sort- newest first
         sortOptions.createdAt = -1;
       }
-    } else {
-      // default sort- newest first
-      sortOptions.createdAt = -1;
+
+      const [transactions, total] = await Promise.all([
+        Transaction.find(query)
+          .sort(sortOptions)
+          .limit(pagination.limit)
+          .skip((pagination.page - 1) * pagination.limit),
+        Transaction.countDocuments(query),
+      ]);
+
+      return {
+        transactions,
+        total,
+        page: pagination.page,
+        totalPages: Math.ceil(total / pagination.limit),
+      };
+    } catch (error: any) {
+      throw new ErrorResponse(
+        500,
+        'Error fetching transaction history',
+        error.message
+      );
     }
-
-    const [transactions, total] = await Promise.all([
-      Transaction.find(query)
-        .sort(sortOptions)
-        .limit(pagination.limit)
-        .skip((pagination.page - 1) * pagination.limit)
-        .populate('tripId', 'tripNumber pickup destination')
-        // .lean({ virtuals: true }),
-        ,
-      Transaction.countDocuments(query)
-    ]);
-
-    return {
-      transactions,
-      total,
-      page: pagination.page,
-      totalPages: Math.ceil(total / pagination.limit),
-    };
-  } catch (error: any) {
-    throw new ErrorResponse(
-      500,
-      'Error fetching transaction history',
-      error.message
-    );
   }
-}
-
-
 
   /**
    * Helper: Get user type
